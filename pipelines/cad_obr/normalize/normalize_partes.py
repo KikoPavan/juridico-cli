@@ -62,7 +62,6 @@ SPLIT_PATTERNS_PRIMARY = [
 ]
 
 
-from typing import Any
 
 def digits_only(s: Any) -> str:
     if s is None:

@@ -30,7 +30,7 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 CR_TO_R_FACTOR = Decimal("2750")  # 1 R$ = 2.750 CR$

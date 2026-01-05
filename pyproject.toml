@@ -22,5 +22,6 @@ dependencies = [
 line-length = 88
 [dependency-groups]
 dev = [
+    "ruff>=0.14.10",
     "types-pyyaml>=6.0.12.20250915",
 ]
