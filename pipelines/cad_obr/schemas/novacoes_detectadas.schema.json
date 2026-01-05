@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/novacoes_detectadas.schema.json",
+  "title": "CAD-OBR Novacoes Detectadas (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "novacao_id",
+    "property_id",
+    "onus_id_baixado",
+    "data_baixa",
+    "onus_id_novo",
+    "data_nova_divida",
+    "match_basis",
+    "match_level",
+    "janela_dias",
+    "evidencias"
+  ],
+  "properties": {
+    "novacao_id": {
+      "type": "string",
+      "minLength": 8
+    },
+
+    "property_id": {
+      "$ref": "common.schema.json#/$defs/PropertyId"
+    },
+
+    "onus_id_baixado": {
+      "$ref": "common.schema.json#/$defs/OnusId"
+    },
+    "data_baixa": {
+      "$ref": "common.schema.json#/$defs/DateISO"
+    },
+
+    "onus_id_novo": {
+      "$ref": "common.schema.json#/$defs/OnusId"
+    },
+    "data_nova_divida": {
+      "$ref": "common.schema.json#/$defs/DateISO",
+      "description": "Preferir data_efetiva; se não existir, usar data_registro."
+    },
+
+    "match_basis": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["CREDOR", "DEVEDOR", "OPERACAO", "VALOR", "JANELA_TEMPO"]
+      }
+    },
+
+    "match_level": {
+      "$ref": "common.schema.json#/$defs/MatchLevel"
+    },
+
+    "janela_dias": {
+      "type": "integer",
+      "minimum": 0
+    },
+
+    "evidencias": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/AnchorRef" }
+    }
+  }
+}

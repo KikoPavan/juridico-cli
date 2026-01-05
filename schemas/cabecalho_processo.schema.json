@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/cabecalho_processo.schema.json",
+  "title": "cabecalho_processo — v2 (1:1)",
+  "description": "Extração 1:1 de capa/cabeçalho do processo (quando o documento for efetivamente um cabeçalho/capa). Campos são literais e devem ser ancorados.",
+  "type": "object",
+  "required": ["document_type"],
+  "properties": {
+    "document_type": { "const": "cabecalho_processo" },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "court": { "$ref": "#/$defs/AnchoredString" },
+    "comarca": { "$ref": "#/$defs/AnchoredString" },
+    "vara": { "$ref": "#/$defs/AnchoredString" },
+
+    "classe": { "$ref": "#/$defs/AnchoredString" },
+    "assunto": { "$ref": "#/$defs/AnchoredString" },
+
+    "distribution_date": { "$ref": "#/$defs/AnchoredDate" },
+
+    "parties": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PartySummary" },
+      "description": "Partes conforme constarem no cabeçalho/capa."
+    },
+
+    "representations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Representation" },
+      "description": "Advogados/representantes conforme constarem no cabeçalho/capa."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" },
+      "description": "Âncoras gerais (opcional). Preferir âncoras por campo/itens."
+    }
+  },
+
+  "anyOf": [
+    { "required": ["process_number"] },
+    { "required": ["parties"] },
+    { "required": ["classe"] },
+    { "required": ["assunto"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PartySummary": {
+      "type": "object",
+      "required": ["name", "role", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "role": { "$ref": "defs/common.schema.json#/$defs/PartyRole" },
+        "role_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal do papel, quando necessário."
+        },
+        "qualification": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Qualificação literal se constar."
+        },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+          "description": "IDs explícitos (CPF/CNPJ/RG etc.) se constarem."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Lawyer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "oab": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Representation": {
+      "type": "object",
+      "required": ["represented_party_name", "lawyers", "anchors"],
+      "properties": {
+        "represented_party_name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "lawyers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Lawyer" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

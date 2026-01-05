@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/partes.schema.json",
+  "title": "CAD-OBR Partes (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["party_id", "roles"],
+  "properties": {
+    "party_id": {
+      "$ref": "common.schema.json#/$defs/PartyId"
+    },
+
+    "cpf": {
+      "anyOf": [
+        { "type": "string", "pattern": "^\\d{11}$" },
+        { "type": "null" }
+      ]
+    },
+    "cnpj": {
+      "anyOf": [
+        { "type": "string", "pattern": "^\\d{14}$" },
+        { "type": "null" }
+      ]
+    },
+
+    "nome": {
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "nome_norm": {
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 2 }
+    },
+
+    "docs_origem": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 8 }
+    },
+
+    "anchors": {
+      "$ref": "common.schema.json#/$defs/AnchorsArray"
+    }
+  },
+
+  "allOf": [
+    {
+      "not": {
+        "description": "Não permitir CPF e CNPJ simultaneamente, para evitar ambiguidade.",
+        "required": ["cpf", "cnpj"]
+      }
+    }
+  ]
+}

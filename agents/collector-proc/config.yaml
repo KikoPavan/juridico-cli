@@ -1,0 +1,136 @@
+agent:
+  name: collector-proc
+  version: "0.2.0"
+
+runtime:
+  provider: "google"
+  model: "gemini-2.0-flash"
+  temperature: 0.1
+  top_p: 0.95
+  max_output_tokens: 8192
+
+paths:
+  prompt_base: "agents/collector-proc/prompts/collector-proc.md"
+  skills_dir: "agents/collector-proc/skills"
+  schemas_dir: "schemas"
+  io_schema: "agents/collector-proc/io.schema.json"
+
+  output_base_dir: "outputs/processo/01_collector"
+  triage_dir: "outputs/processo/00_triage"
+  logs_dir: "outputs/processo/99_logs"
+
+front_matter:
+  # Campos que devem existir no topo do .md (YAML front matter)
+  required:
+    - document_type
+    - skill_key
+    - target_schema
+    - source_id
+    - source_sha256
+    - source_filename
+    - language
+    - created_at
+  optional:
+    - case_id
+  document_type_field: "document_type"
+
+validation:
+  json_schema_draft: "2020-12"
+  strict: true
+  # Se true, recusa quando skill_key/target_schema do front matter não bater com o roteamento
+  enforce_front_matter_consistency: true
+
+routing:
+  default_mode: "individual" # individual | consolidated
+  on_unknown_document_type: "triage" # triage | fail
+  on_missing_front_matter: "fail" # triage | fail
+
+  # document_type -> skill/schema/output/modes
+  map:
+    processo:
+      skill_key: "processo"
+      schema_individual: "schemas/processo.schema.json"
+      output_dir: "processo"
+      allow_individual: true
+      allow_consolidated: false
+
+    cabecalho_processo:
+      skill_key: "cabecalho_processo"
+      schema_individual: "schemas/cabecalho_processo.schema.json"
+      schema_consolidated: "schemas/cabecalho_processo.consolidated.schema.json"
+      output_dir: "cabecalho_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    peticao_processo:
+      skill_key: "peticao_processo"
+      schema_individual: "schemas/peticao_processo.schema.json"
+      schema_consolidated: "schemas/peticao_processo.consolidated.schema.json"
+      output_dir: "peticao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    contestacao_processo:
+      skill_key: "contestacao_processo"
+      schema_individual: "schemas/contestacao_processo.schema.json"
+      schema_consolidated: "schemas/contestacao_processo.consolidated.schema.json"
+      output_dir: "contestacao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    decisao_processo:
+      skill_key: "decisao_processo"
+      schema_individual: "schemas/decisao_processo.schema.json"
+      schema_consolidated: "schemas/decisao_processo.consolidated.schema.json"
+      output_dir: "decisao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    procuracao:
+      skill_key: "procuracao"
+      schema_individual: "schemas/procuracao.schema.json"
+      schema_consolidated: "schemas/procuracao.consolidated.schema.json"
+      output_dir: "procuracao"
+      allow_individual: true
+      allow_consolidated: true
+
+    mandato_processo:
+      skill_key: "mandato_processo"
+      schema_individual: "schemas/mandato_processo.schema.json"
+      schema_consolidated: "schemas/mandato_processo.consolidated.schema.json"
+      output_dir: "mandato_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+skills_map:
+  core: "agents/collector-proc/skills/SKILL.core.md"
+  processo: "agents/collector-proc/skills/SKILL.processo.md"
+  cabecalho_processo: "agents/collector-proc/skills/SKILL.cabecalho_processo.md"
+  peticao_processo: "agents/collector-proc/skills/SKILL.peticao_processo.md"
+  contestacao_processo: "agents/collector-proc/skills/SKILL.contestacao_processo.md"
+  decisao_processo: "agents/collector-proc/skills/SKILL.decisao_processo.md"
+  procuracao: "agents/collector-proc/skills/SKILL.procuracao.md"
+  mandato_processo: "agents/collector-proc/skills/SKILL.mandato_processo.md"
+
+jobs:
+  - id: "collector-proc-router"
+    name: "Router (front matter) — individual + optional consolidation"
+    input_dir: "data/processo"
+    file_glob: "**/*.md"
+
+    run_individual: true
+    run_consolidated: true
+
+    consolidation:
+      # Regra crítica: consolidar SEMPRE por document_type; case_id é opcional
+      group_by:
+        - document_type
+        - case_id
+      # Se case_id não existir, o runner deve consolidar somente por document_type dentro do mesmo job/run
+      require_case_id: false
+
+output_naming:
+  individual_suffix: ".json"
+  consolidated_suffix: ".consolidated.json"
+  error_suffix: ".error.json"
+  schema_error_suffix: ".schema_error.json"

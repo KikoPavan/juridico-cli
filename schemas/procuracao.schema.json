@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/procuracao.schema.json",
+  "title": "procuracao — v2 (1:1)",
+  "description": "Extração 1:1 de procuração. Conteúdo literal, com âncoras em outorgante/outorgados e poderes.",
+  "type": "object",
+  "required": ["document_type"],
+  "properties": {
+    "document_type": { "const": "procuracao" },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "outorgante": {
+      "$ref": "#/$defs/Person",
+      "description": "Outorgante (quem confere poderes), se constar."
+    },
+
+    "outorgados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Person" },
+      "description": "Outorgados (quem recebe poderes), se constar."
+    },
+
+    "poderes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Power" },
+      "description": "Poderes conferidos (itens literais)."
+    },
+
+    "data": {
+      "$ref": "#/$defs/AnchoredDate",
+      "description": "Data da procuração, se explícita."
+    },
+
+    "local": {
+      "$ref": "#/$defs/AnchoredString",
+      "description": "Local de assinatura, se explícito."
+    },
+
+    "restricoes_ou_limitacoes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Restrições/limitações/observações, se constarem."
+    },
+
+    "assinantes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Person" },
+      "description": "Assinantes (quando constar explicitamente)."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" },
+      "description": "Âncoras gerais (opcional). Preferir âncoras por itens."
+    }
+  },
+
+  "anyOf": [
+    { "required": ["poderes"] },
+    { "required": ["outorgante"] },
+    { "required": ["outorgados"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredTextItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000,
+          "description": "Trecho literal relevante (não resumir; pode ser parágrafo curto)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Person": {
+      "type": "object",
+      "required": ["name", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "qualification": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Qualificação literal, se constar."
+        },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+          "description": "IDs explícitos (CPF/CNPJ/RG etc.), se constarem."
+        },
+        "oab": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "OAB, se constar para advogados."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Power": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "Texto literal do poder."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'Poderes gerais', 'Poderes especiais', 'ad judicia')."
+        },
+        "power_type": {
+          "type": "string",
+          "enum": ["gerais", "especiais", "outro"],
+          "description": "Classificação opcional; só usar se o documento explicitamente indicar."
+        },
+        "power_type_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal da classificação, quando necessário."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

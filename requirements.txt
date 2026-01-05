@@ -1,0 +1,8 @@
+# Necessário para ler os arquivos config.yaml nos scripts main.py
+PyYAML
+pdfplumber
+pdf2image
+markitdown>=0.1.3
+google-genai
+# Adicione a biblioteca do seu 'genai_adapter' se for uma lib instalável
+# ou apenas copie o arquivo .py para a pasta 'scripts/'

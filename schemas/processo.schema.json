@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/processo.schema.json",
+  "title": "processo (dossiê/overview do caso) — v2",
+  "description": "Dossiê agregado do caso, construído a partir de outputs 1:1. Não é extração de uma peça específica.",
+  "type": "object",
+  "required": [
+    "document_type",
+    "sources",
+    "document_index",
+    "merge_meta",
+    "conflicts"
+  ],
+  "properties": {
+    "document_type": {
+      "const": "processo"
+    },
+    "case_id": {
+      "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+      "description": "Identificador lógico do lote/caso no pipeline."
+    },
+    "process_number": {
+      "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+      "description": "Número do processo (quando existir no material)."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/SourceRefInput"
+      },
+      "description": "Fontes (peças 1:1) utilizadas para compor o dossiê."
+    },
+    "document_index": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ProcessDocument"
+      },
+      "description": "Índice das peças detectadas/processadas no lote."
+    },
+    "header_summary": {
+      "$ref": "#/$defs/HeaderSummary",
+      "description": "Visão consolidada de capa/cabeçalho (sem inferência)."
+    },
+    "parties": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Party"
+      },
+      "description": "Partes consolidadas (quando existirem)."
+    },
+    "representations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Representation"
+      },
+      "description": "Representações/advogados consolidados (quando existirem)."
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TimelineEvent"
+      },
+      "description": "Linha do tempo consolidada (opcional)."
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Note"
+      },
+      "description": "Notas técnicas (opcional)."
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "$ref": "defs/common.schema.json#/$defs/ConflictRecord"
+      },
+      "description": "Conflitos detectados durante a consolidação (pode ser vazio)."
+    },
+    "merge_meta": {
+      "$ref": "#/$defs/MergeMeta"
+    }
+  },
+  "anyOf": [
+    { "required": ["case_id"] },
+    { "required": ["process_number"] }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+    "SourceRefInput": {
+      "allOf": [
+        { "$ref": "defs/common.schema.json#/$defs/SourceRef" },
+        {
+          "properties": {
+            "document_type": { "not": { "const": "processo" } }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ProcessDocument": {
+      "type": "object",
+      "required": [
+        "document_type",
+        "source_id",
+        "source_sha256",
+        "anchors"
+      ],
+      "properties": {
+        "document_type": {
+          "allOf": [
+            { "$ref": "defs/common.schema.json#/$defs/DocumentType" },
+            { "not": { "const": "processo" } }
+          ]
+        },
+        "title": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Título/descrição curta da peça (quando explícito)."
+        },
+        "md_filename": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Arquivo .md que originou o output 1:1 (recomendado)."
+        },
+        "source_id": {
+          "$ref": "defs/common.schema.json#/$defs/UUID"
+        },
+        "source_sha256": {
+          "$ref": "defs/common.schema.json#/$defs/Sha256"
+        },
+        "document_date": {
+          "$ref": "defs/common.schema.json#/$defs/ISODate",
+          "description": "Data explícita da peça (se constar)."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "HeaderSummary": {
+      "type": "object",
+      "properties": {
+        "court": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "comarca": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "vara": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "classe": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "assunto": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "distribution_date": {
+          "$ref": "defs/common.schema.json#/$defs/ISODate"
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" },
+          "description": "Âncoras de suporte para os campos do cabeçalho (recomendado quando houver dados)."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Party": {
+      "type": "object",
+      "required": [
+        "name",
+        "role",
+        "anchors"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "role": {
+          "$ref": "defs/common.schema.json#/$defs/PartyRole"
+        },
+        "role_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal do papel no documento, quando não couber bem no enum."
+        },
+        "qualification": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Qualificação literal (sem inferência)."
+        },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+          "description": "IDs explícitos (CPF/CNPJ/RG etc.), se constarem."
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Lawyer": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "oab": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Representation": {
+      "type": "object",
+      "required": [
+        "represented_party_name",
+        "lawyers",
+        "anchors"
+      ],
+      "properties": {
+        "represented_party_name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "lawyers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Lawyer" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "TimelineEvent": {
+      "type": "object",
+      "required": [
+        "event_type",
+        "description",
+        "anchors"
+      ],
+      "properties": {
+        "event_type": {
+          "$ref": "defs/common.schema.json#/$defs/EventType"
+        },
+        "event_type_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "event_date": {
+          "$ref": "defs/common.schema.json#/$defs/ISODate"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Descrição curta e literal do evento (sem inferência)."
+        },
+        "related_documents": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "$ref": "defs/common.schema.json#/$defs/UUID" },
+              { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+            ]
+          },
+          "description": "Referências a source_id e/ou md_filename relacionados ao evento."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Note": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "anchors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MergeMeta": {
+      "type": "object",
+      "required": [
+        "merge_strategy",
+        "merged_at",
+        "input_count"
+      ],
+      "properties": {
+        "merge_strategy": {
+          "const": "llm_merge_assisted_v1"
+        },
+        "merged_at": {
+          "$ref": "defs/common.schema.json#/$defs/ISODateTime"
+        },
+        "input_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ignored_inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IgnoredInput"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "IgnoredInput": {
+      "type": "object",
+      "required": [
+        "reason"
+      ],
+      "properties": {
+        "source_id": { "$ref": "defs/common.schema.json#/$defs/UUID" },
+        "md_filename": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "reason": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

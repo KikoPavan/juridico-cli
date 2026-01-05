@@ -1,0 +1,16 @@
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 8192
+
+rag:
+  enabled: true
+  stores:
+    - jurisprudencia  # store principal de acórdãos
+
+paths:
+  prompt_file: prompts/case-law.md
+  input_relatorio_firac: outputs/relatorio_firac.md
+  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+  output_jurisprudencia: outputs/jurisprudencia.md

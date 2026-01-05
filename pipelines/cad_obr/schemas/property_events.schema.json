@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/property_events.schema.json",
+  "title": "CAD-OBR Property Events (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "property_id", "event_type", "event_date", "source_doc_id"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "ID do evento (determinístico ou UUID)."
+    },
+    "property_id": {
+      "$ref": "common.schema.json#/$defs/PropertyId"
+    },
+    "event_type": {
+      "$ref": "common.schema.json#/$defs/EventType"
+    },
+    "event_date": {
+      "$ref": "common.schema.json#/$defs/DateISO"
+    },
+    "data_registro": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+    "data_efetiva": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+    "data_baixa": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+    "flag_registro_posterior": {
+      "type": "boolean",
+      "description": "true quando data_registro > data_efetiva."
+    },
+    "delta_registro_efetiva_dias": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Diferença em dias entre data_registro e data_efetiva quando flag_registro_posterior=true."
+    },
+
+    "onus_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/OnusId" },
+        { "type": "null" }
+      ]
+    },
+    "operation_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/OperationId" },
+        { "type": "null" }
+      ]
+    },
+    "registro_ref": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/RegistroRef" },
+        { "type": "null" }
+      ]
+    },
+
+    "credor_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/PartyId" },
+        { "type": "null" }
+      ]
+    },
+    "emitente_devedor_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/PartyId" },
+        { "type": "null" }
+      ]
+    },
+
+    "valor_divida_num": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/MoneyCentavos" },
+        { "type": "null" }
+      ]
+    },
+    "valor_presente_num": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/MoneyCentavos" },
+        { "type": "null" }
+      ]
+    },
+
+    "source_doc_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "doc_id do documento de origem do evento."
+    },
+    "anchors": {
+      "$ref": "common.schema.json#/$defs/AnchorsArray"
+    },
+
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Observações curtas e determinísticas (sem inferências)."
+    }
+  },
+
+  "allOf": [
+    {
+      "if": {
+        "properties": { "event_type": { "const": "ONUS_BAIXA" } },
+        "required": ["event_type"]
+      },
+      "then": {
+        "required": ["data_baixa"],
+        "description": "Baixa deve ter data_baixa preenchida (ISO)."
+      }
+    },
+    {
+      "if": {
+        "properties": { "flag_registro_posterior": { "const": true } },
+        "required": ["flag_registro_posterior"]
+      },
+      "then": {
+        "required": ["delta_registro_efetiva_dias"]
+      }
+    }
+  ]
+}

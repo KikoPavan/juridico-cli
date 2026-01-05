@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema IO do 'compliance-cli'",
+  "description": "Define o contrato de dados para as entradas e saídas do agente 'compliance-cli'",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "peticao_esqueleto_path": {
+          "type": "string",
+          "description": "Caminho para a petição gerada",
+          "default": "../../outputs/peticao_esqueleto.md"
+        },
+        "firac_report_path": {
+          "type": "string",
+          "description": "Caminho para o relatório FIRAC (base de auditoria)",
+          "default": "../../outputs/relatorio_firac.md"
+        }
+      },
+      "required": [
+        "peticao_esqueleto_path",
+        "firac_report_path"
+      ]
+    },
+    "outputs": {
+      "description": "Define a saída do checklist de compliance",
+      "type": "object",
+      "properties": {
+        "checklist_out_path": {
+          "type": "string",
+          "description": "Caminho para o Markdown de saída do checklist.",
+          "default": "../../outputs/checklist.md"
+        },
+        "checklist_items": {
+          "type": "array",
+          "description": "Lista estruturada dos itens de checagem",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_check": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "FALHA"
+                ]
+              },
+              "sugestao": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "item_check",
+              "status"
+            ]
+          }
+        }
+      },
+      "required": [
+        "checklist_out_path"
+      ]
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "log_file": {
+          "type": "string",
+          "default": "logs/compliance.log"
+        },
+        "items_checked": {
+          "type": "integer"
+        },
+        "items_failed": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

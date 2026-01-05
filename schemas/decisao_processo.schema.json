@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/decisao_processo.schema.json",
+  "title": "decisao_processo — v2 (1:1)",
+  "description": "Extração 1:1 de decisão/sentença/acórdão (conforme o documento). Conteúdo literal, com âncoras por bloco e, principalmente, no dispositivo.",
+  "type": "object",
+  "required": ["document_type"],
+  "properties": {
+    "document_type": { "const": "decisao_processo" },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "decision_type": {
+      "$ref": "#/$defs/AnchoredDecisionType",
+      "description": "Tipo de pronunciamento, se explícito (ex.: decisão, sentença, acórdão)."
+    },
+
+    "decision_date": { "$ref": "#/$defs/AnchoredDate" },
+
+    "decisor": {
+      "$ref": "#/$defs/Decisor",
+      "description": "Identificação do decisor/órgão julgador, se constar."
+    },
+
+    "relatorio": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Trechos do relatório, se constarem."
+    },
+
+    "fundamentacao": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Trechos da fundamentação, se constarem."
+    },
+
+    "dispositivo": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DispositivoItem" },
+      "description": "Dispositivo (itens literais). Deve ser o foco de ancoragem."
+    },
+
+    "outcome": {
+      "$ref": "#/$defs/Outcome",
+      "description": "Resultado somente quando explícito (deferiu/indeferiu etc.)."
+    },
+
+    "determinacoes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Determinações específicas (ex.: intimações, prazos) quando explícitas."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" },
+      "description": "Âncoras gerais (opcional). Preferir âncoras por itens."
+    }
+  },
+
+  "anyOf": [
+    { "required": ["dispositivo"] },
+    { "required": ["outcome"] },
+    { "required": ["decision_date"] },
+    { "required": ["decisor"] },
+    { "required": ["fundamentacao"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredTextItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 7000,
+          "description": "Trecho literal relevante (não resumir; pode ser parágrafo curto)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'Relatório', 'Fundamentação')."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDecisionType": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "enum": ["decisao", "sentenca", "acordao", "despacho", "outro"],
+          "description": "Tipo explícito do documento."
+        },
+        "value_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal do tipo, se necessário."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Decisor": {
+      "type": "object",
+      "required": ["anchors"],
+      "properties": {
+        "name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Nome do juiz/desembargador/ministro, se constar."
+        },
+        "role": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Cargo/função literal (ex.: 'Juiz de Direito', 'Relator'), se constar."
+        },
+        "orgao_julgador": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Órgão julgador, se constar (ex.: Câmara/Turma)."
+        },
+        "tribunal": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Tribunal, se constar."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "anyOf": [
+        { "required": ["name"] },
+        { "required": ["orgao_julgador"] },
+        { "required": ["tribunal"] }
+      ],
+      "unevaluatedProperties": false
+    },
+
+    "DispositivoItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000,
+          "description": "Texto literal do dispositivo (item)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'I', 'a)', 'DISPOSITIVO')."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Outcome": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/DecisionOutcome" },
+        "value_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal do resultado, quando necessário."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

@@ -1,0 +1,804 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/escritura_hipotecaria.schema.json",
+  "title": "Escritura Hipotecária",
+  "type": "object",
+  "$defs": {
+    "Fonte": {
+      "title": "Fonte",
+      "description": "Estrutura padronizada para ancorar a prova no documento.",
+      "type": "object",
+      "properties": {
+        "arquivo_md": {
+          "title": "Arquivo Markdown",
+          "description": "Nome do arquivo Markdown de origem.",
+          "type": "string"
+        },
+        "fls": {
+          "title": "Folhas dos autos",
+          "description": "Número ou intervalo de folhas dos autos.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rotulo_documento": {
+          "title": "Rótulo do documento",
+          "description": "Identificação amigável do documento.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ancora": {
+          "title": "Âncora",
+          "description": "Marcador de página/âncora no Markdown (ex.: [[PÁGINA 2]]).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "arquivo_md"
+      ]
+    },
+    "RepresentanteEmpresa": {
+      "title": "Representante da Empresa",
+      "type": "object",
+      "properties": {
+        "nome": {
+          "type": "string",
+          "description": "Nome completo do representante/sócio."
+        },
+        "assinatura_por_procuracao": {
+          "type": "boolean",
+          "description": "Indica se este representante assina por procuração."
+        },
+        "procurador": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Nome do procurador se assinar por procuração, ou false se não houver.",
+          "default": false
+        },
+        "detalhes_da_procuracao": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Detalhes da procuração utilizada, se houver.",
+          "default": null
+        }
+      },
+      "required": [
+        "nome",
+        "assinatura_por_procuracao"
+      ]
+    }
+  },
+  "required": [
+    "tipo_documento",
+    "data_assinatura",
+    "credor",
+    "divida_confessada",
+    "devedores_solidarios",
+    "garantias",
+    "fonte_documento_geral"
+  ],
+  "properties": {
+    "tipo_documento": {
+      "type": "string",
+      "description": "Tipo do documento (ex: 'Escritura Pública de Confissão de Dívidas com Garantias Hipotecárias')."
+    },
+    "data_assinatura": {
+      "type": "string",
+      "description": "Data de assinatura/lavratura da escritura."
+    },
+    "credor": {
+      "type": "object",
+      "description": "Credor (instituição financeira).",
+      "properties": {
+        "nome": {
+          "type": "string",
+          "description": "Razão social do credor."
+        },
+        "cnpj": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "CNPJ do credor.",
+          "default": null
+        },
+        "endereco": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Endereço do credor.",
+          "default": null
+        },
+        "representante": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Representante do credor.",
+          "properties": {
+            "nome": {
+              "type": "string"
+            },
+            "qualificacao": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "rg": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "cpf": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "endereco": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "fonte": {
+              "description": "Localização da informação do representante.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Fonte"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "nome"
+          ],
+          "default": null
+        },
+        "fonte": {
+          "description": "Localização da informação do credor.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fonte"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "nome"
+      ]
+    },
+    "divida_confessada": {
+      "type": "object",
+      "description": "Detalhes da dívida confessada.",
+      "properties": {
+        "valor": {
+          "type": "string",
+          "description": "Valor da dívida confessada."
+        },
+        "data_posicao": {
+          "type": "string",
+          "description": "Data da posição do valor."
+        },
+        "operacao_original": {
+          "type": "object",
+          "description": "Operação de crédito original.",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "description": "Tipo da operação."
+            },
+            "numero": {
+              "type": "string",
+              "description": "Número do contrato/operação."
+            },
+            "data_celebracao": {
+              "type": "string",
+              "description": "Data de celebração do contrato original."
+            },
+            "limite": {
+              "type": "string",
+              "description": "Limite de crédito estabelecido."
+            },
+            "vencimento": {
+              "type": "string",
+              "description": "Data de vencimento original."
+            },
+            "garantia_original": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Garantia original da operação.",
+              "default": null
+            },
+            "fonte": {
+              "description": "Localização da informação da operação.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Fonte"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "tipo",
+            "numero",
+            "data_celebracao",
+            "limite",
+            "vencimento"
+          ]
+        },
+        "forma_pagamento": {
+          "type": "object",
+          "description": "Forma de pagamento estabelecida.",
+          "properties": {
+            "valor_total_composicao": {
+              "type": "string",
+              "description": "Valor total da composição."
+            },
+            "data_posicao_composicao": {
+              "type": "string",
+              "description": "Data da posição da composição."
+            },
+            "pagamento_a_vista": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Valor do pagamento à vista.",
+              "default": null
+            },
+            "valor_remanescente": {
+              "type": "string",
+              "description": "Valor remanescente a pagar."
+            },
+            "numero_prestacoes": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Número de prestações.",
+              "default": null
+            },
+            "primeiro_vencimento": {
+              "type": "string",
+              "description": "Data do primeiro vencimento."
+            },
+            "ultimo_vencimento": {
+              "type": "string",
+              "description": "Data do último vencimento."
+            },
+            "fonte": {
+              "description": "Localização da informação da forma de pagamento.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Fonte"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "valor_total_composicao",
+            "data_posicao_composicao",
+            "valor_remanescente",
+            "primeiro_vencimento",
+            "ultimo_vencimento"
+          ]
+        },
+        "encargos_financeiros": {
+          "type": "object",
+          "description": "Encargos financeiros aplicados.",
+          "properties": {
+            "indice_basico": {
+              "type": "string",
+              "description": "Índice básico de correção."
+            },
+            "taxa_adicional_mensal": {
+              "type": "string",
+              "description": "Taxa adicional mensal."
+            },
+            "taxa_adicional_anual": {
+              "type": "string",
+              "description": "Taxa adicional anual."
+            },
+            "fonte": {
+              "description": "Localização da informação dos encargos.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Fonte"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "indice_basico",
+            "taxa_adicional_mensal",
+            "taxa_adicional_anual"
+          ]
+        },
+        "fonte": {
+          "description": "Localização geral da informação da dívida.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fonte"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "valor",
+        "data_posicao",
+        "operacao_original",
+        "forma_pagamento",
+        "encargos_financeiros"
+      ]
+    },
+    "devedores_solidarios": {
+      "type": "array",
+      "description": "Lista de devedores solidários (pessoas físicas).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome completo do devedor."
+          },
+          "qualificacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Qualificação completa.",
+            "default": null
+          },
+          "rg": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Documento de identidade.",
+            "default": null
+          },
+          "cpf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CPF.",
+            "default": null
+          },
+          "endereco": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Endereço completo.",
+            "default": null
+          },
+          "estado_civil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Estado civil específico.",
+            "default": null
+          },
+          "representado_por": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nome do representante legal.",
+            "default": null
+          },
+          "fonte": {
+            "description": "Localização da informação do devedor.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Fonte"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "nome"
+        ]
+      }
+    },
+    "interveniente_garante": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Empresa que garante a dívida como interveniente.",
+      "properties": {
+        "nome": {
+          "type": "string",
+          "description": "Razão social da empresa."
+        },
+        "cnpj": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "CNPJ da empresa.",
+          "default": null
+        },
+        "registro_jucesp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Registro na Junta Comercial.",
+          "default": null
+        },
+        "endereco": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Endereço da empresa.",
+          "default": null
+        },
+        "comparece_na_qualidade_de": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Qualidade em que comparece.",
+          "default": "interveniente garante"
+        },
+        "representantes": {
+          "type": "array",
+          "description": "Lista de representantes/sócios que assinam pela empresa.",
+          "items": {
+            "$ref": "#/$defs/RepresentanteEmpresa"
+          },
+          "default": []
+        },
+        "representada_por_socios": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Descrição textual dos sócios representantes.",
+          "default": null
+        },
+        "fonte": {
+          "description": "Localização da informação do interveniente.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fonte"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "default": null
+    },
+    "garantias": {
+      "type": "array",
+      "description": "Lista de garantias oferecidas.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo da garantia.",
+            "enum": [
+              "Hipotecária",
+              "Cheques Custodiados",
+              "Fiança",
+              "Outras"
+            ]
+          },
+          "grau": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Grau da hipoteca (ex: 'TERCEIRO GRAU').",
+            "default": null
+          },
+          "descricao": {
+            "type": "string",
+            "description": "Descrição detalhada da garantia."
+          },
+          "valor_venal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor venal do bem dado em garantia.",
+            "default": null
+          },
+          "cadastro_municipal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cadastro municipal do imóvel.",
+            "default": null
+          },
+          "matricula": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Número da matrícula do imóvel.",
+            "default": null
+          },
+          "registro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Registro no cartório de imóveis.",
+            "default": null
+          },
+          "interveniente": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Indica se a hipoteca pertence ao interveniente garante.",
+            "default": null
+          },
+          "hipoteca_anterior": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Informações sobre hipoteca anterior existente.",
+            "properties": {
+              "credor": {
+                "type": "string"
+              },
+              "cedula_credito": {
+                "type": "string"
+              },
+              "valor": {
+                "type": "string"
+              },
+              "data_emissao": {
+                "type": "string"
+              },
+              "devedor": {
+                "type": "string"
+              },
+              "vencimento": {
+                "type": "string"
+              },
+              "registro": {
+                "type": "string"
+              }
+            },
+            "default": null
+          },
+          "percentual_cobertura": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Percentual de cobertura para cheques custodiados.",
+            "default": null
+          },
+          "fonte": {
+            "description": "Localização da informação da garantia.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Fonte"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "tipo",
+          "descricao"
+        ]
+      }
+    },
+    "foro_eleito": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Foro eleito para dirimir eventuais controvérsias.",
+      "default": null
+    },
+    "tabeliao_designado": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Tabelião que lavrou a escritura.",
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "cpf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "fonte": {
+          "description": "Localização da informação do tabelião.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fonte"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "default": null
+    },
+    "custas_emolumentos": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Custas e emolumentos da escritura.",
+      "properties": {
+        "serventuario": {
+          "type": "string"
+        },
+        "estado": {
+          "type": "string"
+        },
+        "reg_civil": {
+          "type": "string"
+        },
+        "ipesp": {
+          "type": "string"
+        },
+        "stas_casas": {
+          "type": "string"
+        },
+        "total": {
+          "type": "string"
+        },
+        "fonte": {
+          "description": "Localização da informação das custas.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fonte"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "default": null
+    },
+    "fonte_documento_geral": {
+      "description": "Localização geral do documento.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Fonte"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "emitente_devedor": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Devedor principal / emitente da obrigação (especialmente em contratos bancários/cédulas).",
+      "default": null,
+      "properties": {
+        "nome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Nome/Razão social do emitente/devedor."
+        },
+        "cnpj": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "CNPJ do emitente/devedor, se houver."
+        },
+        "endereco": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Endereço do emitente/devedor, se houver."
+        },
+        "qualidade": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Rótulo textual quando constar (ex.: emitente, devedor principal, tomador)."
+        },
+        "representantes": {
+          "type": "array",
+          "description": "Lista de representantes/sócios que assinam pela empresa emitente, quando indicado.",
+          "items": {
+            "$ref": "#/$defs/RepresentanteEmpresa"
+          },
+          "default": []
+        },
+        "representada_por_socios": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Trecho literal quando o documento listar os nomes e indicar 'retro qualificados' ou similar."
+        },
+        "fonte": {
+          "$ref": "#/$defs/Fonte"
+        }
+      }
+    }
+  },
+  "description": ""
+}

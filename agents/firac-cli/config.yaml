@@ -1,0 +1,21 @@
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 8192  # FIRAC pode precisar de respostas maiores
+
+rag:
+  enabled: true
+  stores:
+    - evidencias_caso     # fatos, documentos, cadeia de obrigações
+    - base_normativa      # leis, códigos, doutrina
+    - jurisprudencia      # decisões usadas como insumo preliminar
+
+paths:
+  prompt_file: prompts/firac.md
+  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+  input_collector_json: outputs/collector_out.json
+  input_contexto_societario: inputs/contexto/contexto_societario.json
+  input_hipotese_juridica: inputs/contexto/hipotese_juridica.md
+  template_relatorio: templates/relatorio_base.md
+  output_relatorio_firac: outputs/relatorio_firac.md

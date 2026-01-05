@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/mandato_processo.consolidated.schema.json",
+  "title": "mandato_processo — v2 (consolidated N:1)",
+  "description": "Consolidação N:1 de instrumentos de mandato (mandato_processo) para o mesmo caso/lote. Preserva itens literais e une âncoras; registra conflitos.",
+  "type": "object",
+  "required": ["document_type", "mode", "sources", "merge_meta", "conflicts"],
+  "properties": {
+    "document_type": { "const": "mandato_processo" },
+    "mode": { "const": "consolidated" },
+
+    "case_id": {
+      "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+      "description": "Identificador lógico do lote/caso no pipeline."
+    },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/SourceRefInput" },
+      "description": "Fontes 1:1 usadas na consolidação."
+    },
+
+    "merge_meta": { "$ref": "#/$defs/MergeMeta" },
+
+    "conflicts": {
+      "type": "array",
+      "items": { "$ref": "defs/common.schema.json#/$defs/ConflictRecord" },
+      "description": "Conflitos detectados (pode ser vazio)."
+    },
+
+    "mandante": { "$ref": "#/$defs/Person" },
+
+    "mandatario": { "$ref": "#/$defs/Person" },
+
+    "escopo": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Cláusulas de escopo/objeto do mandato (itens literais)."
+    },
+
+    "poderes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Power" },
+      "description": "Poderes conferidos no mandato (itens literais)."
+    },
+
+    "data": { "$ref": "#/$defs/AnchoredDate" },
+
+    "local": { "$ref": "#/$defs/AnchoredString" },
+
+    "assinantes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Person" }
+    },
+
+    "restricoes_ou_limitacoes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" }
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" }
+    }
+  },
+
+  "anyOf": [
+    { "required": ["case_id"] },
+    { "required": ["process_number"] },
+    { "required": ["poderes"] },
+    { "required": ["escopo"] },
+    { "required": ["mandante"] },
+    { "required": ["mandatario"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": { "$ref": "defs/common.schema.json#/$defs/Anchor" },
+
+    "SourceRefInput": {
+      "allOf": [
+        { "$ref": "defs/common.schema.json#/$defs/SourceRef" },
+        {
+          "properties": {
+            "document_type": { "const": "mandato_processo" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+
+    "MergeMeta": {
+      "type": "object",
+      "required": ["merge_strategy", "merged_at", "input_count"],
+      "properties": {
+        "merge_strategy": { "const": "llm_merge_assisted_v1" },
+        "merged_at": { "$ref": "defs/common.schema.json#/$defs/ISODateTime" },
+        "input_count": { "type": "integer", "minimum": 0 },
+        "ignored_inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/IgnoredInput" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "IgnoredInput": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "source_id": { "$ref": "defs/common.schema.json#/$defs/UUID" },
+        "md_filename": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "reason": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredTextItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 6000 },
+        "label": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Person": {
+      "type": "object",
+      "required": ["name", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "qualification": { "type": "string", "maxLength": 4000 },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Power": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "label": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "power_type": {
+          "type": "string",
+          "enum": ["gerais", "especiais", "outro"],
+          "description": "Classificação opcional; só usar se explícito."
+        },
+        "power_type_raw": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

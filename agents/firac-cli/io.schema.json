@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema IO do 'firac-cli'",
+  "description": "Define o contrato de dados para as entradas e saídas do agente 'firac-cli'",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "collector_out_path": {
+          "type": "string",
+          "description": "Caminho para a coleta de fatos",
+          "default": "../../outputs/collector_out.md"
+        },
+        "relatorio_base_path": {
+          "type": "string",
+          "description": "Caminho para o template do relatório base",
+          "default": "../../templates/relatorio_base.md"
+        }
+      },
+      "required": [
+        "collector_out_path"
+      ]
+    },
+    "outputs": {
+      "description": "Define a saída do relatório FIRAC",
+      "type": "object",
+      "properties": {
+        "relatorio_firac_path": {
+          "type": "string",
+          "description": "Caminho para o Markdown de saída do FIRAC.",
+          "default": "../../outputs/relatorio_firac.md"
+        }
+      },
+      "required": [
+        "relatorio_firac_path"
+      ]
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "log_file": {
+          "type": "string",
+          "default": "logs/firac.log"
+        },
+        "questions_identified": {
+          "type": "integer"
+        },
+        "matrix_rows_generated": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/procuracao.schema.json",
+  "title": "Procuração",
+  "type": "object",
+      "properties": {
+        "arquivo_md": {
+          "title": "Arquivo Markdown",
+          "description": "Nome do arquivo Markdown de origem relacionado a este registro (por exemplo, 'procuracao_outorgante_X.md').",
+          "type": "string"
+        },
+        "fls": {
+          "title": "Folhas dos autos",
+          "description": "Número ou intervalo de folhas dos autos em que a informação aparece (por exemplo, '12-15'). Use null quando o documento for juntada sem numeração de folhas dos autos.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rotulo_documento": {
+          "title": "Rótulo do documento",
+          "description": "Identificação amigável do documento, tal como será citada na petição (por exemplo, 'Doc. 07 – Procuração outorgada por JKMG em 10/05/2001').",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "arquivo_md"
+      ]
+    }
+  },
+  "title": "Procuracao",
+  "type": "object",
+  "properties": {
+    "tipo_documento": {
+      "title": "Tipo Documento",
+      "description": "Tipo de documento",
+      "type": "string",
+      "default": "Procuração"
+    },
+    "data_outorga": {
+      "title": "Data Outorga",
+      "type": "string"
+    },
+    "outorgantes": {
+      "title": "Outorgantes",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outorgados": {
+      "title": "Outorgados",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "transfere_poderes_pj": {
+      "title": "Transfere Poderes PJ",
+      "description": "Tri-estado. Indica se o texto da procuração transfere, de forma explícita, poderes para representar pessoa jurídica (empresa) das outorgantes ou exercer poderes de gerência/administrador em seu nome. Use: true quando o texto menciona claramente poderes em nome de empresa(s) (ex.: \"representar a sociedade X\", \"na qualidade de sócio-gerente da empresa...\"); false quando o texto afasta ou restringe expressamente esses poderes; null quando o texto é omisso ou não permite concluir com segurança.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "transfere_poderes_pf": {
+      "title": "Transfere Poderes PF",
+      "description": "Tri-estado. Indica se o texto da procuração transfere, de forma explícita, poderes para a prática de atos em nome das pessoas físicas outorgantes (vida civil, contratos, bancos, confissão de dívida etc.). Use: true quando há concessão clara desses poderes; false quando o texto restringe ou exclui explicitamente tais poderes; null quando o texto é omisso ou não permite conclusão segura.",
+         "type": [
+            "boolean",
+            "null"
+    ]
+    },
+    "descricao_poderes": {
+      "title": "Descricao Poderes",
+      "description": "Resumo geral dos poderes transferidos.",
+      "type": "string"
+    },
+    "poderes_especificos": {
+      "title": "Poderes Especificos",
+      "description": "Lista de poderes específicos/especiais citados.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fonte": {
+      "description": "Localização principal do documento (arquivo Markdown, fls dos autos e/ou rótulo de juntada).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Fonte"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "data_outorga",
+    "outorgantes",
+    "outorgados",
+    "transfere_poderes_pj",
+    "transfere_poderes_pf",
+    "descricao_poderes"
+  ]
+}

@@ -1,0 +1,47 @@
+runtime:
+  provider: gemini
+  mode: google.genai
+  model: gemini-2.5-flash
+  temperature: 0.0
+  top_p: 0.95
+  max_output_tokens: 8192
+
+paths:
+  # Prompt base do reconciler
+  prompt_file: "prompts/reconciler.md"
+
+skills_map:
+  # Skill genérica (núcleo)
+  core: "agents/reconciler-cli/skills/SKILL.core.md"
+
+  # Skill específica para cadeia de obrigações em nulidade de garantia hipotecária
+  cadeia_obrigacoes_nulidade_hipoteca: "agents/reconciler-cli/skills/SKILL.cadeia_obrigacoes_nulidade_hipoteca.md"
+
+jobs:
+  # Único job: cadeia de obrigações, com escolha dinâmica de skill
+  cadeia_obrigacoes:
+  - id: "cadeia_obrigacoes"
+    name: "Reconciliação da cadeia de obrigações"
+
+    # Tipo de processo alvo para usar a skill específica
+    process_type_target: "ACAO_NULIDADE_GARANTIA_HIPOTECARIA"
+
+    # Skill padrão (fallback) quando o tipo de processo NÃO bater com o alvo
+    skill_key_default: "core"
+
+    # Skill usada quando input.contexto_caso.tipo_processo == process_type_target
+    skill_key_target: "cadeia_obrigacoes_nulidade_hipoteca"
+
+    # Schema de saída do reconciler (seu io.schema.json)
+    schema_file: "schemas/cadeia_obrigacoes.schema.json"
+
+    # Entradas principais
+    monetary_dir: "outputs/cad-obr/02_monetary"
+    juntada_dir: "outputs/juntada"
+    processo_file: "outputs/processo/collector_out_processo_consolidado.json"
+    context_file: "data/context.json"
+    relacoes_file: "data/contexto_relacoes.json"
+
+    # Saída
+    output_dir: "outputs/reconciler"
+    output_filename: "reconciler_out_relacoes_criticas.json"

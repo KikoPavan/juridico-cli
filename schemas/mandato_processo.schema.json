@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/mandato_processo.schema.json",
+  "title": "mandato_processo — v2 (1:1)",
+  "description": "Extração 1:1 de instrumento de mandato (quando aplicável). Conteúdo literal, com âncoras em partes/mandatários e cláusulas de poderes/escopo.",
+  "type": "object",
+  "required": ["document_type"],
+  "properties": {
+    "document_type": { "const": "mandato_processo" },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "mandante": {
+      "$ref": "#/$defs/Person",
+      "description": "Quem confere poderes/atribuições, se constar."
+    },
+
+    "mandatario": {
+      "$ref": "#/$defs/Person",
+      "description": "Quem recebe poderes/atribuições, se constar."
+    },
+
+    "escopo": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Cláusulas de escopo/objeto do mandato (itens literais)."
+    },
+
+    "poderes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Power" },
+      "description": "Poderes conferidos no mandato (itens literais)."
+    },
+
+    "data": { "$ref": "#/$defs/AnchoredDate" },
+
+    "local": { "$ref": "#/$defs/AnchoredString" },
+
+    "assinantes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Person" },
+      "description": "Assinantes, quando constar explicitamente."
+    },
+
+    "restricoes_ou_limitacoes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Restrições/limitações/observações, se constarem."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" }
+    }
+  },
+
+  "anyOf": [
+    { "required": ["poderes"] },
+    { "required": ["escopo"] },
+    { "required": ["mandante"] },
+    { "required": ["mandatario"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredTextItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000,
+          "description": "Trecho literal relevante (não resumir; pode ser parágrafo curto)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Person": {
+      "type": "object",
+      "required": ["name", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "qualification": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Power": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "power_type": {
+          "type": "string",
+          "enum": ["gerais", "especiais", "outro"],
+          "description": "Classificação opcional; só usar se explícito."
+        },
+        "power_type_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

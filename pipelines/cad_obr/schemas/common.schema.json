@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/common.schema.json",
+  "title": "CAD-OBR Common Types (v1)",
+  "type": "object",
+  "$defs": {
+    "DateISO": {
+      "type": "string",
+      "description": "Data no formato ISO (YYYY-MM-DD).",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "MoneyCentavos": {
+      "type": "integer",
+      "description": "Valor monetário em centavos (inteiro >= 0).",
+      "minimum": 0
+    },
+    "PartyId": {
+      "type": "string",
+      "description": "Identificador determinístico de parte (cpf/cnpj/hash de nome).",
+      "pattern": "^(cpf:\\d{11}|cnpj:\\d{14}|nome:[0-9a-f]{12})$"
+    },
+    "PropertyId": {
+      "type": "string",
+      "description": "Identificador determinístico de matrícula.",
+      "pattern": "^matricula:\\d+$"
+    },
+    "OperationId": {
+      "type": "string",
+      "description": "Número de operação/documento em digits-only.",
+      "pattern": "^\\d{5,20}$"
+    },
+    "RegistroRef": {
+      "type": "string",
+      "description": "Referência registral (R./Av.). Ex.: R.16, AV.7",
+      "pattern": "^(R|AV)\\.\\d+.*$"
+    },
+    "OnusId": {
+      "type": "string",
+      "description": "ID do ônus no formato <property_id>#<registro_ref>.",
+      "pattern": "^matricula:\\d+#(R|AV)\\.\\d+.*$"
+    },
+    "AnchorRef": {
+      "type": "object",
+      "description": "Referência de prova/rastreabilidade (arquivo + âncora).",
+      "additionalProperties": false,
+      "required": ["source_path"],
+      "properties": {
+        "source_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ancora": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trecho": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "AnchorsArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchorRef" }
+    },
+    "DocTipo": {
+      "type": "string",
+      "enum": [
+        "ESCRITURA_IMOVEL",
+        "ESCRITURA_HIPOTECARIA",
+        "CONTRATO_BANCARIO",
+        "ADITIVO",
+        "CONTRATO_SOCIAL"
+      ]
+    },
+    "Stage": {
+      "type": "string",
+      "enum": ["02_normalize", "03_monetary"]
+    },
+    "OnusStatus": {
+      "type": "string",
+      "enum": ["ATIVA", "BAIXADA", "INDETERMINADA"]
+    },
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "ONUS_REGISTRO",
+        "ONUS_BAIXA",
+        "VENDA",
+        "ANUENCIA_BANCO",
+        "AVERBACAO",
+        "OUTRO"
+      ]
+    },
+    "MatchLevel": {
+      "type": "string",
+      "enum": ["A", "B", "C"]
+    },
+    "LinkEntityType": {
+      "type": "string",
+      "enum": ["DOC", "ONUS", "OPERATION", "PARTY", "PROPERTY", "EVENT"]
+    }
+  },
+  "additionalProperties": false,
+  "properties": {}
+}

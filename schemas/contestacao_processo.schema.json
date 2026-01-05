@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/contestacao_processo.schema.json",
+  "title": "contestacao_processo — v2 (1:1)",
+  "description": "Extração 1:1 de contestação. Conteúdo literal, com âncoras por bloco (preliminares/mérito/pedidos finais) e por itens relevantes.",
+  "type": "object",
+  "required": ["document_type"],
+  "properties": {
+    "document_type": { "const": "contestacao_processo" },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "parties": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PartySummary" },
+      "description": "Partes conforme constarem na contestação."
+    },
+
+    "representations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Representation" },
+      "description": "Advogados/representantes conforme constarem na contestação."
+    },
+
+    "contestacao_identification": {
+      "$ref": "#/$defs/AnchoredString",
+      "description": "Identificação textual da peça (ex.: 'CONTESTAÇÃO')."
+    },
+
+    "preliminares": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Argumento" },
+      "description": "Preliminares (quando existirem)."
+    },
+
+    "merito": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Argumento" },
+      "description": "Argumentos de mérito/impugnações (quando existirem)."
+    },
+
+    "provas_e_requerimentos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnchoredTextItem" },
+      "description": "Provas/requerimentos e demais pedidos acessórios."
+    },
+
+    "pedidos_finais": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PedidoFinal" },
+      "description": "Pedidos finais formulados na contestação."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" },
+      "description": "Âncoras gerais (opcional). Preferir âncoras por itens."
+    }
+  },
+
+  "anyOf": [
+    { "required": ["preliminares"] },
+    { "required": ["merito"] },
+    { "required": ["pedidos_finais"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": {
+      "$ref": "defs/common.schema.json#/$defs/Anchor"
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredTextItem": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000,
+          "description": "Trecho literal relevante (não resumir; pode ser parágrafo curto)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'Das Preliminares', 'Do Mérito', 'Provas')."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Argumento": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000,
+          "description": "Texto literal do argumento/preliminar/impugnação (sem síntese criativa)."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'I - Inépcia da inicial', 'Prescrição')."
+        },
+        "argument_key": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Chave opcional para dedupe/merge (somente se explícita/estável; não inferir)."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PedidoFinal": {
+      "type": "object",
+      "required": ["text", "anchors"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "Texto literal do pedido final."
+        },
+        "label": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Rótulo curto opcional (ex.: 'a)', 'b)', 'Improcedência')."
+        },
+        "pedido_key": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Chave opcional para dedupe/merge (somente se explícita/estável; não inferir)."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PartySummary": {
+      "type": "object",
+      "required": ["name", "role", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "role": { "$ref": "defs/common.schema.json#/$defs/PartyRole" },
+        "role_raw": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+          "description": "Texto literal do papel, quando necessário."
+        },
+        "qualification": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Qualificação literal se constar."
+        },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Lawyer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "oab": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Representation": {
+      "type": "object",
+      "required": ["represented_party_name", "lawyers", "anchors"],
+      "properties": {
+        "represented_party_name": {
+          "$ref": "defs/common.schema.json#/$defs/NonEmptyString"
+        },
+        "lawyers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Lawyer" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

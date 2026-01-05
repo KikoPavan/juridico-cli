@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema IO do 'petition-cli'",
+  "description": "Define o contrato de dados para as entradas e saídas do agente 'petition-cli'",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "firac_report_path": {
+          "type": "string",
+          "description": "Caminho para o relatório FIRAC",
+          "default": "../../outputs/relatorio_firac.md"
+        },
+        "jurisprudencia_path": {
+          "type": "string",
+          "description": "Caminho para os precedentes",
+          "default": "../../outputs/jurisprudencia.md"
+        },
+        "peticao_template_path": {
+          "type": "string",
+          "description": "Caminho para o template da petição",
+          "default": "../../templates/peticao_esqueleto.md"
+        }
+      },
+      "required": [
+        "firac_report_path",
+        "jurisprudencia_path",
+        "peticao_template_path"
+      ]
+    },
+    "outputs": {
+      "description": "Define a saída da petição-esqueleto",
+      "type": "object",
+      "properties": {
+        "peticao_esqueleto_out_path": {
+          "type": "string",
+          "description": "Caminho para o Markdown de saída da petição.",
+          "default": "../../outputs/peticao_esqueleto.md"
+        }
+      },
+      "required": [
+        "peticao_esqueleto_out_path"
+      ]
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "log_file": {
+          "type": "string",
+          "default": "logs/petition.log"
+        },
+        "placeholders_filled": {
+          "type": "integer"
+        },
+        "requests_generated": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

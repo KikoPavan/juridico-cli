@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema IO do 'case-law-cli'",
+  "description": "Define o contrato de dados para as entradas e saídas do agente 'case-law-cli'",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "firac_report_path": {
+          "type": "string",
+          "description": "Caminho para o relatório FIRAC (fonte das teses).",
+          "default": "../../outputs/relatorio_firac.md"
+        },
+        "theses": {
+          "type": "array",
+          "description": "Teses nucleares extraídas do FIRAC para busca.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "firac_report_path",
+        "theses"
+      ]
+    },
+    "outputs": {
+      "description": "Define a saída estruturada (MD) para os precedentes",
+      "type": "object",
+      "properties": {
+        "jurisprudencia_out_path": {
+          "type": "string",
+          "description": "Caminho para o Markdown de saída com os precedentes.",
+          "default": "../../outputs/jurisprudencia.md"
+        },
+        "precedentes": {
+          "type": "array",
+          "description": "Lista estruturada de precedentes encontrados.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tese_associada": {
+                "type": "string"
+              },
+              "citacao_padrao": {
+                "type": "string",
+                "description": "Formato: {TRIBUNAL} – {Classe/Nº} – Rel. {Nome} – Julg. {DD/MM/AAAA} – {Link/ID}"
+              },
+              "adesao": {
+                "type": "string",
+                "enum": [
+                  "alta",
+                  "média",
+                  "baixa"
+                ]
+              },
+              "distincao": {
+                "type": "string"
+              },
+              "sintese": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "tese_associada",
+              "citacao_padrao",
+              "adesao"
+            ]
+          }
+        }
+      },
+      "required": [
+        "jurisprudencia_out_path"
+      ]
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "log_file": {
+          "type": "string",
+          "default": "logs/case-law.log"
+        },
+        "theses_count": {
+          "type": "integer"
+        },
+        "precedents_found": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/documentos.schema.json",
+  "title": "CAD-OBR Documentos (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["doc_id", "tipo_documento", "source_path", "origin_stage"],
+  "properties": {
+    "doc_id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "ID determinístico do documento (ou UUID)."
+    },
+    "tipo_documento": {
+      "$ref": "common.schema.json#/$defs/DocTipo"
+    },
+    "source_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Caminho do JSON de origem (02_normalize ou 03_monetary)."
+    },
+    "origin_stage": {
+      "$ref": "common.schema.json#/$defs/Stage"
+    },
+
+    "operation_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/OperationId" },
+        { "type": "null" }
+      ]
+    },
+
+    "property_ids": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/PropertyId" }
+    },
+    "party_ids": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/PartyId" }
+    },
+
+    "datas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data_assinatura": {
+          "anyOf": [
+            { "$ref": "common.schema.json#/$defs/DateISO" },
+            { "type": "null" }
+          ]
+        },
+        "data_registro": {
+          "anyOf": [
+            { "$ref": "common.schema.json#/$defs/DateISO" },
+            { "type": "null" }
+          ]
+        },
+        "data_efetiva": {
+          "anyOf": [
+            { "$ref": "common.schema.json#/$defs/DateISO" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+
+    "anchors": {
+      "$ref": "common.schema.json#/$defs/AnchorsArray"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+    "cSpell.words": [
+        "basse",
+        "Especificos",
+        "firac",
+        "gemini",
+        "genai",
+        "Julg",
+        "peticao",
+        "reqdo",
+        "reqte"
+    ],
+    "python-envs.pythonProjects": [],
+    "python.defaultInterpreterPath": "/home/kiko/devops/juridico-cli/.venv/bin/python",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": false,
+    "gemini-cli.debug.logging.enabled": true
+
+}

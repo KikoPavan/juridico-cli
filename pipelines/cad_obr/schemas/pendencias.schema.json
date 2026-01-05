@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/pendencias.schema.json",
+  "title": "CAD-OBR Pendencias (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pendencia_id", "entity_type", "entity_id", "motivo", "evidencias"],
+  "properties": {
+    "pendencia_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["ONUS", "DOC", "OPERATION", "PROPERTY", "PARTY", "EVENT"]
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "motivo": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 2000
+    },
+    "campos_faltantes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "candidatos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_type", "candidate_id", "match_level", "reason"],
+        "properties": {
+          "candidate_type": {
+            "type": "string",
+            "enum": ["ONUS", "DOC", "OPERATION", "PROPERTY", "PARTY", "EVENT"]
+          },
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "match_level": {
+            "$ref": "common.schema.json#/$defs/MatchLevel"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "evidencias": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/AnchorRef" }
+    }
+  }
+}

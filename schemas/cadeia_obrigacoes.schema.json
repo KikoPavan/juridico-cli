@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/cadeia_obrigacoes.schema.json",
+  "title": "Cadeia de Obrigações",
+  "type": "object",
+  "description": "Grafo de obrigações reconstruído a partir de múltiplas escrituras.",
+  "properties": {
+    "metadados_execucao": {
+      "type": "object",
+      "properties": {
+        "data_geracao": { "type": "string" },
+        "total_obrigacoes_detectadas": { "type": "integer" },
+        "total_alertas_risco": { "type": "integer" }
+      }
+    },
+    "obrigacoes": {
+      "type": "array",
+      "description": "Lista de obrigações (nós do grafo), identificadas unicamente.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id_obrigacao": { "type": "string", "description": "ID gerado (Hash ou UUID)" },
+          "dados_base": {
+            "type": "object",
+            "properties": {
+              "credor_original": { "type": "string" },
+              "devedor_principal": { "type": "string" },
+              "valor_original": { "type": "number" },
+              "imovel_garantia": { "type": "string", "description": "Matrícula/Cartório normalizados" }
+            }
+          },
+          "status_atual": {
+            "type": "string",
+            "enum": ["ATIVA", "BAIXADA", "NOVADA", "EM_LITIGIO", "INCERTO"]
+          },
+          "linha_tempo": {
+            "type": "array",
+            "description": "Eventos cronológicos afetando esta obrigação (Arestas do grafo).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "data": { "type": "string", "format": "date" },
+                "tipo_evento": { "type": "string", "enum": ["CONSTITUICAO", "ADITIVO", "CESSAO", "NOVACAO", "BAIXA", "REITERACAO"] },
+                "valor_envolvido": { "type": "number" },
+                "documento_fonte_id": { "type": "string" },
+                "justificativa_vinculo": { "type": "string" }
+              }
+            }
+          },
+          "riscos_detectados": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": { "type": "string", "enum": ["BAIXA_SEM_QUITACAO", "RECICLAGEM_GARANTIA", "VALOR_INCOMPATIVEL", "DATA_ANACRONICA"] },
+                "descricao": { "type": "string" },
+                "severidade": { "type": "string", "enum": ["ALTA", "MEDIA", "BAIXA"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "analise_narrativa": {
+      "type": "string",
+      "description": "Texto explicativo gerado pela IA conectando os pontos."
+    }
+  }
+}

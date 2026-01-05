@@ -1,0 +1,26 @@
+[project]
+name = "juridico-cli"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "markitdown>=0.1.3",
+    "google-genai>=0.3.3",
+    "pdf2image>=1.17.0",
+    "pdfplumber>=0.11.7",
+    "pyyaml>=6.0.3",
+    "python-dotenv>=1.0.0",
+    "pymupdf>=1.26.6",
+    "typer>=0.20.0",
+    "rich>=14.2.0",
+    "jsonschema>=4.25.1",
+]
+# No seu pyproject.toml
+[tool.ruff]
+# Apenas para testar, adicione uma regra básica
+line-length = 88
+[dependency-groups]
+dev = [
+    "types-pyyaml>=6.0.12.20250915",
+]

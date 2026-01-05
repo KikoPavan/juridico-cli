@@ -1,0 +1,21 @@
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 8192
+
+rag:
+  enabled: true
+  stores:
+    - evidencias_caso     # fatos e documentos do caso
+    - base_normativa      # leis e doutrina
+    - jurisprudencia      # acórdãos relevantes
+
+paths:
+  prompt_file: prompts/petition.md
+  input_relatorio_firac: outputs/relatorio_firac.md
+  input_jurisprudencia: outputs/jurisprudencia.md
+  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+  template_peticao: templates/peticao_esqueleto.md
+  template_regras: templates/Regras_para_petição_juridica.md
+  output_peticao: outputs/peticao_esqueleto.md

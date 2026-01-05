@@ -1,0 +1,5 @@
+name = "precedent-finder-ext"
+description = "Busca jurisprudência relevante a partir das teses do FIRAC, usando consulta web. Recebe o prompt via STDIN e os caminhos dos arquivos via argumentos."
+# Comandos corrigidos para aceitar argumentos da CLI
+commands = ["python scripts/precedent_finder.py --firac_file {{.Args.firac_file}} --output_file {{.Args.output_file}} --prompt_stdin"]
+tools = ["google_web_search", "read_file"]

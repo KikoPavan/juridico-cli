@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/imoveis.schema.json",
+  "title": "CAD-OBR Imoveis (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["property_id", "matricula", "docs_origem"],
+  "properties": {
+    "property_id": {
+      "$ref": "common.schema.json#/$defs/PropertyId"
+    },
+    "matricula": {
+      "type": "string",
+      "pattern": "^\\d+$",
+      "minLength": 1,
+      "description": "Número da matrícula (digits-only)."
+    },
+    "cartorio": {
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "docs_origem": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 8 }
+    },
+    "anchors": {
+      "$ref": "common.schema.json#/$defs/AnchorsArray"
+    }
+  }
+}

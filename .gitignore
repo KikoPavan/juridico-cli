@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.pytest_cache/
+# Diretórios
+.venv
+.env
+logs/
+outputs/
+backup/
+data/
+arq-md/
+arq-js/
+docs_iplt/
+docs/

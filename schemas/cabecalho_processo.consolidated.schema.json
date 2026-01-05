@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/cabecalho_processo.consolidated.schema.json",
+  "title": "cabecalho_processo — v2 (consolidated N:1)",
+  "description": "Consolidação N:1 de cabeçalhos/capas (cabecalho_processo) para o mesmo caso/lote. Une âncoras e registra conflitos.",
+  "type": "object",
+  "required": ["document_type", "mode", "sources", "merge_meta", "conflicts"],
+  "properties": {
+    "document_type": { "const": "cabecalho_processo" },
+    "mode": { "const": "consolidated" },
+
+    "case_id": {
+      "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
+      "description": "Identificador lógico do lote/caso no pipeline."
+    },
+
+    "process_number": { "$ref": "#/$defs/AnchoredString" },
+
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/SourceRefInput" },
+      "description": "Fontes 1:1 usadas na consolidação."
+    },
+
+    "merge_meta": { "$ref": "#/$defs/MergeMeta" },
+
+    "conflicts": {
+      "type": "array",
+      "items": { "$ref": "defs/common.schema.json#/$defs/ConflictRecord" },
+      "description": "Conflitos detectados (pode ser vazio)."
+    },
+
+    "court": { "$ref": "#/$defs/AnchoredString" },
+    "comarca": { "$ref": "#/$defs/AnchoredString" },
+    "vara": { "$ref": "#/$defs/AnchoredString" },
+
+    "classe": { "$ref": "#/$defs/AnchoredString" },
+    "assunto": { "$ref": "#/$defs/AnchoredString" },
+
+    "distribution_date": { "$ref": "#/$defs/AnchoredDate" },
+
+    "parties": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PartySummary" },
+      "description": "Partes conforme constarem no cabeçalho/capa."
+    },
+
+    "representations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Representation" },
+      "description": "Advogados/representantes conforme constarem no cabeçalho/capa."
+    },
+
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Anchor" },
+      "description": "Âncoras gerais (opcional). Preferir âncoras por campo/itens."
+    }
+  },
+
+  "anyOf": [
+    { "required": ["case_id"] },
+    { "required": ["process_number"] },
+    { "required": ["classe"] },
+    { "required": ["assunto"] },
+    { "required": ["parties"] }
+  ],
+
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "Anchor": { "$ref": "defs/common.schema.json#/$defs/Anchor" },
+
+    "SourceRefInput": {
+      "allOf": [
+        { "$ref": "defs/common.schema.json#/$defs/SourceRef" },
+        {
+          "properties": {
+            "document_type": { "const": "cabecalho_processo" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+
+    "MergeMeta": {
+      "type": "object",
+      "required": ["merge_strategy", "merged_at", "input_count"],
+      "properties": {
+        "merge_strategy": { "const": "llm_merge_assisted_v1" },
+        "merged_at": { "$ref": "defs/common.schema.json#/$defs/ISODateTime" },
+        "input_count": { "type": "integer", "minimum": 0 },
+        "ignored_inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/IgnoredInput" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "IgnoredInput": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "source_id": { "$ref": "defs/common.schema.json#/$defs/UUID" },
+        "md_filename": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "reason": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredString": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AnchoredDate": {
+      "type": "object",
+      "required": ["value", "anchors"],
+      "properties": {
+        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PartySummary": {
+      "type": "object",
+      "required": ["name", "role", "anchors"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "role": { "$ref": "defs/common.schema.json#/$defs/PartyRole" },
+        "role_raw": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "qualification": { "type": "string", "maxLength": 4000 },
+        "document_ids": {
+          "type": "array",
+          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Lawyer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "oab": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "Representation": {
+      "type": "object",
+      "required": ["represented_party_name", "lawyers", "anchors"],
+      "properties": {
+        "represented_party_name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "lawyers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Lawyer" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

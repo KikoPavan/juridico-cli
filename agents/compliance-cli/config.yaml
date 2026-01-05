@@ -1,0 +1,19 @@
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 8192
+
+rag:
+  enabled: true
+  stores:
+    - evidencias_caso     # valida lastro fático
+    - jurisprudencia      # valida alegações sobre entendimento dominante
+
+paths:
+  prompt_file: prompts/compliance.md
+  input_peticao: outputs/peticao_esqueleto.md
+  input_relatorio_firac: outputs/relatorio_firac.md
+  input_jurisprudencia: outputs/jurisprudencia.md
+  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+  output_relatorio_compliance: outputs/relatorio_compliance.md

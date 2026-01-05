@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/contratos_operacoes.schema.json",
+  "title": "CAD-OBR Contratos/Operacoes (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["operation_id", "tipo_operacao", "docs_origem"],
+  "properties": {
+    "operation_id": {
+      "$ref": "common.schema.json#/$defs/OperationId"
+    },
+
+    "tipo_operacao": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tipo/denominação da operação (ex.: Cédula de Crédito, Contrato Bancário, Aditivo, Hipoteca...)."
+    },
+
+    "data_celebracao": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+    "data_assinatura": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+    "vencimento": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/DateISO" },
+        { "type": "null" }
+      ]
+    },
+
+    "credor_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/PartyId" },
+        { "type": "null" }
+      ]
+    },
+    "emitente_devedor_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/PartyId" },
+        { "type": "null" }
+      ]
+    },
+    "garante_id": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/PartyId" },
+        { "type": "null" }
+      ],
+      "description": "Interveniente/garante principal quando houver."
+    },
+
+    "menciona_TR": {
+      "type": "boolean",
+      "description": "true quando o texto/encargos menciona TR explicitamente."
+    },
+
+    "taxas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tipo_taxa": {
+          "anyOf": [
+            { "type": "string", "enum": ["anual", "mensal", "diaria"] },
+            { "type": "null" }
+          ]
+        },
+        "taxa_percentual_anual": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }]
+        },
+        "taxa_percentual_mensal": {
+          "anyOf": [{ "type": "number" }, { "type": "null" }]
+        }
+      }
+    },
+
+    "valor_base": {
+      "anyOf": [{ "type": "string" }, { "type": "null" }],
+      "description": "String BR sem símbolo (ex.: \"67.250,51\")."
+    },
+    "valor_base_num": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/MoneyCentavos" },
+        { "type": "null" }
+      ]
+    },
+
+    "valor_presente": {
+      "anyOf": [{ "type": "string" }, { "type": "null" }],
+      "description": "String BR sem símbolo (ou null quando não aplicável)."
+    },
+    "valor_presente_num": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/MoneyCentavos" },
+        { "type": "null" }
+      ]
+    },
+
+    "monetary_meta": {
+      "anyOf": [{ "type": "object" }, { "type": "null" }],
+      "description": "Meta de cálculo consolidada quando existir (espelho do _monetary_meta)."
+    },
+
+    "property_ids": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/PropertyId" },
+      "description": "Matrículas vinculadas como garantia, quando identificadas."
+    },
+
+    "docs_origem": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 8 }
+    },
+
+    "anchors": {
+      "$ref": "common.schema.json#/$defs/AnchorsArray"
+    }
+  }
+}

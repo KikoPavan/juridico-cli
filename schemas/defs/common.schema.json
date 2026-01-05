@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/schemas/defs/common.schema.json",
+  "title": "Common Definitions (collector-proc) — v2",
+  "description": "Definições reutilizáveis (âncoras, fontes, enums e tipos básicos) para os schemas do collector-proc.",
+  "type": "object",
+  "$defs": {
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+
+    "UUID": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+
+    "SHA256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+
+    "ISODate": {
+      "type": "string",
+      "format": "date"
+    },
+
+    "ISODateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+
+    "DocumentType": {
+      "type": "string",
+      "enum": [
+        "processo",
+        "cabecalho_processo",
+        "peticao_processo",
+        "contestacao_processo",
+        "decisao_processo",
+        "procuracao",
+        "mandato_processo"
+      ]
+    },
+
+    "PartyRole": {
+      "type": "string",
+      "enum": [
+        "autor",
+        "reu",
+        "requerente",
+        "requerido",
+        "exequente",
+        "executado",
+        "agravante",
+        "agravado",
+        "apelante",
+        "apelado",
+        "embargante",
+        "embargado",
+        "recorrente",
+        "recorrido",
+        "impetrante",
+        "impetrado",
+        "terceiro_interessado",
+        "outro"
+      ]
+    },
+
+    "DecisionOutcome": {
+      "type": "string",
+      "enum": [
+        "deferiu",
+        "indeferiu",
+        "parcial",
+        "procedente",
+        "improcedente",
+        "extincao_sem_merito",
+        "extinguiu",
+        "homologou",
+        "negou_seguimento",
+        "deu_provimento",
+        "negou_provimento",
+        "outro"
+      ]
+    },
+
+    "AnchorKind": {
+      "type": "string",
+      "enum": ["folha", "pagina", "secao", "outro"]
+    },
+
+    "Anchor": {
+      "type": "object",
+      "required": ["kind", "page_marker", "quote"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/AnchorKind" },
+        "page_marker": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Marcador literal de página/folha, ex.: '[[Folha 12]]' ou '[Pág. 3]'."
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200,
+          "description": "Trecho literal curto que comprova o fato."
+        },
+        "line_start": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Opcional: linha inicial no markdown, se disponível."
+        },
+        "line_end": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Opcional: linha final no markdown, se disponível."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Opcional: confiança do extrator/validador."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "SourceRef": {
+      "type": "object",
+      "required": ["source_id", "source_sha256", "source_filename", "document_type"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/UUID" },
+        "source_sha256": { "$ref": "#/$defs/SHA256" },
+        "source_filename": { "$ref": "#/$defs/NonEmptyString" },
+        "document_type": { "$ref": "#/$defs/DocumentType" },
+
+        "md_filename": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Opcional: nome/caminho do markdown processado (quando houver)."
+        },
+        "created_at": {
+          "$ref": "#/$defs/ISODateTime",
+          "description": "Opcional: timestamp do markdown ou do processamento."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ConflictCandidate": {
+      "type": "object",
+      "required": ["value", "source_ids"],
+      "properties": {
+        "value": {
+          "description": "Valor candidato (tipagem livre).",
+          "anyOf": [
+            { "type": "object" },
+            { "type": "array" },
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "integer" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
+        },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/UUID" }
+        },
+        "anchors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Anchor" }
+        },
+        "note": { "$ref": "#/$defs/NonEmptyString" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ConflictRecord": {
+      "type": "object",
+      "required": ["field_path", "candidates"],
+      "properties": {
+        "field_path": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Caminho do campo em conflito (ex.: 'process_number.value' ou 'parties[0].name')."
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/ConflictCandidate" }
+        },
+        "resolution": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Opcional: como o merge resolveu (ou por que não resolveu)."
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

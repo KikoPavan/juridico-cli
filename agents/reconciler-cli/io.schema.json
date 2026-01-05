@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/reconciler.schema.json",
+  "title": "Saída estruturada do agente reconciler-cli",
+  "type": "object",
+  "additionalProperties": true,
+  "description": "Estrutura de saída do agente reconciler-cli, consolidando relações críticas entre obrigações, documentos de juntada e contexto do usuário.",
+  "properties": {
+    "versao": {
+      "type": "string",
+      "description": "Versão lógica do formato de saída (ex.: 'reconciler-v1')."
+    },
+    "gerado_em": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp ISO 8601 da geração, se disponível."
+    },
+    "origem": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Metadados sobre os arquivos de entrada utilizados pelo reconciler.",
+      "properties": {
+        "cadeias_arquivo": {
+          "type": ["string", "null"],
+          "description": "Caminho do arquivo de cadeia de obrigações (ex.: 'outputs/cadeia_obrigacoes.json')."
+        },
+        "monetary_dir": {
+          "type": ["string", "null"],
+          "description": "Diretório de onde foram lidos os arquivos do monetary-cli (ex.: 'outputs/cad-obr/02_monetary')."
+        },
+        "juntada_file": {
+          "type": ["string", "null"],
+          "description": "Caminho do arquivo consolidado de juntada (ex.: 'outputs/juntada/collector_out_juntada_consolidado.json')."
+        },
+        "processo_file": {
+          "type": ["string", "null"],
+          "description": "Caminho do arquivo consolidado do processo (ex.: 'outputs/processo/collector_out_processo_consolidado.json')."
+        }
+      }
+    },
+    "contexto_entrada": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Metadados sobre os arquivos de contexto e relações críticas fornecidos pelo usuário.",
+      "properties": {
+        "contexto_usuario_arquivo": {
+          "type": ["string", "null"],
+          "description": "Arquivo com contexto geral do usuário (ex.: 'data/context.json')."
+        },
+        "contexto_relacoes_arquivo": {
+          "type": ["string", "null"],
+          "description": "Arquivo com a definição das relações críticas (ex.: 'data/contexto_relacoes.json')."
+        }
+      }
+    },
+    "relacoes_criticas": {
+      "type": "array",
+      "description": "Lista de relações críticas avaliadas pelo reconciler (R1, R2, ...).",
+      "items": {
+        "$ref": "#/$defs/RelacaoCritica"
+      }
+    },
+    "notas_gerais": {
+      "type": ["string", "null"],
+      "description": "Observações gerais sobre o caso e sobre as reconciliações realizadas."
+    },
+    "checklist_global": {
+      "description": "Checklist agregado de documentos/diligências relevantes para o caso como um todo.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ChecklistDocumentos"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": ["versao", "relacoes_criticas"],
+  "$defs": {
+    "FonteApoio": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Fonte específica de apoio probatório para uma relação crítica.",
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": ["registro_imobiliario", "juntada", "processo", "outro"],
+          "description": "Tipo da fonte de apoio (registro, juntada, processo ou outra)."
+        },
+        "referencia": {
+          "type": "string",
+          "description": "Identificador da fonte (ex.: '7013:R.4', 'contrato_social_JKMG_2002')."
+        },
+        "descricao": {
+          "type": ["string", "null"],
+          "description": "Descrição breve da relevância desta fonte para a relação crítica."
+        }
+      },
+      "required": ["tipo", "referencia"]
+    },
+    "ChecklistItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Item de checklist de documento ou diligência.",
+      "properties": {
+        "id_item": {
+          "type": "string",
+          "description": "Identificador interno do item de checklist (ex.: 'CHK-R1-01')."
+        },
+        "tipo_documento": {
+          "type": ["string", "null"],
+          "description": "Tipo de documento ou diligência (ex.: 'Cédula Rural', 'Contrato Social', 'Certidão de Inteiro Teor')."
+        },
+        "descricao": {
+          "type": ["string", "null"],
+          "description": "Descrição do que deve ser obtido ou verificado."
+        },
+        "prioridade": {
+          "type": ["string", "null"],
+          "enum": ["baixa", "media", "alta", "critica", null],
+          "description": "Prioridade do item de checklist."
+        },
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["pendente", "obtido", "inviavel", "nao_necessario", null],
+          "description": "Status atual do item de checklist."
+        },
+        "relacionado_a_relacao": {
+          "type": ["string", "null"],
+          "description": "ID da relação crítica à qual este item está vinculado (ex.: 'R1'), se aplicável."
+        },
+        "relacionado_a_obrigacoes": {
+          "type": ["array", "null"],
+          "description": "Lista de IDs de obrigações relacionadas (ex.: ['7013:R.4']).",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["id_item"]
+    },
+    "ChecklistDocumentos": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Checklist de documentos a obter/verificar, separado entre cartório e fora de cartório.",
+      "properties": {
+        "cartorio": {
+          "type": ["array", "null"],
+          "description": "Itens de checklist que envolvem documentos ou diligências em cartórios.",
+          "items": {
+            "$ref": "#/$defs/ChecklistItem"
+          }
+        },
+        "fora_cartorio": {
+          "type": ["array", "null"],
+          "description": "Itens de checklist que envolvem documentos ou diligências fora de cartórios.",
+          "items": {
+            "$ref": "#/$defs/ChecklistItem"
+          }
+        }
+      }
+    },
+    "FatoDocumentoContextual": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Fato extraído de documentos contextuais (contrato social, procuração, contratos bancários, documentos bancários, decisões judiciais, escrituras públicas etc.) que complementam a leitura dos registros imobiliários.",
+      "properties": {
+        "id_fato_doc": {
+          "type": "string",
+          "description": "Identificador interno do fato documental (ex.: 'DOC1', 'DOC_R4_01')."
+        },
+        "tipo_fonte": {
+          "type": "string",
+          "enum": [
+            "contrato_social",
+            "procuracao",
+            "contrato_bancario",
+            "documento_bancario",
+            "decisao_judicial",
+            "escritura_publica",
+            "outro"
+          ],
+          "description": "Tipo principal de documento de origem do fato."
+        },
+        "categoria_fato": {
+          "type": ["string", "null"],
+          "enum": [
+            "RESTRICAO_PODERES",
+            "LIBERACAO_VENDA",
+            "CISAO",
+            "CESSAO_DIREITOS",
+            "CONTRATO_CREDITO",
+            "PROCURACAO_PODERES",
+            "OUTRO",
+            null
+          ],
+          "description": "Categoria lógica do fato extraído, usada para cruzamentos (ex.: restrição de poderes, liberação para venda, cisão, contrato de crédito, poderes de procuração)."
+      },
+      "descricao": {
+        "type": "string",
+        "description": "Descrição factual, preferencialmente literal ou parafraseada de modo objetivo, do que o documento estabelece."
+      },
+      "data_fato": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "Data associada ao fato (ex.: data da assinatura do contrato, da decisão ou da carta de liberação), se conhecida."
+      },
+      "ref_origem": {
+        "type": ["string", "null"],
+        "description": "Referência à origem no documento de juntada (ex.: 'Contrato_Social_JKMG_2002.pdf:clausula_10', 'Procuração_Juraci_para_Francisco.pdf:fls_2', 'Carta_Liberacao_BB_2005.pdf')."
+      },
+      "matriculas_relacionadas": {
+        "type": ["array", "null"],
+        "description": "Lista de matrículas imobiliárias relacionadas a este fato documental (ex.: ['7013','905']).",
+        "items": {
+          "type": "string"
+        }
+      },
+      "obrigacoes_relacionadas": {
+        "type": ["array", "null"],
+        "description": "Lista de IDs de obrigações/cadeias relacionadas (ex.: ['7013:R.4', '7013:R.16']).",
+        "items": {
+          "type": "string"
+        }
+      },
+      "empresas_relacionadas": {
+        "type": ["array", "null"],
+        "description": "Lista de empresas relacionadas ao fato (ex.: ['Pavão Supermercados Ltda.', 'JKMG - Comercial, Incorporadora e Administradora Ltda.']).",
+        "items": {
+          "type": "string"
+        }
+      },
+      "pessoas_relacionadas": {
+        "type": ["array", "null"],
+        "description": "Lista de pessoas físicas relacionadas ao fato (ex.: ['Juraci Pires Pavan', 'Francisco Carlos Pavan', 'Paulo Vizioli']).",
+        "items": {
+          "type": "string"
+        }
+      },
+      "observacoes": {
+        "type": ["string", "null"],
+        "description": "Observações adicionais do reconciler sobre como este fato influencia a relação crítica ou os cruzamentos entre obrigações."
+      }
+    },
+    "required": ["id_fato_doc", "descricao", "tipo_fonte"]
+    },
+    "PremissaUsuario": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Premissa ou hipótese do usuário que influencia a leitura das obrigações.",
+      "properties": {
+        "id_premissa": {
+          "type": "string",
+          "description": "Identificador interno da premissa (ex.: 'P1')."
+        },
+        "descricao": {
+          "type": "string",
+          "description": "Descrição da premissa (ex.: 'todas as dívidas agrícolas foram consolidadas na cédula X')."
+        },
+        "ligada_a_relacao": {
+          "type": ["string", "null"],
+          "description": "ID da relação crítica à qual a premissa se refere (ex.: 'R1'), se aplicável."
+        },
+        "ligada_a_obrigacoes": {
+          "type": ["array", "null"],
+          "description": "Lista de IDs de obrigações relacionadas a esta premissa.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "avaliacao_reconciler": {
+          "type": ["string", "null"],
+          "description": "Análise do reconciler sobre a premissa à luz das provas disponíveis."
+        }
+      },
+      "required": ["id_premissa", "descricao"]
+    },
+    "RelacaoCritica": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Relação crítica analisada pelo reconciler (ex.: sucessão de dívidas, origem comum, consolidação, etc.).",
+      "properties": {
+        "id_relacao": {
+          "type": "string",
+          "description": "Identificador da relação crítica (ex.: 'R1')."
+        },
+        "titulo": {
+          "type": ["string", "null"],
+          "description": "Título resumido da relação (ex.: 'Origem comum das dívidas rurais com Banco do Brasil')."
+        },
+        "descricao_relacao": {
+          "type": "string",
+          "description": "Descrição objetiva do que está sendo investigado nessa relação."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "confirmado",
+            "contrariado",
+            "indicio_forte",
+            "indicio_fraco",
+            "nao_localizado_nos_registros"
+          ],
+          "description": "Conclusão atual sobre a relação, à luz das provas levantadas."
+        },
+        "nivel_prova_atual": {
+          "type": "string",
+          "enum": ["fraca", "relevante", "forte"],
+          "description": "Força probatória atual para esta relação."
+        },
+        "matriculas_envolvidas": {
+          "type": ["array", "null"],
+          "description": "Lista de matrículas imobiliárias diretamente envolvidas na relação.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "obrigacoes_relacionadas": {
+          "type": ["array", "null"],
+          "description": "Lista de IDs de obrigações relacionadas (ex.: ['7013:R.4', '7013:R.16']).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "documentos_juntada_relacionados": {
+          "type": ["array", "null"],
+          "description": "Lista de IDs de documentos de juntada relevantes (ex.: ['contrato_social_JKMG_2002']).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fontes_apoio": {
+          "type": ["array", "null"],
+          "description": "Fontes específicas de apoio probatório (registros, juntada, processo, etc.).",
+          "items": {
+            "$ref": "#/$defs/FonteApoio"
+          }
+        },
+        "fatos_registros_imobiliarios": {
+          "type": ["array", "null"],
+          "description": "Fatos objetivos extraídos de registros imobiliários (matrículas, averbações, hipotecas, cédulas) relevantes para esta relação. Use este campo apenas para fatos extraídos diretamente das certidões/registros; para fatos de contratos sociais, procurações, contratos bancários ou decisões judiciais utilize 'fatos_documentos_contextuais'.",
+          "items": {
+            "$ref": "#/$defs/FatoRegistroImobiliario"
+          }
+        },
+        "fatos_documentos_contextuais": {
+          "type": ["array", "null"],
+          "description": "Fatos objetivos extraídos de documentos contextuais (contratos sociais, procurações, contratos bancários, documentos bancários, decisões judiciais, escrituras públicas etc.) que impactam esta relação crítica, complementando os registros imobiliários.",
+          "items": {
+            "$ref": "#/$defs/FatoDocumentoContextual"
+        }
+        },
+        "fatos_declarados_usuario": {
+          "type": ["array", "null"],
+          "description": "Fatos ou alegações declarados pelo usuário que influenciam a análise desta relação.",
+          "items": {
+            "$ref": "#/$defs/FatoDeclaradoUsuario"
+          }
+        },
+        "lacunas_documentais": {
+          "type": ["array", "null"],
+          "description": "Lacunas de prova documental associadas a esta relação crítica.",
+          "items": {
+            "$ref": "#/$defs/LacunaDocumental"
+          }
+        },
+        "checklist_documentos": {
+          "description": "Checklist de documentos/diligências específicos desta relação.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChecklistDocumentos"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "premissas_usuario": {
+          "type": ["array", "null"],
+          "description": "Premissas ou hipóteses do usuário vinculadas a esta relação.",
+          "items": {
+            "$ref": "#/$defs/PremissaUsuario"
+          }
+        },
+        "comentarios_reconciler": {
+          "type": ["string", "null"],
+          "description": "Comentários finais do reconciler sobre esta relação (síntese explicativa)."
+        }
+      },
+      "required": ["id_relacao", "descricao_relacao", "status", "nivel_prova_atual"]
+    }
+  }
+}

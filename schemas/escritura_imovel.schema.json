@@ -1,0 +1,543 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/escritura_imovel.schema.json",
+  "title": "Escritura Imovel",
+  "type": "object",
+  "properties": {
+    "tipo_documento": {
+      "type": "string",
+      "title": "Tipo Documento",
+      "description": "Tipo de documento.",
+      "default": "Escritura de Imóvel/Matrícula"
+    },
+    "matricula": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "Matrícula",
+      "description": "Número da matrícula do imóvel."
+    },
+    "cartorio": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "Cartório",
+      "description": "Cartório responsável pela matrícula."
+    },
+    "transacoes_venda": {
+      "type": "array",
+      "title": "Transações de Venda",
+      "description": "Histórico de transações de compra e venda registradas na matrícula.",
+      "items": {
+        "type": "object",
+        "title": "TransacaoCompraVenda",
+        "properties": {
+          "registro": {
+            "type": "string",
+            "title": "Registro",
+            "description": "Número do registro (ex.: 'R.46')."
+          },
+          "anuencia_credor": {
+            "type": ["string", "null"],
+            "title": "Anuência/Concordância",
+            "description": "Texto descrevendo quem autorizou ou manifestou concordância com a venda (ex: Banco, Credor Hipotecário)."
+          },      
+          "data_registro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data do registro/averbação",
+            "description": "Data em que o registro ou averbação foi lançado na matrícula."
+          },
+          "data_efetiva": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data efetiva",
+            "description": "Data em que o contrato ou obrigação foi efetivamente celebrado."
+          },
+          "vendedores": {
+            "type": "array",
+            "title": "Vendedores",
+            "description": "Lista de vendedores constantes no registro.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compradores": {
+            "type": "array",
+            "title": "Compradores",
+            "description": "Lista de compradores constantes no registro.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "valor": {
+            "type": "string",
+            "title": "Valor",
+            "description": "Valor da transação, em formato numérico e por extenso."
+          },
+          "folha_localizacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Folha de localização",
+            "description": "Número da folha em que o registro aparece no documento."
+          },
+          "tipo_transacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Tipo de transação",
+            "description": "Classificação jurídica da transação (ex.: 'COMPRA_VENDA', 'COMPRA_VENDA_RETROVENDA', 'VENDA_DEFINITIVA')."
+          },
+          "possui_pacto_retrovenda": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Possui pacto de retrovenda",
+            "description": "Indica se a transação foi realizada com pacto de retrovenda."
+          },
+          "consolida_titularidade": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Consolida titularidade",
+            "description": "Indica se este registro consolida a titularidade em favor dos compradores."
+          },
+          "observacao_juridica": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Observação jurídica",
+            "description": "Resumo jurídico do efeito do registro (ex.: consolidação de compra e venda com retrovenda, venda definitiva)."
+          },
+          "contrato_arquivado_em_cartorio": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Contrato arquivado em Cartório",
+            "description": "Indica se o registro menciona que as demais condições constam em título cuja cópia fica arquivada em Cartório."
+          },
+          "texto_contrato_arquivado": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Texto sobre contrato arquivado",
+            "description": "Trecho literal como 'Demais condições constantes do título, cuja cópia fica arquivada em Cartório.'"
+          }
+        },
+        "required": [
+          "registro",
+          "data_registro",
+          "data_efetiva",
+          "vendedores",
+          "compradores",
+          "valor"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "transacoes_venda_posse": {
+      "type": "array",
+      "title": "Transações de posse/fruição",
+      "description": "Registros de usufruto, uso, habitação ou outros direitos de fruição.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "registro_ou_averbacao": {
+            "type": "string",
+            "title": "Registro ou averbação",
+            "description": "Número do registro (R) ou averbação (Av) relacionado ao direito de posse/fruição."
+          },
+          "data_registro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data do registro/averbação",
+            "description": "Data em que o registro ou averbação foi lançado na matrícula."
+          },
+          "data_efetiva": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data efetiva",
+            "description": "Data em que o contrato ou obrigação foi efetivamente celebrado."
+          },
+          "tipo_posse": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Tipo de posse",
+            "description": "Tipo de direito de posse/fruição (ex.: 'CONCESSAO_USUFRUTO', 'BAIXA_USUFRUTO', 'USO', 'HABITACAO')."
+          },
+          "beneficiario": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Beneficiário",
+            "description": "Pessoa em favor de quem é constituído o direito (ex.: usufrutuário)."
+          },
+          "nu_proprietario": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Nu-proprietário",
+            "description": "Proprietário(s) do imóvel (nu-proprietário), se indicado."
+          },
+          "prazo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Prazo",
+            "description": "Prazo contratual ou duração da obrigação."
+          },
+          "detalhes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Detalhes",
+            "description": "Resumo textual do conteúdo do registro ou averbação (ex.: renúncia de usufruto, condições especiais)."
+          },
+          "folha_localizacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Folha de localização",
+            "description": "Número da folha onde consta este registro."
+          }
+        },
+        "required": [
+          "registro_ou_averbacao",
+          "data_registro",
+          "data_efetiva",
+          "tipo_posse"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "hipotecas_onus": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "Hipotecas e ônus",
+      "description": "Relação de hipotecas, alienações fiduciárias e demais ônus registrados sobre o imóvel.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "registro_ou_averbacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Registro ou averbação",
+            "description": "Identificador do ato registral, como 'R.5', 'Av.24', etc."
+          },
+          "historico_aditivos": {
+            "type": ["array", "null"],
+            "title": "Histórico de Aditivos",
+            "description": "Lista de alterações contratuais (aditivos) que modificaram este registro (ex: prorrogação de prazo).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "averbacao": {"type": "string"},
+                "data": {"type": "string"},
+                "resumo": {"type": "string"}
+              }
+            }
+          },
+          "data_registro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data do registro/averbação",
+            "description": "Data em que o registro ou averbação foi lançado na matrícula."
+          },
+          "data_efetiva": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data efetiva",
+            "description": "Data em que o contrato ou obrigação foi efetivamente celebrado ou passou a produzir efeitos."
+          },
+          "tipo_divida": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Tipo de dívida/obrigação",
+            "description": "Natureza da obrigação garantida (ex.: 'HIPOTECA', 'ALIENACAO_FIDUCIARIA', 'ARRENDAMENTO_MERCANTIL')."
+          },
+          "numero_contrato": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Número do contrato",
+            "description": "Número do contrato bancário ou instrumento particular, se houver."
+          },
+          "credor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Credor",
+            "description": "Instituição ou pessoa em favor de quem é constituída a garantia."
+          },
+          "valor_divida_original": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Valor da dívida original",
+            "description": "Valor original da dívida/garantia, em formato numérico e por extenso."
+          },
+          "valor_divida": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Valor da dívida",
+            "description": "Valor da dívida/garantia na moeda original, quando destacado no texto."
+          },
+          "prazo": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "title": "Prazo (nº de parcelas)",
+            "description": "Número total de parcelas/prestações do contrato, se mencionado."
+          },
+          "vencimento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Vencimento final",
+            "description": "Data de vencimento da última prestação ou da obrigação principal."
+          },
+          "taxas": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Taxas e encargos",
+            "description": "Campo livre para juros, comissões e outros encargos, se relevantes."
+          },
+          "quitada": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Quitada",
+            "description": "Indica se a matrícula menciona quitação da dívida."
+          },
+          "cancelada": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Cancelada/baixada",
+            "description": "Indica se o ônus consta como cancelado/baixado na matrícula."
+          },
+          "detalhes_baixa": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Detalhes da baixa",
+            "description": "Resumo textual da forma de baixa/cancelamento (ex.: por autorização do banco, por sentença)."
+          },
+          "averbacao_baixa": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Averbação de baixa",
+            "description": "Referência à averbação que formaliza a baixa/cancelamento (ex.: 'Av.47')."
+          },
+          "data_baixa": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data da baixa/cancelamento",
+            "description": "Data em que a baixa ou cancelamento foi efetivada (usar SEMPRE a data_efetiva e NÃO a data_registro)."
+          },
+          "folha_localizacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Folha de localização",
+            "description": "Indicação da(s) folha(s) em que o ônus aparece, para rastreabilidade."
+          },
+          "valor_presente": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Valor presente na data da baixa",
+            "description": "Valor da dívida corrigida para a data da baixa, se houver informação."
+          },
+          "contrato_arquivado_em_cartorio": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Contrato arquivado em Cartório",
+            "description": "Indica se o registro menciona que as demais condições constam em título cuja cópia fica arquivada em Cartório."
+          },
+          "texto_contrato_arquivado": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Texto sobre contrato arquivado",
+            "description": "Trecho literal como 'Demais condições constantes do título, cuja cópia fica arquivada em Cartório.'"
+          },
+          "informacoes_devedor_dependem_de_contrato": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "title": "Informações de devedor dependem do contrato arquivado",
+            "description": "Marque como true quando a identificação completa do devedor depender do contrato arquivado em Cartório."
+          }
+        },
+        "required": [
+          "registro_ou_averbacao",
+          "data_registro",
+          "data_efetiva",
+          "tipo_divida",
+          "credor",
+          "valor_divida_original"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "historico_titularidade": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "Histórico de titularidade",
+      "description": "Períodos em que o imóvel esteve em nome de determinados proprietários, com início, consolidação e fim da titularidade.",
+      "items": {
+        "type": "object",
+        "title": "PeriodoTitularidade",
+        "properties": {
+          "id_periodo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "ID do período",
+            "description": "Identificador interno do período de titularidade (ex.: 'P1', 'P2')."
+          },
+          "proprietarios": {
+            "type": "array",
+            "title": "Proprietários",
+            "description": "Lista de proprietários do imóvel durante este período.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "registro_inicio": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Registro de início",
+            "description": "Registro que dá origem à titularidade (ex.: 'R.46')."
+          },
+          "data_inicio": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data inicio",
+            "description": "Data em que se iniciou a titularidade neste período (usar SEMPRE a data_efetiva do registro_inicio, e NÃO a data_registro)."
+          },
+          "registro_consolidacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Registro de consolidação",
+            "description": "Registro que consolida a titularidade (ex.: venda definitiva ou consolidação de retrovenda)."
+          },
+          "data_consolidacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data de consolidação",
+            "description": "Data em que a titularidade se consolidou (usar a data_efetiva do registro_consolidacao)."
+          },
+          "registro_fim": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Registro de fim",
+            "description": "Registro que encerra a titularidade (ex.: venda para terceiro, perda do imóvel)."
+          },
+          "data_fim": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Data de fim",
+            "description": "Data em que a titularidade deste período se encerra (usar a data_efetiva do registro_fim)."
+          },
+          "registros_periodo": {
+            "type": [
+              "array",
+              "null"
+          ],
+            "title": "Registros/averbações do período",
+            "description": "Lista de identificadores de registros e averbações entre o periudo data_inicio a data_fim (USAR data_efetiva) (ex.: ['R.46', 'R.48', 'Av.3', 'Av.4']) que definem este período de titularidade.",
+              "items": {
+                "type": "string"
+          }    
+          },
+          "descricao_periodo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "title": "Descrição do período",
+            "description": "Descrição resumida do período (ex.: 'Período em que o imóvel esteve em nome de Paulo e Leonilce, com compra e venda com retrovenda consolidada por R.48')."
+          }
+        },
+        "required": [
+          "proprietarios"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad-obr/links.schema.json",
+  "title": "CAD-OBR Links (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "link_id",
+    "from_type",
+    "from_id",
+    "to_type",
+    "to_id",
+    "match_level",
+    "match_reason",
+    "evidencias"
+  ],
+  "properties": {
+    "link_id": {
+      "type": "string",
+      "minLength": 8
+    },
+
+    "from_type": {
+      "$ref": "common.schema.json#/$defs/LinkEntityType"
+    },
+    "from_id": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "to_type": {
+      "$ref": "common.schema.json#/$defs/LinkEntityType"
+    },
+    "to_id": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "match_level": {
+      "$ref": "common.schema.json#/$defs/MatchLevel"
+    },
+    "match_reason": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 2000
+    },
+
+    "evidencias": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/AnchorRef" }
+    },
+
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  }
+}

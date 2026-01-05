@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/agents/collector-proc/io.schema.json",
+  "title": "collector-proc IO Envelope — v2",
+  "description": "Contrato de entrada/saída do collector-proc. Valida envelope + payload por document_type e mode.",
+  "type": "object",
+  "required": [
+    "agent_name",
+    "agent_version",
+    "job_id",
+    "run_id",
+    "created_at",
+    "document_type",
+    "mode",
+    "status",
+    "sources"
+  ],
+  "properties": {
+    "agent_name": {
+      "const": "collector-proc"
+    },
+    "agent_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "job_id": {
+      "$ref": "../../schemas/defs/common.schema.json#/$defs/NonEmptyString"
+    },
+    "run_id": {
+      "$ref": "../../schemas/defs/common.schema.json#/$defs/UUID"
+    },
+    "created_at": {
+      "$ref": "../../schemas/defs/common.schema.json#/$defs/ISODateTime"
+    },
+    "document_type": {
+      "$ref": "../../schemas/defs/common.schema.json#/$defs/DocumentType"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["individual", "consolidated"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "error"]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "../../schemas/defs/common.schema.json#/$defs/SourceRef"
+      },
+      "description": "Fontes utilizadas. No 1:1 normalmente terá 1 item; no N:1 terá N itens. No dossiê (processo) pode conter vários document_type."
+    },
+    "payload": {
+      "description": "Conteúdo extraído (válido conforme document_type e mode).",
+      "anyOf": [
+        { "type": "object" },
+        { "type": "array" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "integer" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "errors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ErrorRecord" }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Metadados opcionais do runner (timings, contadores, warnings).",
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "ok" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["payload"],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "required": ["errors"],
+        "properties": {
+          "payload": { "type": ["null", "object", "array", "string", "number", "integer", "boolean"] }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "processo" }
+        },
+        "required": ["status", "document_type"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/processo.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "cabecalho_processo" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/cabecalho_processo.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "cabecalho_processo" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/cabecalho_processo.consolidated.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "peticao_processo" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/peticao_processo.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "peticao_processo" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/peticao_processo.consolidated.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "contestacao_processo" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/contestacao_processo.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "contestacao_processo" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/contestacao_processo.consolidated.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "decisao_processo" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/decisao_processo.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "decisao_processo" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/decisao_processo.consolidated.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "procuracao" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/procuracao.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "procuracao" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/procuracao.consolidated.schema.json" }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "mandato_processo" },
+          "mode": { "const": "individual" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/mandato_processo.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "ok" },
+          "document_type": { "const": "mandato_processo" },
+          "mode": { "const": "consolidated" }
+        },
+        "required": ["status", "document_type", "mode"]
+      },
+      "then": {
+        "properties": {
+          "payload": { "$ref": "../../schemas/mandato_processo.consolidated.schema.json" }
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "ErrorRecord": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "../../schemas/defs/common.schema.json#/$defs/NonEmptyString" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}
