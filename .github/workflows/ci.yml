@@ -1,25 +1,36 @@
 name: CI
 
 on:
-    push:
-    pull_request:
+  push:
+  pull_request:
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v5
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Sync dependencies (locked)
+        run: uv sync --locked --dev
+      - name: Ruff (lint)
+        run: uv run ruff check .
 
-            - name: Set up Python
-              uses: actions/setup-python@v6
-              with:
-                  python-version-file: ".python-version"
-
-            - name: Install uv
-              uses: astral-sh/setup-uv@v7
-
-            - name: Sync dependencies (locked)
-              run: uv sync --locked --dev
-
-            - name: Ruff (lint)
-              run: uv run ruff check .
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Sync dependencies (locked)
+        run: uv sync --locked --dev
+      - name: Pytest (tests)
+        run: uv run pytest -q
