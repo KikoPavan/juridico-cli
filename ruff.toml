@@ -1,0 +1,3 @@
+[lint]
+ignore = ["ALL"] # Apenas para testar se ele para de cair
+exclude = [".venv", "venv", ".git"]

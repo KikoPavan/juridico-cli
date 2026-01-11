@@ -15,10 +15,17 @@ dependencies = [
     "typer>=0.20.0",
     "rich>=14.2.0",
     "jsonschema>=4.25.1",
+    "langgraph>=1.0.5",
+    "langchain-core>=1.2.6",
 ]
 # No seu pyproject.toml
 [tool.ruff]
-# Apenas para testar, adicione uma regra básica
+exclude = [
+    ".venv",
+    "venv",
+    "node_modules",
+    "dist",
+]
 line-length = 88
 [dependency-groups]
 dev = [

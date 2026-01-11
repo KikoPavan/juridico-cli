@@ -22,10 +22,10 @@ def main():
 
         print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
 
-        # 1. Construir comando (Claude)
+        # 1. Construir comando (Gemini)
         # A Skill (esqueleto-peticao) é responsável por ler seus
         # arquivos de input/prompt/template e salvar o output.
-        command = ["claude", "skill", skill_name]
+        command = ["gemini", "skill", skill_name]
 
         print(f"Executando: {' '.join(command)}")
 

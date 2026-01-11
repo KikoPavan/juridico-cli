@@ -15,13 +15,20 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": false,
     "gemini-cli.debug.logging.enabled": true,
+
+    "ruff.importStrategy": "fromEnvironment",  
+    "ruff.nativeServer": "on",
+    "ruff.lint.enable": true,
+    "ruff.organizeImports": true,
+    "ruff.fixAll": true,
+    "ruff.showSyntaxErrors": true,
     "ruff.configurationPreference": "filesystemFirst",
     "ruff.format.preview": true,
     "ruff.lint.preview": true,
-    "ruff.nativeServer": "on",
-    "ruff.trace.server": "off",
-    "explorer.excludeGitIgnore": false,
+    "ruff.format.backend": "ruff",
+    "ruff.path": ["/home/kiko/devops/juridico-cli/.venv/bin/ruff"],  
 
+    "explorer.excludeGitIgnore": false,
     "files.exclude": {
         "**/.venv": false
     },
@@ -30,5 +37,7 @@
     },
     "files.watcherExclude": {
         "**/.venv/**": true
-  }
+}
+
+
 }

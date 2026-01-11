@@ -36,7 +36,7 @@ jobs:
     schema_file: "schemas/cadeia_obrigacoes.schema.json"
 
     # Entradas principais
-    monetary_dir: "outputs/cad-obr/02_monetary"
+    monetary_dir: "outputs/cad-obr/03_monetary"
     juntada_dir: "outputs/juntada"
     processo_file: "outputs/processo/collector_out_processo_consolidado.json"
     context_file: "data/context.json"
