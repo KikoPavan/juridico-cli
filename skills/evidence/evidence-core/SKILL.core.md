@@ -1,12 +1,12 @@
 ---
-name: reconciler_core
-agent: reconciler-cli
+name: evidence_core
+agent: evidence-agent
 description: |
-  Skill genérica do reconciler-cli para ler o input já normalizado em io.schema.json
+  Skill genérica do evidence-agent para ler o input já normalizado em io.schema.json
   e produzir a saída também no formato io.schema.json, avaliando relações críticas
   de forma neutra, sem tese específica.
 version: 0.2
-target_schema: reconciler.schema.json
+target_schema: evidence.schema.json
 ---
 
 # SKILL GENÉRICA – NÚCLEO DO RECONCILER
@@ -17,7 +17,7 @@ Use estas instruções sempre que o reconciler-cli for acionado sem uma tese jur
 específica (modo genérico). O objetivo é:
 
 - ler um objeto `input` já organizado conforme o schema de entrada do reconciler;
-- produzir um objeto `output` que respeite rigorosamente `reconciler.schema.json`;
+- produzir um objeto `output` que respeite rigorosamente `evidence.schema.json`;
 - avaliar, para cada relação crítica, o estado atual da prova, sem assumir teses.
 
 Esta skill **não** decide petições ou conclusões jurídicas definitivas; ela apenas

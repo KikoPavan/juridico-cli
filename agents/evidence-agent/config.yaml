@@ -7,15 +7,12 @@ runtime:
   max_output_tokens: 8192
 
 paths:
-  # Prompt base do reconciler
-  prompt_file: "prompts/reconciler.md"
+  # Prompt base do evidence-agent
+  prompt_file: "agents/evidence-agent/prompt.md"
 
-skills_map:
-  # Skill genérica (núcleo)
-  core: "agents/reconciler-cli/skills/SKILL.core.md"
-
-  # Skill específica para cadeia de obrigações em nulidade de garantia hipotecária
-  cadeia_obrigacoes_nulidade_hipoteca: "agents/reconciler-cli/skills/SKILL.cadeia_obrigacoes_nulidade_hipoteca.md"
+skills_id:
+  allowlist_file: policies/allowlists/evidence-agent.json
+  skills_catalog_file: artifacts/skills/skills.catalog.json
 
 jobs:
   # Único job: cadeia de obrigações, com escolha dinâmica de skill
@@ -44,4 +41,4 @@ jobs:
 
     # Saída
     output_dir: "outputs/reconciler"
-    output_filename: "reconciler_out_relacoes_criticas.json"
+    output_filename: "evidence_out_relacoes_criticas.json"

@@ -1,10 +1,10 @@
 ---
-name: reconciler_cadeia_obrigacoes_nulidade_hipoteca
-agent: reconciler-cli
+name: evidence_cadeia_obrigacoes_nulidade_hipoteca
+agent: evidence-agent
 process_types:
   - ACAO_NULIDADE_GARANTIA_HIPOTECARIA
 description: |
-  Skill específica do reconciler-cli para reconstruir e avaliar a cadeia de
+  Skill específica do evidence-agent para reconstruir e avaliar a cadeia de
   obrigações em casos de nulidade/ineficácia de escrituras de confissão de dívida
   com garantia hipotecária, considerando registros imobiliários, cálculos do
   monetary-cli, documentos de juntada e fatos declarados pelo usuário.
