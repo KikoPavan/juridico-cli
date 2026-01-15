@@ -7,38 +7,34 @@ runtime:
   max_output_tokens: 8192
 
 paths:
-  # Prompt base do evidence-agent
   prompt_file: "agents/evidence-agent/prompt.md"
 
 skills_id:
-  allowlist_file: policies/allowlists/evidence-agent.json
-  skills_catalog_file: artifacts/skills/skills.catalog.json
+  allowlist_file: "policies/allowlists/evidence-agent.json"
+  skills_catalog_file: "artifacts/skills/skills.catalog.json"
+  skills_prompt_file: "artifacts/skills/skills.prompt.evidence-agent.xml"
 
 jobs:
-  # Único job: cadeia de obrigações, com escolha dinâmica de skill
-  cadeia_obrigacoes:
-  - id: "cadeia_obrigacoes"
-    name: "Reconciliação da cadeia de obrigações"
+  - id: "evidence_pack"
+    name: "Evidence Pack — Manipulação de dívidas (dataset reconciliado)"
 
-    # Tipo de processo alvo para usar a skill específica
     process_type_target: "ACAO_NULIDADE_GARANTIA_HIPOTECARIA"
 
-    # Skill padrão (fallback) quando o tipo de processo NÃO bater com o alvo
-    skill_key_default: "core"
+    # Use os nomes reais definidos no frontmatter das SKILLs
+    skill_name_default: "evidence_core"
+    skill_name_target: "evidence_cadeia_obrigacoes_nulidade_hipoteca"
 
-    # Skill usada quando input.contexto_caso.tipo_processo == process_type_target
-    skill_key_target: "cadeia_obrigacoes_nulidade_hipoteca"
+    # Output schema do próprio agent (vamos corrigir o metadata dele no próximo passo)
+    schema_file: "agents/evidence-agent/io.schema.json"
 
-    # Schema de saída do reconciler (seu io.schema.json)
-    schema_file: "schemas/cadeia_obrigacoes.schema.json"
+    # Entrada canônica: dataset reconciliado (filesystem agora, DB depois)
+    dataset_dir: "outputs/cad-obr/04_reconciler/dataset_v1"
+    reports_dir: "outputs/cad-obr/04_reconciler/reports/dataset_v1"
 
-    # Entradas principais
-    monetary_dir: "outputs/cad-obr/03_monetary"
-    juntada_dir: "outputs/juntada"
-    processo_file: "outputs/processo/collector_out_processo_consolidado.json"
+    # Contextos auxiliares (se você usa tipo_processo/premissas)
     context_file: "data/context.json"
     relacoes_file: "data/contexto_relacoes.json"
 
-    # Saída
-    output_dir: "outputs/reconciler"
+    # Saída do evidence-agent (separada do reconciler determinístico)
+    output_dir: "outputs/cad-obr/05_evidence/dataset_v1"
     output_filename: "evidence_out_relacoes_criticas.json"
