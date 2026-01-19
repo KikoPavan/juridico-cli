@@ -1,17 +1,17 @@
 """
 Script: monetary_cli.py
 
-Fase 1 – CLI para aplicar o motor `monetary_core` ao fluxo cad-obr.
+Fase 1 – CLI para aplicar o motor `monetary_core` ao fluxo cad_obr.
 
 Fluxo padrão:
-- Entrada:  outputs/cad-obr/02_normalize/escritura_imovel/collector_out_cad-obr_*.json
-- Saída:    outputs/cad-obr/03_monetary/escritura_imovel/monetary_out_cad-obr_*.json
+- Entrada:  outputs/cad_obr/02_normalize/escritura_imovel/collector_out-cad_obr_*.json
+- Saída:    outputs/cad_obr/03_monetary/escritura_imovel/monetary_out-cad_obr_*.json
 
 Uso típico:
     python3 scripts/monetary_cli.py
 
 Para processar apenas um arquivo específico:
-    python3 scripts/monetary_cli.py --file collector_out_cad-obr_escritura_matricula_7.546.json
+    python3 scripts/monetary_cli.py --file collector_out_cad_obr_escritura_matricula_7.546.json
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _listar_arquivos_entrada(input_dir: str, file_filter: str | None) -> List[st
         - Se for caminho absoluto, usa diretamente.
         - Se for apenas nome, junta com `input_dir`.
     - Caso contrário:
-        - Procura por `collector_out_cad-obr_*.json` em `input_dir`.
+        - Procura por `collector_out_cad_obr_*.json` em `input_dir`.
         - Se não encontrar nada, cai para todos os `*.json` do diretório.
     """
     if file_filter:
@@ -42,7 +42,7 @@ def _listar_arquivos_entrada(input_dir: str, file_filter: str | None) -> List[st
         else:
             return [os.path.join(input_dir, file_filter)]
 
-    pattern_pref = os.path.join(input_dir, "collector_out_cad-obr_*.json")
+    pattern_pref = os.path.join(input_dir, "collector_out_cad_obr_*.json")
     files = sorted(glob.glob(pattern_pref))
 
     if not files:
@@ -104,17 +104,17 @@ def _contar_onus(doc: Dict[str, Any]) -> Tuple[int, int, int]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Aplica o motor monetary (cad-obr) aos arquivos JSON do collector."
+        description="Aplica o motor monetary (cad_obr) aos arquivos JSON do collector."
     )
     parser.add_argument(
         "--input-dir",
-        default="outputs/cad-obr/02_normalize/escritura_imovel/",
-        help="Diretório de entrada com arquivos collector_out_cad-obr_*.json",
+        default="outputs/cad_obr/02_normalize/escritura_imovel/",
+        help="Diretório de entrada com arquivos collector_out_cad_obr_*.json",
     )
     parser.add_argument(
         "--output-dir",
-        default="outputs/cad-obr/03_monetary/escritura_imovel/",
-        help="Diretório de saída para arquivos monetary_out_cad-obr_*.json",
+        default="outputs/cad_obr/03_monetary/escritura_imovel/",
+        help="Diretório de saída para arquivos monetary_out_cad_obr_*.json",
     )
     parser.add_argument(
         "--file",
@@ -141,7 +141,7 @@ def main() -> None:
         print(f"[AVISO] Nenhum arquivo .json encontrado em: {input_dir}")
         return
 
-    print("=== monetary-cli (cad-obr) Iniciado ===")
+    print("=== monetary-cli (cad_obr) Iniciado ===")
     print(f"Entrada : {input_dir}")
     print(f"Saída   : {output_dir}")
     if args.file:
@@ -190,7 +190,7 @@ def main() -> None:
         )
 
     print("")
-    print("=== monetary-cli (cad-obr) Finalizado ===")
+    print("=== monetary-cli (cad_obr) Finalizado ===")
     print(f"Documentos processados      : {total_docs}")
     print(f"Total de ônus encontrados   : {total_onus_global}")
     print(f"Ônus com cálculo aplicado   : {total_calc_true_global}")

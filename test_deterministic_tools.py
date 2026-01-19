@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # Add current directory to path so we can import modules
-sys.path.append(str(Path("mcp-server-cad-obr").absolute()))
+sys.path.append(str(Path("mcp-server-cad_obr").absolute()))
 
 from deterministic import get_property, list_onus, timeline
 

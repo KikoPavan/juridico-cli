@@ -1,6 +1,6 @@
 """
 Módulo: monetary_core.py
-Fase 1 – motor de cálculo para cad-obr (sem índices externos ainda).
+Fase 1 – motor de cálculo para cad_obr (sem índices externos ainda).
 
 Responsabilidades principais:
 - processar_documento_cad_obr(doc): aplica o cálculo em todos os itens de `hipotecas_onus`.
@@ -17,13 +17,12 @@ Política atual:
 """
 
 import csv
+import math
 import os
 import re
-import math
-from functools import lru_cache
-from typing import Any, Dict, Optional, Tuple, List
 from datetime import date
-
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Tuple
 
 # ------------------------------------------------------------
 # Utilitários de parsing
@@ -155,7 +154,11 @@ def extrair_taxa_anual(taxas_str: Optional[str]) -> tuple[Optional[float], str]:
     texto_lower = texto.lower()
 
     # Flags de unidade
-    eh_mensal = ("ao mês" in texto_lower) or ("ao mes" in texto_lower) or ("mensal" in texto_lower)
+    eh_mensal = (
+        ("ao mês" in texto_lower)
+        or ("ao mes" in texto_lower)
+        or ("mensal" in texto_lower)
+    )
     eh_anual = (
         ("ao ano" in texto_lower)
         or ("anual" in texto_lower)
@@ -224,7 +227,7 @@ def formatar_valor_brl(valor: float) -> str:
 
 
 # ------------------------------------------------------------
-# Núcleo de regras cad-obr
+# Núcleo de regras cad_obr
 # ------------------------------------------------------------
 
 
@@ -319,7 +322,7 @@ def processar_onus_cad_obr(
     tr_table: Optional[Dict[Tuple[int, int], float]] = None,
 ) -> Dict[str, Any]:
     """
-    Processa um único item de hipoteca/ônus de matrícula (cad-obr),
+    Processa um único item de hipoteca/ônus de matrícula (cad_obr),
     aplicando:
       - regras já existentes de juros (taxa efetiva anual ou mensal),
       - e, se aplicável, correção pela TR mensal acumulada.
@@ -347,7 +350,9 @@ def processar_onus_cad_obr(
     dt_baixa = parse_data_ptbr(data_baixa_str)
 
     if dt_efetiva is None:
-        meta["motivo"] = "dados_insuficientes_para_calculo: data_efetiva_ausente_ou_invalida"
+        meta["motivo"] = (
+            "dados_insuficientes_para_calculo: data_efetiva_ausente_ou_invalida"
+        )
         meta["regra_aplicada"] = "R13"
         onus.setdefault("valor_presente", None)
         onus["_monetary_meta"] = meta
@@ -363,7 +368,7 @@ def processar_onus_cad_obr(
 
     # Não baixada e sem data_baixa → ainda em aberto, não calcula
     if dt_baixa is None and not (quitada is True or cancelada is True):
-        meta["motivo"] = "divida_sem_baixa_no_cad-obr"
+        meta["motivo"] = "divida_sem_baixa_no_cad_obr"
         meta["regra_aplicada"] = "R6"
         onus.setdefault("valor_presente", None)
         onus["_monetary_meta"] = meta
@@ -384,7 +389,6 @@ def processar_onus_cad_obr(
         onus.setdefault("valor_presente", None)
         onus["_monetary_meta"] = meta
         return onus
-    
 
     # 3) Valor base (capital) – prioridade: valor_divida_num (centavos)
     valor_base = None
@@ -407,13 +411,14 @@ def processar_onus_cad_obr(
             valor_base_centavos = int(round(valor_base * 100))
 
     if valor_base is None:
-        meta["motivo"] = "dados_insuficientes_para_calculo: valor_divida_invalido_ou_ausente"
+        meta["motivo"] = (
+            "dados_insuficientes_para_calculo: valor_divida_invalido_ou_ausente"
+        )
         meta["regra_aplicada"] = "R13"
         onus.setdefault("valor_presente", None)
         onus.setdefault("valor_presente_num", None)
         onus["_monetary_meta"] = meta
         return onus
-
 
     # 4) Taxa de juros (já na forma decimal) e tipo ("anual" ou "mensal")
     taxa_decimal, tipo_taxa = extrair_taxa_anual(onus.get("taxas"))
@@ -487,7 +492,7 @@ def processar_onus_cad_obr(
                 if tr_val is None:
                     tr_meses_sem_dado.append(f"{ano}-{mes:02d}")
                     continue
-                fator_tr *= (1.0 + tr_val)
+                fator_tr *= 1.0 + tr_val
 
             if tr_meses_sem_dado:
                 # Aplicamos TR onde havia índice; meses sem dado são assumidos com TR=0,
@@ -514,16 +519,13 @@ def processar_onus_cad_obr(
         "data_final_utilizada": dt_baixa.isoformat(),
         "dias_decorridos": dias_decorridos,
         "regime_juros": regime_juros,
-
         # numéricos canônicos (centavos)
         "valor_base_centavos": valor_base_centavos,
         "valor_presente_centavos": valor_presente_centavos,
-
         # leitura humana (float em reais)
         "valor_base_num": round(valor_base, 2) if valor_base is not None else None,
         "valor_presente_num": round(valor_presente_float, 2),
     }
-
 
     if tipo_taxa == "anual":
         detalhe["tipo_taxa"] = "anual"

@@ -4,7 +4,7 @@
 """
 pipelines/cad_obr.py
 
-Orquestrador do pipeline CAD-OBR (Normalize -> Monetary).
+Orquestrador do pipeline CAD_OBR (Normalize -> Monetary).
 
 Ordem por tipo de documento:
 1) normalize_valores.py       (01_collector -> 02_normalize)
@@ -27,7 +27,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
-
 
 DEFAULT_TYPES = ["contrato_social", "escritura_imovel", "escritura_hipotecaria"]
 
@@ -64,11 +63,13 @@ def _ensure_dir(path: Path) -> None:
 def main() -> int:
     repo = _repo_root()
 
-    ap = argparse.ArgumentParser(description="Orquestrador CAD-OBR (normalize + monetary).")
+    ap = argparse.ArgumentParser(
+        description="Orquestrador CAD_OBR (normalize + monetary)."
+    )
     ap.add_argument(
         "--base-out",
-        default="outputs/cad-obr",
-        help="Base de outputs (default: outputs/cad-obr)",
+        default="outputs/cad_obr",
+        help="Base de outputs (default: outputs/cad_obr)",
     )
     ap.add_argument(
         "--types",
@@ -80,10 +81,20 @@ def main() -> int:
         default="*collector_out*.json",
         help='Pattern de entrada do collector para o normalize_valores (default: "*collector_out*.json")',
     )
-    ap.add_argument("--dry-run", action="store_true", help="Apenas imprime comandos, sem executar.")
-    ap.add_argument("--continue-on-error", action="store_true", help="Continua mesmo se um passo falhar.")
-    ap.add_argument("--skip-values", action="store_true", help="Pula normalize_valores.")
-    ap.add_argument("--skip-titularidade", action="store_true", help="Pula normalize_titularidade.")
+    ap.add_argument(
+        "--dry-run", action="store_true", help="Apenas imprime comandos, sem executar."
+    )
+    ap.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Continua mesmo se um passo falhar.",
+    )
+    ap.add_argument(
+        "--skip-values", action="store_true", help="Pula normalize_valores."
+    )
+    ap.add_argument(
+        "--skip-titularidade", action="store_true", help="Pula normalize_titularidade."
+    )
     ap.add_argument("--skip-partes", action="store_true", help="Pula normalize_partes.")
     ap.add_argument("--skip-monetary", action="store_true", help="Pula monetary_cli.")
     args = ap.parse_args()
@@ -98,9 +109,15 @@ def main() -> int:
         print("ERRO: --types vazio.")
         return 2
 
-    normalize_valores_py = _script_path(repo, "pipelines/cad_obr/normalize/normalize_valores.py")
-    normalize_titularidade_py = _script_path(repo, "pipelines/cad_obr/normalize/normalize_titularidade.py")
-    normalize_partes_py = _script_path(repo, "pipelines/cad_obr/normalize/normalize_partes.py")
+    normalize_valores_py = _script_path(
+        repo, "pipelines/cad_obr/normalize/normalize_valores.py"
+    )
+    normalize_titularidade_py = _script_path(
+        repo, "pipelines/cad_obr/normalize/normalize_titularidade.py"
+    )
+    normalize_partes_py = _script_path(
+        repo, "pipelines/cad_obr/normalize/normalize_partes.py"
+    )
     monetary_cli_py = _script_path(repo, "pipelines/cad_obr/monetary/monetary_cli.py")
 
     py = sys.executable  # garante o Python do seu venv/uv/ambiente atual

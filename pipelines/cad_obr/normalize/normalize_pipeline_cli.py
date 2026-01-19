@@ -9,7 +9,6 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-
 DEFAULT_CATEGORIES = ["contrato_social", "escritura_imovel", "escritura_hipotecaria"]
 
 
@@ -51,18 +50,18 @@ def _copy_back_outputs(tmp_cat_dir: Path, dest_cat_dir: Path) -> int:
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="normalize_pipeline_cli.py",
-        description="Motor CAD-OBR: roda normalize_titularidade -> normalize_partes -> normalize_valores (por categoria).",
+        description="Motor CAD_OBR: roda normalize_titularidade -> normalize_partes -> normalize_valores (por categoria).",
     )
 
     p.add_argument(
         "--collector-root",
-        default="outputs/cad-obr/01_collector",
-        help="Raiz de entrada (default: outputs/cad-obr/01_collector)",
+        default="outputs/cad_obr/01_collector",
+        help="Raiz de entrada (default: outputs/cad_obr/01_collector)",
     )
     p.add_argument(
         "--normalize-root",
-        default="outputs/cad-obr/02_normalize",
-        help="Raiz de saída/base de normalização (default: outputs/cad-obr/02_normalize)",
+        default="outputs/cad_obr/02_normalize",
+        help="Raiz de saída/base de normalização (default: outputs/cad_obr/02_normalize)",
     )
     p.add_argument(
         "--pattern",
@@ -178,7 +177,9 @@ def main() -> int:
 
             if not dry_run:
                 changed = _copy_back_outputs(tmp_cat, out_cat_02)
-                print(f"OK: {cat} -> valores aplicados (arquivos copiados de volta: {changed})")
+                print(
+                    f"OK: {cat} -> valores aplicados (arquivos copiados de volta: {changed})"
+                )
 
         return 0
 

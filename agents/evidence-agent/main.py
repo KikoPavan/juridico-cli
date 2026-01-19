@@ -1,367 +1,443 @@
+# agents/evidence-agent/main.py
 import argparse
 import json
 import os
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+import re
+import sys
+from datetime import datetime
+from typing import Any, Dict, Tuple
 
-import yaml
-from jsonschema import Draft202012Validator
+try:
+    import yaml  # type: ignore
+except Exception as e:  # pragma: no cover
+    raise RuntimeError(
+        "Dependência ausente: pyyaml. Instale no seu venv (uv/pip)."
+    ) from e
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-@dataclass(frozen=True)
-class RuntimeConfig:
-    provider: str
-    mode: str
-    model: str
-    temperature: float
-    top_p: float
-    max_output_tokens: int
-
-
-def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+try:
+    import jsonschema  # type: ignore
+except Exception as e:  # pragma: no cover
+    raise RuntimeError(
+        "Dependência ausente: jsonschema. Instale no seu venv (uv/pip)."
+    ) from e
 
 
-def _read_json(path: Path) -> Any:
-    return json.loads(_read_text(path))
+def _read_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
-def _read_yaml(path: Path) -> Dict[str, Any]:
-    return yaml.safe_load(_read_text(path))
+def _write_text(path: str, content: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
 
 
-def _load_runtime(cfg: Dict[str, Any]) -> RuntimeConfig:
-    rt = cfg.get("runtime") or {}
-    return RuntimeConfig(
-        provider=str(rt.get("provider", "gemini")),
-        mode=str(rt.get("mode", "google.genai")),
-        model=str(rt.get("model", "gemini-2.5-flash")),
-        temperature=float(rt.get("temperature", 0.0)),
-        top_p=float(rt.get("top_p", 0.95)),
-        max_output_tokens=int(rt.get("max_output_tokens", 8192)),
-    )
+def _read_json(path: str) -> Any:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-def _select_job(cfg: Dict[str, Any], job_id: Optional[str]) -> Dict[str, Any]:
-    jobs = cfg.get("jobs")
-    if isinstance(jobs, list):
-        if not jobs:
-            raise ValueError("config.yaml: 'jobs' está vazio.")
-        if job_id is None:
-            return jobs[0]
-        for j in jobs:
-            if j.get("id") == job_id:
-                return j
-        raise ValueError(f"config.yaml: job id '{job_id}' não encontrado em 'jobs'.")
-    if isinstance(jobs, dict):
-        # suporte para layout antigo: jobs: { nome: [ {..} ] }
-        if not jobs:
-            raise ValueError("config.yaml: 'jobs' (dict) está vazio.")
-        if job_id is None:
-            first_key = next(iter(jobs.keys()))
-            job_list = jobs[first_key]
-            if not isinstance(job_list, list) or not job_list:
-                raise ValueError("config.yaml: formato inválido em jobs.<key> (esperado lista).")
-            return job_list[0]
-        # tentar por chave e por id
-        if job_id in jobs:
-            job_list = jobs[job_id]
-            if not isinstance(job_list, list) or not job_list:
-                raise ValueError(f"config.yaml: jobs.{job_id} inválido (esperado lista não-vazia).")
-            return job_list[0]
-        for k, lst in jobs.items():
-            if isinstance(lst, list):
-                for j in lst:
-                    if j.get("id") == job_id:
-                        return j
-        raise ValueError(f"config.yaml: job id '{job_id}' não encontrado em 'jobs'.")
-    raise ValueError("config.yaml: 'jobs' precisa ser uma lista (recomendado) ou dict (legado).")
+def _read_yaml(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
-def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
-    if not path.exists():
-        return rows
-    with path.open("r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            s = line.strip()
-            if not s:
-                continue
-            try:
-                obj = json.loads(s)
-                if isinstance(obj, dict):
-                    rows.append(obj)
-                else:
-                    rows.append({"_value": obj})
-            except json.JSONDecodeError:
-                rows.append({"_parse_error": True, "_line_no": line_no, "_raw": s})
-    return rows
+def _extract_json_object(raw: str) -> Dict[str, Any]:
+    raw = raw.strip()
+
+    # tentativa direta
+    try:
+        obj = json.loads(raw)
+        if isinstance(obj, dict):
+            return obj
+    except Exception:
+        pass
+
+    # encontrar o primeiro objeto { ... } no texto
+    m = re.search(r"\{", raw)
+    if not m:
+        raise ValueError(
+            "Não foi possível localizar início de objeto JSON na resposta do modelo."
+        )
+    start = m.start()
+
+    # tentar pelo último }
+    end = raw.rfind("}")
+    if end == -1 or end <= start:
+        raise ValueError(
+            "JSON parece truncado: não foi encontrado fechamento do objeto."
+        )
+
+    candidate = raw[start : end + 1]
+    try:
+        obj = json.loads(candidate)
+    except Exception as e:
+        raise ValueError("Falha ao parsear JSON extraído da resposta do modelo.") from e
+
+    if not isinstance(obj, dict):
+        raise ValueError("O JSON retornado não é um objeto (dict).")
+    return obj
 
 
-def _read_reports_md(reports_dir: Path) -> Dict[str, str]:
-    if not reports_dir.exists():
-        return {}
-    out: Dict[str, str] = {}
-    for p in sorted(reports_dir.glob("*.md")):
-        out[p.name] = _read_text(p)
+def _validate_schema(schema_path: str, envelope: Dict[str, Any]) -> None:
+    schema = _read_json(schema_path)
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(envelope), key=lambda e: list(e.path))
+    if errors:
+        lines = ["Falha de validacao JSON Schema:"]
+        for err in errors:
+            lines.append(f"- {list(err.path)}: {err.message}")
+        raise ValueError("\n".join(lines))
+
+
+def _severity_map(val: Any) -> str:
+    s = str(val or "").strip().lower()
+    mapping = {
+        "low": "baixa",
+        "medium": "media",
+        "high": "alta",
+        "critical": "critica",
+        "baixa": "baixa",
+        "media": "media",
+        "média": "media",
+        "alta": "alta",
+        "crítica": "critica",
+        "critica": "critica",
+    }
+    return mapping.get(s, s or "media")
+
+
+def _normalize_docs_apresentados(obj: Any) -> Dict[str, Any]:
+    # objetivo: garantir {total_documentos, por_tipo, lista} e remover extras.
+    lista = []
+    if isinstance(obj, list):
+        lista = obj
+    elif isinstance(obj, dict):
+        # aceitamos 'lista' ou variações
+        lista = obj.get("lista") or obj.get("itens") or obj.get("items") or []
+        if not isinstance(lista, list):
+            lista = []
+    else:
+        lista = []
+
+    # normalizar itens
+    norm_lista = []
+    for it in lista:
+        if not isinstance(it, dict):
+            continue
+        norm_lista.append(
+            {
+                "id_doc": str(
+                    it.get("id_doc") or it.get("id") or it.get("doc_id") or ""
+                ),
+                "tipo": str(it.get("tipo") or it.get("type") or "desconhecido"),
+                "descricao": str(it.get("descricao") or it.get("description") or ""),
+                "referencia": str(
+                    it.get("referencia") or it.get("ref") or it.get("fonte") or ""
+                ),
+                "observacao": it.get("observacao")
+                if "observacao" in it
+                else it.get("note"),
+            }
+        )
+
+    por_tipo: Dict[str, int] = {}
+    for it in norm_lista:
+        t = (it.get("tipo") or "desconhecido").strip() or "desconhecido"
+        por_tipo[t] = por_tipo.get(t, 0) + 1
+
+    return {
+        "total_documentos": len(norm_lista),
+        "por_tipo": por_tipo,
+        "lista": norm_lista,
+    }
+
+
+def _normalize_evidencias(evs: Any) -> list:
+    out = []
+    if not isinstance(evs, list):
+        return out
+    for ev in evs:
+        if not isinstance(ev, dict):
+            continue
+        fonte = (
+            ev.get("fonte")
+            or ev.get("source")
+            or ev.get("ref")
+            or ev.get("arquivo")
+            or ""
+        )
+        trecho = (
+            ev.get("trecho")
+            or ev.get("text")
+            or ev.get("excerpt")
+            or ev.get("fragmento")
+            or ""
+        )
+        obs = (
+            ev.get("observacao")
+            or ev.get("note")
+            or ev.get("comentario")
+            or ev.get("why")
+            or ""
+        )
+        out.append(
+            {
+                "fonte": str(fonte) if fonte is not None else "",
+                "trecho": str(trecho) if trecho is not None else "",
+                "observacao": str(obs) if obs is not None else "",
+            }
+        )
     return out
 
 
-def _infer_tipo_processo(context: Dict[str, Any]) -> str:
-    # aceitar variações comuns do seu projeto
-    if not context:
-        return ""
-    if isinstance(context.get("tipo_processo"), str):
-        return context["tipo_processo"].strip()
-    cc = context.get("contexto_caso")
-    if isinstance(cc, dict) and isinstance(cc.get("tipo_processo"), str):
-        return cc["tipo_processo"].strip()
-    return ""
+def _normalize_findings(findings: Any) -> list:
+    if not isinstance(findings, list):
+        return []
+    norm = []
+    for f in findings:
+        if not isinstance(f, dict):
+            continue
+
+        fid = f.get("id") or f.get("finding_id") or f.get("findingId") or ""
+        titulo = f.get("titulo") or f.get("title") or ""
+        descricao = f.get("descricao") or f.get("summary") or f.get("description") or ""
+        sev = f.get("severidade") or f.get("severity") or ""
+
+        evidencias = f.get("evidencias") or f.get("evidence") or f.get("snippets") or []
+        evidencias_norm = _normalize_evidencias(evidencias)
+
+        recomendacoes = f.get("recomendacoes") or f.get("recommendations") or []
+        if not isinstance(recomendacoes, list):
+            recomendacoes = []
+
+        # limpar para o formato esperado (sem propriedades extras)
+        norm.append(
+            {
+                "id": str(fid) if fid is not None else "",
+                "titulo": str(titulo) if titulo is not None else "",
+                "descricao": str(descricao) if descricao is not None else "",
+                "severidade": _severity_map(sev),
+                "evidencias": evidencias_norm,
+                "recomendacoes": [str(x) for x in recomendacoes if x is not None],
+            }
+        )
+    return norm
 
 
-def _select_skill_hint(job: Dict[str, Any], tipo_processo: str) -> Tuple[str, str]:
-    target = str(job.get("process_type_target", "")).strip()
-
-    # nomes diferentes (alguns configs usam skill_id_*, outros skill_name_*)
-    default_skill = (
-        job.get("skill_id_default")
-        or job.get("skill_name_default")
-        or job.get("skill_key_default")
+def _ensure_result_shape(result: Dict[str, Any]) -> Dict[str, Any]:
+    resumo = (
+        result.get("resumo_executivo")
+        or result.get("executive_summary")
+        or result.get("summary")
         or ""
     )
-    target_skill = (
-        job.get("skill_id_target")
-        or job.get("skill_name_target")
-        or job.get("skill_key_target")
-        or ""
+    findings = _normalize_findings(
+        result.get("findings") or result.get("achados") or []
     )
 
-    default_skill = str(default_skill).strip()
-    target_skill = str(target_skill).strip()
+    inv = result.get("inventario_documental") or result.get("inventario") or {}
+    if not isinstance(inv, dict):
+        inv = {}
 
-    if target and tipo_processo and tipo_processo == target and target_skill:
-        return target_skill, "target"
-    if default_skill:
-        return default_skill, "default"
-    return "", "none"
+    docs_apr = _normalize_docs_apresentados(
+        inv.get("documentos_apresentados") or inv.get("docs_apresentados") or []
+    )
+    docs_falt = inv.get("documentos_faltantes") or inv.get("missing_documents") or []
+    rec_colheita = (
+        inv.get("documentos_recomendados_para_colheita")
+        or inv.get("docs_recomendados")
+        or []
+    )
 
+    if not isinstance(docs_falt, list):
+        docs_falt = []
+    if not isinstance(rec_colheita, list):
+        rec_colheita = []
 
-def _build_input_payload(
-    job: Dict[str, Any],
-    dataset_dir: Path,
-    reports_dir: Optional[Path],
-    context_file: Optional[Path],
-    relacoes_file: Optional[Path],
-) -> Dict[str, Any]:
-    # dataset tables (JSONL)
-    dataset = {
-        "contratos_operacoes": _read_jsonl(dataset_dir / "contratos_operacoes.jsonl"),
-        "documentos": _read_jsonl(dataset_dir / "documentos.jsonl"),
-        "imoveis": _read_jsonl(dataset_dir / "imoveis.jsonl"),
-        "links": _read_jsonl(dataset_dir / "links.jsonl"),
-        "novacoes_detectadas": _read_jsonl(dataset_dir / "novacoes_detectadas.jsonl"),
-        "onus_obrigacoes": _read_jsonl(dataset_dir / "onus_obrigacoes.jsonl"),
-        "partes": _read_jsonl(dataset_dir / "partes.jsonl"),
-        "pendencias": _read_jsonl(dataset_dir / "pendencias.jsonl"),
-        "property_events": _read_jsonl(dataset_dir / "property_events.jsonl"),
+    # garantir resumo_executivo se vazio
+    if not str(resumo).strip():
+        if findings:
+            resumo = "; ".join([f["titulo"] for f in findings[:3] if f.get("titulo")])
+        else:
+            resumo = "Nenhum finding consolidado a partir do pack."
+
+    return {
+        "resumo_executivo": str(resumo),
+        "findings": findings,
+        "inventario_documental": {
+            "documentos_apresentados": docs_apr,
+            "documentos_faltantes": [str(x) for x in docs_falt if x is not None],
+            "documentos_recomendados_para_colheita": [
+                str(x) for x in rec_colheita if x is not None
+            ],
+        },
     }
 
-    reports = {}
-    if reports_dir is not None:
-        reports = _read_reports_md(reports_dir)
 
-    contexto_caso = {}
-    contexto_relacoes = {}
-    if context_file is not None and context_file.exists():
-        contexto_caso = _read_json(context_file)
-    if relacoes_file is not None and relacoes_file.exists():
-        contexto_relacoes = _read_json(relacoes_file)
-
-    tipo_processo = _infer_tipo_processo(contexto_caso)
-    skill_hint, skill_hint_mode = _select_skill_hint(job, tipo_processo)
-
-    payload: Dict[str, Any] = {
-        "dataset_dir": str(dataset_dir.as_posix()),
-        "dataset": dataset,
-        "reports_dir": str(reports_dir.as_posix()) if reports_dir is not None else "",
-        "reports": reports,
-        "contexto_caso": contexto_caso,
-        "contexto_relacoes": contexto_relacoes,
-        "tipo_processo": tipo_processo,
-        "skill_hint": {"id": skill_hint, "mode": skill_hint_mode},
-    }
-    return payload
+def _render_prompt(template_path: str, skill_text: str, pack_obj: Any) -> str:
+    tpl = _read_text(template_path)
+    pack_json = json.dumps(pack_obj, ensure_ascii=False, indent=2)
+    return tpl.replace("{{SKILL_TEXT}}", skill_text).replace("{{PACK_JSON}}", pack_json)
 
 
-def _inject_skills_xml(prompt_md: str, skills_prompt_xml: str) -> str:
-    return prompt_md.replace("{{SKILLS_PROMPT_XML}}", skills_prompt_xml)
+def _load_skill_text(skill_path: str) -> str:
+    return _read_text(skill_path).strip()
 
 
-def _call_gemini_json(
-    runtime: RuntimeConfig,
-    full_prompt: str,
-) -> str:
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+def _call_model(
+    runtime: Dict[str, Any], prompt: str, api_key_override: str | None = None
+) -> Tuple[str, str]:
+    api_key_env = runtime.get("api_key_env") or "GOOGLE_API_KEY"
+    api_key = (
+        api_key_override
+        or os.getenv(str(api_key_env))
+        or os.getenv("GEMINI_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+    )
     if not api_key:
         raise RuntimeError(
-            "API key não encontrada. Defina GOOGLE_API_KEY ou GEMINI_API_KEY no ambiente."
+            "GOOGLE_API_KEY não está definido no ambiente (nem GEMINI_API_KEY)."
         )
 
-    # google-genai (novo)
+    from google import genai  # type: ignore
+    from google.genai import types  # type: ignore
+
+    client = genai.Client(api_key=api_key)
+
+    model = str(runtime.get("model") or "gemini-2.5-flash")
+    temperature = float(runtime.get("temperature", 0.0))
+    top_p = float(runtime.get("top_p", 0.95))
+    max_output_tokens = int(runtime.get("max_output_tokens", 8192))
+    response_mime_type = str(runtime.get("response_mime_type") or "application/json")
+
+    cfg = types.GenerateContentConfig(
+        temperature=temperature,
+        top_p=top_p,
+        max_output_tokens=max_output_tokens,
+        response_mime_type=response_mime_type,
+    )
+
+    resp = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=cfg,
+    )
+
+    raw = (resp.text or "").strip()
+    model_used = model
     try:
-        from google import genai
-        from google.genai import types
-
-        client = genai.Client(api_key=api_key)
-        config = types.GenerateContentConfig(
-            temperature=runtime.temperature,
-            top_p=runtime.top_p,
-            max_output_tokens=runtime.max_output_tokens,
-            response_mime_type="application/json",
-        )
-        resp = client.models.generate_content(
-            model=runtime.model,
-            contents=full_prompt,
-            config=config,
-        )
-        return (resp.text or "").strip()
-    except ImportError:
-        # fallback: google.generativeai (mais antigo)
-        import google.generativeai as genai  # type: ignore
-
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name=runtime.model,
-            generation_config={
-                "temperature": runtime.temperature,
-                "top_p": runtime.top_p,
-                "max_output_tokens": runtime.max_output_tokens,
-            },
-        )
-        resp = model.generate_content(full_prompt)
-        return str(getattr(resp, "text", "")).strip()
-
-
-def _extract_json_object(text: str) -> Dict[str, Any]:
-    s = text.strip()
-    if not s:
-        raise ValueError("Resposta vazia do modelo.")
-    # se veio puro
-    if s.startswith("{") and s.endswith("}"):
-        return json.loads(s)
-
-    # tentativa de extração (caso o modelo tenha colocado texto extra)
-    start = s.find("{")
-    end = s.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError("Não foi possível localizar um objeto JSON na resposta do modelo.")
-    candidate = s[start : end + 1].strip()
-    return json.loads(candidate)
-
-
-def _validate_output(schema_path: Path, output_obj: Dict[str, Any]) -> None:
-    schema = _read_json(schema_path)
-    Draft202012Validator(schema).validate(output_obj)
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Evidence-agent (config-driven, dataset_v1 JSONL)")
-    parser.add_argument(
-        "--config",
-        default="agents/evidence-agent/config.yaml",
-        help="Caminho do config.yaml (relativo ao repo root)",
-    )
-    parser.add_argument(
-        "--job",
-        default=None,
-        help="ID do job (se omitido, usa o primeiro job do config)",
-    )
-    parser.add_argument(
-        "--dataset-dir",
-        default=None,
-        help="Override do dataset_dir (se omitido, usa o do job)",
-    )
-    args = parser.parse_args()
-
-    cfg_path = (REPO_ROOT / args.config).resolve()
-    cfg = _read_yaml(cfg_path)
-    runtime = _load_runtime(cfg)
-
-    paths = cfg.get("paths") or {}
-    prompt_file = str(paths.get("prompt_file", "agents/evidence-agent/prompt.md"))
-    prompt_path = (REPO_ROOT / prompt_file).resolve()
-    prompt_md = _read_text(prompt_path)
-
-    skills_id = cfg.get("skills_id") or {}
-    skills_prompt_file = str(skills_id.get("skills_prompt_file", "")).strip()
-    if not skills_prompt_file:
-        raise ValueError("config.yaml: skills_id.skills_prompt_file é obrigatório (XML de skills).")
-    skills_prompt_path = (REPO_ROOT / skills_prompt_file).resolve()
-    skills_prompt_xml = _read_text(skills_prompt_path)
-
-    job = _select_job(cfg, args.job)
-
-    schema_file = str(job.get("schema_file", "")).strip()
-    if not schema_file:
-        raise ValueError("config.yaml: job.schema_file é obrigatório.")
-    schema_path = (REPO_ROOT / schema_file).resolve()
-
-    dataset_dir_str = args.dataset_dir or str(job.get("dataset_dir", "")).strip()
-    if not dataset_dir_str:
-        raise ValueError("config.yaml: job.dataset_dir é obrigatório (diretório dataset_v1).")
-    dataset_dir = (REPO_ROOT / dataset_dir_str).resolve()
-
-    reports_dir = None
-    reports_dir_str = str(job.get("reports_dir", "")).strip()
-    if reports_dir_str:
-        reports_dir = (REPO_ROOT / reports_dir_str).resolve()
-
-    context_file = None
-    context_file_str = str(job.get("context_file", "")).strip()
-    if context_file_str:
-        context_file = (REPO_ROOT / context_file_str).resolve()
-
-    relacoes_file = None
-    relacoes_file_str = str(job.get("relacoes_file", "")).strip()
-    if relacoes_file_str:
-        relacoes_file = (REPO_ROOT / relacoes_file_str).resolve()
-
-    output_dir_str = str(job.get("output_dir", "")).strip()
-    output_filename = str(job.get("output_filename", "")).strip()
-    if not output_dir_str or not output_filename:
-        raise ValueError("config.yaml: job.output_dir e job.output_filename são obrigatórios.")
-    output_dir = (REPO_ROOT / output_dir_str).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Monta payload
-    payload = _build_input_payload(job, dataset_dir, reports_dir, context_file, relacoes_file)
-
-    # Monta prompt final
-    prompt_with_skills = _inject_skills_xml(prompt_md, skills_prompt_xml)
-    input_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    full_prompt = f"{prompt_with_skills}\n\nINPUT_JSON:\n{input_json}\n"
-
-    # Chamada LLM
-    raw = _call_gemini_json(runtime, full_prompt)
-
-    # Parse + validação
-    try:
-        out_obj = _extract_json_object(raw)
-        _validate_output(schema_path, out_obj)
+        mv = getattr(resp, "model_version", None)
+        if mv:
+            model_used = str(mv)
     except Exception:
-        # mantém rastreabilidade para depuração (sem “gambiarra”; é evidência técnica)
-        (output_dir / "_last_raw.txt").write_text(raw, encoding="utf-8")
-        (output_dir / "_last_prompt.txt").write_text(full_prompt, encoding="utf-8")
-        raise
+        pass
 
-    out_path = output_dir / output_filename
-    out_path.write_text(json.dumps(out_obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    return raw, model_used
 
-    print(f"[OK] evidence-agent output: {out_path.as_posix()}")
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", required=True)
+    ap.add_argument("--job", default=None)
+    ap.add_argument("--api-key", default=None)
+    ap.add_argument("--pack", default=None)
+    args = ap.parse_args()
+
+    cfg = _read_yaml(args.config)
+    runtime = cfg.get("runtime") or {}
+    paths = cfg.get("paths") or {}
+    skills_map = cfg.get("skills_map") or {}
+    jobs = cfg.get("jobs") or {}
+
+    prompt_file = str(paths["prompt_file"])
+    schema_file = str(paths["schema_file"])
+    pack_file = str(args.pack or paths.get("pack_file"))
+
+    out_dir = str(paths.get("output_dir", "outputs/cad_obr/05_evidence/dataset_v1"))
+    out_name = str(paths.get("output_filename", "evidence_out.json"))
+    last_prompt_name = str(paths.get("last_prompt_filename", "_last_prompt.txt"))
+    last_raw_name = str(paths.get("last_raw_filename", "_last_raw.txt"))
+
+    # selecionar job
+    selected_job = None
+    if args.job:
+        for lst in jobs.values():
+            if isinstance(lst, list):
+                for j in lst:
+                    if isinstance(j, dict) and j.get("id") == args.job:
+                        selected_job = j
+                        break
+            if selected_job:
+                break
+        if not selected_job:
+            raise RuntimeError(f"Job não encontrado: {args.job}")
+    else:
+        # pega o primeiro job da primeira chave
+        for lst in jobs.values():
+            if isinstance(lst, list) and lst:
+                selected_job = lst[0]
+                break
+        if not selected_job:
+            raise RuntimeError("Nenhum job definido no config.yaml.")
+
+    skill_key = selected_job.get("skill_key_default") or "core"
+    skill_path = skills_map.get(skill_key)
+    if not skill_path:
+        raise RuntimeError(
+            f"skill_key_default '{skill_key}' não encontrado em skills_map."
+        )
+    skill_text = _load_skill_text(str(skill_path))
+
+    pack_obj = _read_json(pack_file)
+    prompt = _render_prompt(prompt_file, skill_text, pack_obj)
+
+    # debug files
+    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_base = os.path.join(out_dir)
+    os.makedirs(out_base, exist_ok=True)
+    _write_text(os.path.join(out_base, last_prompt_name), prompt)
+
+    raw, model_used = _call_model(runtime, prompt, api_key_override=args.api_key)
+    _write_text(os.path.join(out_base, last_raw_name), raw)
+
+    parsed = _extract_json_object(raw)
+
+    # se veio envelope completo, usa; senão, monta
+    if (
+        isinstance(parsed, dict)
+        and "outputs" in parsed
+        and isinstance(parsed.get("outputs"), dict)
+    ):
+        envelope = parsed
+        # normaliza apenas se existir result
+        if "result" in envelope["outputs"] and isinstance(
+            envelope["outputs"]["result"], dict
+        ):
+            envelope["outputs"]["result"] = _ensure_result_shape(
+                envelope["outputs"]["result"]
+            )
+    else:
+        result_obj = _ensure_result_shape(parsed)
+        envelope = {
+            "meta": {
+                "model_used": model_used,
+                "job_id": selected_job.get("id"),
+            },
+            "outputs": {"result": result_obj},
+        }
+
+    _validate_schema(schema_file, envelope)
+
+    out_path = os.path.join(out_base, out_name)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(envelope, f, ensure_ascii=False, indent=2)
+
+    print(f"OK: escrito: {out_path}")
+    print(f"Model: {model_used}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

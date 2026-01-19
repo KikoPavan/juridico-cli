@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # Add current directory to path
-sys.path.append(str(Path("mcp-server-cad-obr").absolute()))
+sys.path.append(str(Path("mcp-server-cad_obr").absolute()))
 
 from rag_tools import search_laws, semantic_search
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cad-obr/common.schema.json",
-  "title": "CAD-OBR Common Types (v1)",
+  "$id": "cad_obr/common.schema.json",
+  "title": "CAD_OBR Common Types (v1)",
   "type": "object",
   "$defs": {
     "DateISO": {

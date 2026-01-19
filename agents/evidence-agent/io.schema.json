@@ -1,735 +1,112 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/evidence-agent.io.schema.json",
-  "title": "Contrato de I/O do agente evidence-agent",
-  "description": "Schema para padronizar a requisição/opções de execução e o relatório de execução do evidence-agent. O evidence-agent cruza dados do dataset reconciler (CAD-OBR), contexto do caso e juntadas para apontar evidências/hipóteses de manipulação, e ao final lista documentos apresentados e documentos faltantes para colheita.",
+  "$id": "https://juridico-cli.local/schemas/evidence-agent/io.schema.json",
+  "title": "Evidence-Agent Output Envelope",
   "type": "object",
   "additionalProperties": false,
+  "required": ["outputs"],
   "properties": {
-    "agent": {
-      "type": "string",
-      "const": "evidence-agent",
-      "description": "Identificador do agente."
-    },
-    "io_version": {
-      "type": "string",
-      "description": "Versão lógica do contrato de I/O (não confundir com versão de skill/prompt).",
-      "default": "evidence-agent-io-v1"
-    },
-    "inputs": {
+    "meta": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "Parâmetros/overrides opcionais para execução do evidence-agent (o agente pode ignorar campos que não implemente).",
-      "properties": {
-        "config_path": {
-          "type": "string",
-          "description": "Caminho do config.yaml do evidence-agent.",
-          "default": "agents/evidence-agent/config.yaml"
-        },
-        "job_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Job.id a executar. Se null/ausente, executa o job padrão do config.yaml."
-        },
-        "overrides": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": false,
-          "description": "Overrides opcionais (globais) para caminhos e execução.",
-          "properties": {
-            "dataset_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Sobrescreve o diretório do dataset reconciler (ex.: outputs/cad-obr/04_reconciler/dataset_v1)."
-            },
-            "dataset_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Identificador lógico do dataset (ex.: dataset_v1)."
-            },
-            "reports_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Diretório com relatórios derivados do dataset (ex.: outputs/cad-obr/04_reconciler/reports/dataset_v1)."
-            },
-            "context_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Sobrescreve o caminho do data/context.json."
-            },
-            "relacoes_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Sobrescreve o caminho do data/contexto_relacoes.json."
-            },
-            "juntada_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Sobrescreve o diretório de juntadas (ex.: outputs/juntada)."
-            },
-            "processo_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Sobrescreve o arquivo consolidado do processo (ex.: outputs/processo/collector_out_processo_consolidado.json)."
-            }
-          }
-        }
-      },
-      "required": [
-        "config_path"
-      ]
+      "additionalProperties": true
     },
     "outputs": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Relatório estruturado do evidence-agent.",
+      "required": ["result"],
       "properties": {
-        "result": {
-          "$ref": "#/$defs/EvidenceReport"
-        },
-        "run": {
-          "$ref": "#/$defs/RunMetadata"
-        }
-      },
-      "required": [
-        "result"
-      ]
+        "result": { "$ref": "#/$defs/result" }
+      }
     }
   },
-  "required": [
-    "agent",
-    "io_version",
-    "inputs",
-    "outputs"
-  ],
   "$defs": {
-    "RunMetadata": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "description": "Metadados de execução (opcional), preenchidos por código determinístico quando disponível.",
-      "properties": {
-        "run_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Identificador da execução (UUID)."
-        },
-        "generated_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time",
-          "description": "Timestamp ISO 8601 da geração."
-        },
-        "model": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Modelo usado (ex.: gemini-2.5-flash)."
-        },
-        "temperature": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "minimum": 0,
-          "maximum": 2,
-          "description": "Temperatura efetiva."
-        },
-        "skill_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Skill efetivamente usada, se aplicável."
-        },
-        "job_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Job efetivamente executado."
-        }
-      }
-    },
-    "EvidenceReport": {
+    "result": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Resultado analítico do evidence-agent (evidence pack).",
+      "required": ["resumo_executivo", "findings", "inventario_documental"],
       "properties": {
-        "versao": {
-          "type": "string",
-          "description": "Versão lógica do formato de saída (ex.: 'evidence-v1')."
-        },
-        "gerado_em": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time",
-          "description": "Timestamp ISO 8601 da geração, se disponível."
-        },
-        "origem": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": false,
-          "description": "Metadados sobre os insumos de entrada utilizados pelo evidence-agent (dataset reconciler e contextos).",
-          "properties": {
-            "dataset_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Diretório do dataset reconciler (ex.: outputs/cad-obr/04_reconciler/dataset_v1)."
-            },
-            "dataset_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Identificador lógico do dataset (ex.: dataset_v1)."
-            },
-            "reports_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Diretório com relatórios do dataset (opcional)."
-            },
-            "context_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Arquivo de contexto do caso (ex.: data/context.json)."
-            },
-            "relacoes_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Arquivo de relações do caso (ex.: data/contexto_relacoes.json)."
-            },
-            "juntada_dir": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Diretório de juntadas (ex.: outputs/juntada)."
-            },
-            "processo_file": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Arquivo consolidado do processo (opcional)."
-            }
-          }
-        },
-        "relacoes_criticas": {
+        "resumo_executivo": { "type": "string", "minLength": 1 },
+        "findings": {
           "type": "array",
-          "description": "Lista de relações críticas analisadas (R1, R2, ...).",
-          "items": {
-            "$ref": "#/$defs/RelacaoCritica"
-          }
-        },
-        "notas_gerais": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Comentários gerais do evidence-agent (síntese final)."
-        },
-        "checklist_global": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "description": "Checklist global (documentos/ações) para elevar nível probatório do conjunto.",
-          "items": {
-            "$ref": "#/$defs/ChecklistItem"
-          }
+          "items": { "$ref": "#/$defs/finding" }
         },
         "inventario_documental": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": "object",
           "additionalProperties": false,
-          "description": "Consolidação final de documentos apresentados e documentos faltantes/recomendados para colheita.",
+          "required": [
+            "documentos_apresentados",
+            "documentos_faltantes",
+            "documentos_recomendados_para_colheita"
+          ],
           "properties": {
             "documentos_apresentados": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "$ref": "#/$defs/DocumentoInventario"
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["total_documentos", "por_tipo", "lista"],
+              "properties": {
+                "total_documentos": { "type": "integer", "minimum": 0 },
+                "por_tipo": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer", "minimum": 0 }
+                },
+                "lista": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/doc_item" }
+                }
               }
             },
             "documentos_faltantes": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "$ref": "#/$defs/ChecklistItem"
-              }
-            }
-          }
-        }
-      },
-      "required": [
-        "versao",
-        "relacoes_criticas"
-      ]
-    },
-    "DocumentoInventario": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "id_doc": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Identificador interno do documento (se existir)."
-        },
-        "tipo": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Tipo do documento (ex.: escritura_hipotecaria, contrato_social, decisao)."
-        },
-        "descricao": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Descrição curta do documento."
-        },
-        "referencia": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Referência para localizar (ex.: path, URL interna, âncora 'fls.', etc.)."
-        },
-        "observacao": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Observações sobre utilidade/escopo."
-        }
-      },
-      "required": [
-        "tipo"
-      ]
-    },
-    "ChecklistItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "item": {
-          "type": "string",
-          "description": "Descrição do documento/diligência."
-        },
-        "prioridade": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "enum": [
-            "alta",
-            "media",
-            "baixa"
-          ],
-          "description": "Prioridade sugerida."
-        },
-        "impacto_prova": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Como este item melhora a prova."
-        },
-        "por_que_falta": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Por que o item está ausente/necessário."
-        }
-      },
-      "required": [
-        "item"
-      ]
-    },
-    "FonteApoio": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "tipo_fonte": {
-          "type": "string",
-          "enum": [
-            "registro_imobiliario",
-            "juntada",
-            "processo",
-            "contexto",
-            "dataset_reconciler",
-            "outro"
-          ],
-          "description": "Tipo da fonte."
-        },
-        "ref": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Referência (ex.: id_doc, âncora, caminho)."
-        },
-        "trecho": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Trecho curto/nota para contextualização (sem citar texto longo)."
-        }
-      },
-      "required": [
-        "tipo_fonte"
-      ]
-    },
-    "FatoRegistroImobiliario": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "fato": {
-          "type": "string",
-          "description": "Fato objetivo do registro imobiliário."
-        },
-        "matricula": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Matrícula relacionada (se aplicável)."
-        },
-        "id_obrigacao": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "ID da obrigação/ônus no dataset (se aplicável)."
-        },
-        "fonte": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/FonteApoio"
+              "type": "array",
+              "items": { "type": "string" }
             },
-            {
-              "type": "null"
+            "documentos_recomendados_para_colheita": {
+              "type": "array",
+              "items": { "type": "string" }
             }
-          ]
-        }
-      },
-      "required": [
-        "fato"
-      ]
-    },
-    "FatoDeclaradoUsuario": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "alegacao": {
-          "type": "string",
-          "description": "Alegação/fato declarado pelo usuário (assumido como verdadeiro no corpo da análise)."
-        },
-        "impacto": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Como influencia a relação crítica."
-        }
-      },
-      "required": [
-        "alegacao"
-      ]
-    },
-    "LacunaDocumental": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "lacuna": {
-          "type": "string",
-          "description": "O que está faltando provar/documentar."
-        },
-        "impacto": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Impacto probatório da lacuna."
-        },
-        "recomendacao": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Recomendação prática (qual documento ou diligência resolve)."
-        }
-      },
-      "required": [
-        "lacuna"
-      ]
-    },
-    "FatoDocumentoContextual": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "documento_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "ID do documento (juntada/contrato/decisão)."
-        },
-        "fato": {
-          "type": "string",
-          "description": "Fato objetivo extraído do documento."
-        },
-        "data": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Data relevante do fato, quando aplicável (texto/ISO)."
-        },
-        "fonte": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/FonteApoio"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "fato"
-      ]
-    },
-    "ChecklistDocumentos": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "documentos_faltantes": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/ChecklistItem"
-          }
-        },
-        "documentos_recomendados": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/ChecklistItem"
           }
         }
       }
     },
-    "PremissaUsuario": {
+    "finding": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["id", "titulo", "descricao", "severidade", "evidencias", "recomendacoes"],
       "properties": {
-        "premissa": {
-          "type": "string",
-          "description": "Premissa do usuário (assumida como verdadeira no corpo da análise)."
+        "id": { "type": "string", "minLength": 1 },
+        "titulo": { "type": "string", "minLength": 1 },
+        "descricao": { "type": "string", "minLength": 1 },
+        "severidade": { "type": "string", "minLength": 1 },
+        "evidencias": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
         },
-        "justificativa": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Contexto/justificativa fornecida."
+        "recomendacoes": {
+          "type": "array",
+          "items": { "type": "string" }
         }
-      },
-      "required": [
-        "premissa"
-      ]
+      }
     },
-    "RelacaoCritica": {
+    "evidence": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["fonte", "trecho", "observacao"],
       "properties": {
-        "id_relacao": {
-          "type": "string",
-          "description": "Identificador da relação (ex.: 'R1')."
-        },
-        "descricao_relacao": {
-          "type": "string",
-          "description": "Descrição curta do que está sendo analisado."
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "confirmado",
-            "contrariado",
-            "indicio_forte",
-            "indicio_fraco",
-            "nao_localizado_nos_registros"
-          ],
-          "description": "Status da relação após cruzamento."
-        },
-        "nivel_prova_atual": {
-          "type": "string",
-          "enum": [
-            "forte",
-            "relevante",
-            "fraca"
-          ],
-          "description": "Nível de prova atual, considerando o que foi apresentado."
-        },
-        "matriculas_envolvidas": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "obrigacoes_relacionadas": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "documentos_juntada_relacionados": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "fontes_apoio": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/FonteApoio"
-          }
-        },
-        "fatos_registros_imobiliarios": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/FatoRegistroImobiliario"
-          }
-        },
-        "fatos_documentos_contextuais": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/FatoDocumentoContextual"
-          }
-        },
-        "fatos_declarados_usuario": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/FatoDeclaradoUsuario"
-          }
-        },
-        "lacunas_documentais": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/LacunaDocumental"
-          }
-        },
-        "checklist_documentos": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ChecklistDocumentos"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "premissas_usuario": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/PremissaUsuario"
-          }
-        },
-        "comentarios_evidence": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Comentários finais do agente sobre esta relação (síntese explicativa)."
-        }
-      },
-      "required": [
-        "id_relacao",
-        "descricao_relacao",
-        "status",
-        "nivel_prova_atual"
-      ]
+        "fonte": { "type": "string", "minLength": 1 },
+        "trecho": { "type": "string" },
+        "observacao": { "type": "string" }
+      }
+    },
+    "doc_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id_doc", "tipo", "descricao", "referencia"],
+      "properties": {
+        "id_doc": { "type": "string" },
+        "tipo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "referencia": { "type": "string" },
+        "observacao": { "type": ["string", "null"] }
+      }
     }
   }
 }

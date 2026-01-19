@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cad-obr/documentos.schema.json",
-  "title": "CAD-OBR Documentos (v1)",
+  "$id": "cad_obr/documentos.schema.json",
+  "title": "CAD_OBR Documentos (v1)",
   "type": "object",
   "additionalProperties": false,
   "required": ["doc_id", "tipo_documento", "source_path", "origin_stage"],

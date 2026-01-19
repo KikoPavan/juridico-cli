@@ -1,14 +1,13 @@
 # pipelines/cad_obr/reconciler/reconciler_core.py
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-import hashlib
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
 
 # -----------------------------
 # Utilitários determinísticos
@@ -71,7 +70,12 @@ def party_id_from_any(party: Any) -> Optional[str]:
         cnpj = digits_only(str(party.get("cnpj") or ""))
         if cnpj and len(cnpj) == 14:
             return f"cnpj:{cnpj}"
-        nome = party.get("nome") or party.get("razao_social") or party.get("denominacao") or ""
+        nome = (
+            party.get("nome")
+            or party.get("razao_social")
+            or party.get("denominacao")
+            or ""
+        )
         nome = str(nome).strip()
         if nome:
             return f"nome:{sha1_12(normalize_name(nome).lower())}"
@@ -142,7 +146,11 @@ def parse_date_to_iso(raw: Optional[str]) -> Optional[str]:
             return None
 
     # "24 de Abril de 1.991" / "10 de fevereiro de 2.001"
-    m = re.search(r"(\d{1,2})\s+de\s+([A-Za-zçÇáéíóúÁÉÍÓÚãõÃÕ]+)\s+de\s+([\d\.]{2,6})", s, re.IGNORECASE)
+    m = re.search(
+        r"(\d{1,2})\s+de\s+([A-Za-zçÇáéíóúÁÉÍÓÚãõÃÕ]+)\s+de\s+([\d\.]{2,6})",
+        s,
+        re.IGNORECASE,
+    )
     if m:
         d = int(m.group(1))
         mes_txt = m.group(2).lower()
@@ -265,6 +273,7 @@ def anchor_from_obj(obj: Any) -> Optional[Dict[str, Any]]:
 # Modelos
 # -----------------------------
 
+
 @dataclass
 class LoadedDoc:
     stage: str  # "02_normalize" | "03_monetary"
@@ -281,7 +290,7 @@ class ReconcilerInputs:
 
 @dataclass
 class ReconcilerOutputs:
-    output_root: Path  # outputs/cad-obr/04_reconciler
+    output_root: Path  # outputs/cad_obr/04_reconciler
     dataset_dirname: str = "dataset_v1"
 
 
@@ -289,13 +298,20 @@ class ReconcilerOutputs:
 # Detecção de tipo de documento
 # -----------------------------
 
+
 def detect_doc_tipo(doc: Dict[str, Any], fallback_folder: Optional[str] = None) -> str:
     # 1) pelo campo explícito
     tipo_raw = str(doc.get("tipo_documento") or "").upper()
 
     if "ADITIV" in tipo_raw:
         return "ADITIVO"
-    if "CONTRAT" in tipo_raw or "CÉDULA" in tipo_raw or "CEDULA" in tipo_raw or "CRÉDITO" in tipo_raw or "CREDITO" in tipo_raw:
+    if (
+        "CONTRAT" in tipo_raw
+        or "CÉDULA" in tipo_raw
+        or "CEDULA" in tipo_raw
+        or "CRÉDITO" in tipo_raw
+        or "CREDITO" in tipo_raw
+    ):
         return "CONTRATO_BANCARIO"
     if "ESCRITURA" in tipo_raw and "HIPOT" in tipo_raw:
         return "ESCRITURA_HIPOTECARIA"
@@ -307,7 +323,7 @@ def detect_doc_tipo(doc: Dict[str, Any], fallback_folder: Optional[str] = None) 
         # pode ser escritura_hipotecaria ou contrato bancário (sem tipo_documento preenchido)
         if fallback_folder and "hipotec" in fallback_folder.lower():
             # ainda assim pode conter contrato bancário; decide pelo conteúdo de operacao_original
-            op = (((doc.get("divida_confessada") or {}).get("operacao_original")) or {})
+            op = ((doc.get("divida_confessada") or {}).get("operacao_original")) or {}
             if isinstance(op, dict) and op.get("numero"):
                 return "CONTRATO_BANCARIO"
         return "ESCRITURA_HIPOTECARIA"
@@ -335,6 +351,7 @@ def doc_id_for(stage: str, tipo: str, path: Path) -> str:
 # -----------------------------
 # Scanner / Loader
 # -----------------------------
+
 
 def scan_json_files(root: Path, pattern: str) -> List[Path]:
     if not root.exists():
@@ -370,6 +387,7 @@ def load_inputs(inputs: ReconcilerInputs) -> Tuple[List[LoadedDoc], List[LoadedD
 # -----------------------------
 # Construção do dataset (camadas)
 # -----------------------------
+
 
 class CadObrReconciler:
     def __init__(self, inputs: ReconcilerInputs, outputs: ReconcilerOutputs):
@@ -526,7 +544,11 @@ class CadObrReconciler:
 
     def _extract_operation_id(self, doc: Dict[str, Any]) -> Optional[str]:
         # 1) já digits-only
-        cand = doc.get("numero_documento") or doc.get("numero_contrato") or doc.get("operation_id")
+        cand = (
+            doc.get("numero_documento")
+            or doc.get("numero_contrato")
+            or doc.get("operation_id")
+        )
         if isinstance(cand, str):
             d = digits_only(cand)
             if d:
@@ -609,7 +631,12 @@ class CadObrReconciler:
         if pid:
             cur = self.imoveis_map.get(pid)
             if not cur:
-                cur = {"property_id": pid, "matricula": digits_only(str(mat)) or str(mat), "docs_origem": [], "anchors": []}
+                cur = {
+                    "property_id": pid,
+                    "matricula": digits_only(str(mat)) or str(mat),
+                    "docs_origem": [],
+                    "anchors": [],
+                }
                 self.imoveis_map[pid] = cur
             if doc_id not in cur["docs_origem"]:
                 cur["docs_origem"].append(doc_id)
@@ -626,7 +653,12 @@ class CadObrReconciler:
                     continue
                 cur2 = self.imoveis_map.get(pid2)
                 if not cur2:
-                    cur2 = {"property_id": pid2, "matricula": digits_only(str(m)) or str(m), "docs_origem": [], "anchors": []}
+                    cur2 = {
+                        "property_id": pid2,
+                        "matricula": digits_only(str(m)) or str(m),
+                        "docs_origem": [],
+                        "anchors": [],
+                    }
                     self.imoveis_map[pid2] = cur2
                 if doc_id not in cur2["docs_origem"]:
                     cur2["docs_origem"].append(doc_id)
@@ -677,7 +709,10 @@ class CadObrReconciler:
                 cur["menciona_TR"] = True
 
             # datas
-            for k_src, k_dst in [("data_celebracao", "data_celebracao"), ("vencimento", "vencimento")]:
+            for k_src, k_dst in [
+                ("data_celebracao", "data_celebracao"),
+                ("vencimento", "vencimento"),
+            ]:
                 if isinstance(op, dict) and op.get(k_src):
                     iso = parse_date_to_iso(str(op.get(k_src)))
                     if iso:
@@ -708,7 +743,11 @@ class CadObrReconciler:
         # valores (base/presente)
         dc = doc.get("divida_confessada")
         if isinstance(dc, dict):
-            v = dc.get("valor") or (dc.get("valor_principal_original") if isinstance(dc.get("valor_principal_original"), str) else None)
+            v = dc.get("valor") or (
+                dc.get("valor_principal_original")
+                if isinstance(dc.get("valor_principal_original"), str)
+                else None
+            )
             if isinstance(v, str):
                 cent = parse_brl_to_centavos(v)
                 if cent is not None:
@@ -803,7 +842,9 @@ class CadObrReconciler:
 
                 val_num = o.get("valor_divida_num")
                 if not isinstance(val_num, int):
-                    val_num = parse_brl_to_centavos(val_str) or parse_brl_to_centavos(val_orig)
+                    val_num = parse_brl_to_centavos(val_str) or parse_brl_to_centavos(
+                        val_orig
+                    )
 
                 # merge monetary por registro (valor_presente, meta)
                 valor_presente_num: Optional[int] = None
@@ -817,21 +858,31 @@ class CadObrReconciler:
                         valor_presente_str = format_centavos_to_brl(vp_num)
                     vp = mo.get("valor_presente")
                     if isinstance(vp, str):
-                        valor_presente_num = parse_brl_to_centavos(vp) if valor_presente_num is None else valor_presente_num
-                        valor_presente_str = vp if valor_presente_str is None else valor_presente_str
+                        valor_presente_num = (
+                            parse_brl_to_centavos(vp)
+                            if valor_presente_num is None
+                            else valor_presente_num
+                        )
+                        valor_presente_str = (
+                            vp if valor_presente_str is None else valor_presente_str
+                        )
                     mm = mo.get("_monetary_meta")
                     if isinstance(mm, dict):
                         monetary_meta = mm
 
                 cred_id = party_id_from_any(o.get("credor"))
-                dev_id = party_id_from_any(o.get("emitente_devedor")) or party_id_from_any(ld.data.get("emitente_devedor"))
+                dev_id = party_id_from_any(
+                    o.get("emitente_devedor")
+                ) or party_id_from_any(ld.data.get("emitente_devedor"))
 
                 item: Dict[str, Any] = {
                     "onus_id": oid,
                     "property_id": pid,
                     "registro_ref": rr,
                     "tipo_divida": str(o.get("tipo_divida") or "").strip() or "DIVIDA",
-                    "operation_id": digits_only(str(o.get("numero_contrato") or "")) if o.get("numero_contrato") else None,
+                    "operation_id": digits_only(str(o.get("numero_contrato") or ""))
+                    if o.get("numero_contrato")
+                    else None,
                     "credor_id": cred_id,
                     "emitente_devedor_id": dev_id,
                     "data_efetiva": d_ef,
@@ -841,8 +892,12 @@ class CadObrReconciler:
                     "status": status,
                     "janela_vigencia_inicio": inicio,
                     "janela_vigencia_fim": fim,
-                    "valor_divida_original": str(val_orig) if val_orig is not None else None,
-                    "valor_divida": format_centavos_to_brl(val_num) if isinstance(val_num, int) else (str(val_str) if isinstance(val_str, str) else None),
+                    "valor_divida_original": str(val_orig)
+                    if val_orig is not None
+                    else None,
+                    "valor_divida": format_centavos_to_brl(val_num)
+                    if isinstance(val_num, int)
+                    else (str(val_str) if isinstance(val_str, str) else None),
                     "valor_divida_num": val_num if isinstance(val_num, int) else None,
                     "valor_presente": valor_presente_str,
                     "valor_presente_num": valor_presente_num,
@@ -865,7 +920,11 @@ class CadObrReconciler:
 
             # ONUS_REGISTRO
             # Para ordenação jurídica e detecção de eventos, prioriza data_registro; mantém data_efetiva no payload para auditoria.
-            ev_reg_date = o.get("data_registro") or o.get("data_efetiva") or o.get("janela_vigencia_inicio")
+            ev_reg_date = (
+                o.get("data_registro")
+                or o.get("data_efetiva")
+                or o.get("janela_vigencia_inicio")
+            )
             if ev_reg_date:
                 ev: Dict[str, Any] = {
                     "event_id": f"evt_{sha1_12(o['onus_id'] + '|REG')}",
@@ -888,7 +947,12 @@ class CadObrReconciler:
                 # flag registro_posterior
                 d_rg = o.get("data_registro")
                 d_ef = o.get("data_efetiva")
-                if isinstance(d_rg, str) and isinstance(d_ef, str) and is_iso_date(d_rg) and is_iso_date(d_ef):
+                if (
+                    isinstance(d_rg, str)
+                    and isinstance(d_ef, str)
+                    and is_iso_date(d_rg)
+                    and is_iso_date(d_ef)
+                ):
                     try:
                         dr = datetime.strptime(d_rg, "%Y-%m-%d").date()
                         de = datetime.strptime(d_ef, "%Y-%m-%d").date()
@@ -941,7 +1005,9 @@ class CadObrReconciler:
                     continue
 
                 # VENDA
-                d_ev = parse_date_to_iso(t.get("data_efetiva")) or parse_date_to_iso(t.get("data_registro"))
+                d_ev = parse_date_to_iso(t.get("data_efetiva")) or parse_date_to_iso(
+                    t.get("data_registro")
+                )
                 if d_ev:
                     evv: Dict[str, Any] = {
                         "event_id": f"evt_{sha1_12(pid + '|VENDA|' + (t.get('registro') or t.get('tipo_transacao') or ''))}",
@@ -950,10 +1016,14 @@ class CadObrReconciler:
                         "event_date": d_ev,
                         "data_registro": parse_date_to_iso(t.get("data_registro")),
                         "data_efetiva": parse_date_to_iso(t.get("data_efetiva")),
-                        "registro_ref": registro_ref_norm(t.get("registro")) if t.get("registro") else None,
+                        "registro_ref": registro_ref_norm(t.get("registro"))
+                        if t.get("registro")
+                        else None,
                         "source_doc_id": did,
                         "anchors": [{"source_path": str(ld.path)}],
-                        "notes": normalize_ws(str(t.get("tipo_transacao") or ""))[:2000] if t.get("tipo_transacao") else None,
+                        "notes": normalize_ws(str(t.get("tipo_transacao") or ""))[:2000]
+                        if t.get("tipo_transacao")
+                        else None,
                     }
                     self.events_list.append(evv)
 
@@ -977,7 +1047,9 @@ class CadObrReconciler:
                             entity_type="EVENT",
                             entity_id=f"{pid}|ANUENCIA",
                             motivo="anuencia_detectada_sem_data_parseavel",
-                            evidencias=[{"source_path": str(ld.path), "trecho": anu[:200]}],
+                            evidencias=[
+                                {"source_path": str(ld.path), "trecho": anu[:200]}
+                            ],
                         )
 
     # ---------
@@ -989,31 +1061,36 @@ class CadObrReconciler:
         for op_id, op in self.operacoes_map.items():
             # operação -> property
             for pid in op.get("property_ids") or []:
-                self.links_list.append({
-                    "link_id": f"lnk_{sha1_12(op_id + '|' + pid)}",
-                    "from_type": "OPERATION",
-                    "from_id": op_id,
-                    "to_type": "PROPERTY",
-                    "to_id": pid,
-                    "match_level": "A",
-                    "match_reason": "operacao_original.numero vincula garantia (matricula) no documento",
-                    "evidencias": op.get("anchors") or [{"source_path": "unknown"}],
-                })
+                self.links_list.append(
+                    {
+                        "link_id": f"lnk_{sha1_12(op_id + '|' + pid)}",
+                        "from_type": "OPERATION",
+                        "from_id": op_id,
+                        "to_type": "PROPERTY",
+                        "to_id": pid,
+                        "match_level": "A",
+                        "match_reason": "operacao_original.numero vincula garantia (matricula) no documento",
+                        "evidencias": op.get("anchors") or [{"source_path": "unknown"}],
+                    }
+                )
 
             # operação -> partes
             for role_key in ["credor_id", "emitente_devedor_id", "garante_id"]:
                 if op.get(role_key):
                     pid = op[role_key]
-                    self.links_list.append({
-                        "link_id": f"lnk_{sha1_12(op_id + '|' + pid + '|' + role_key)}",
-                        "from_type": "OPERATION",
-                        "from_id": op_id,
-                        "to_type": "PARTY",
-                        "to_id": pid,
-                        "match_level": "B",
-                        "match_reason": f"parte vinculada à operação via campo {role_key}",
-                        "evidencias": op.get("anchors") or [{"source_path": "unknown"}],
-                    })
+                    self.links_list.append(
+                        {
+                            "link_id": f"lnk_{sha1_12(op_id + '|' + pid + '|' + role_key)}",
+                            "from_type": "OPERATION",
+                            "from_id": op_id,
+                            "to_type": "PARTY",
+                            "to_id": pid,
+                            "match_level": "B",
+                            "match_reason": f"parte vinculada à operação via campo {role_key}",
+                            "evidencias": op.get("anchors")
+                            or [{"source_path": "unknown"}],
+                        }
+                    )
         # pendências: status_indeterminado removida (status passa a ser determinístico ATIVA/BAIXADA)
 
     # ---------
@@ -1040,7 +1117,9 @@ class CadObrReconciler:
                 return None
 
         # index de onus por id (para bases de match)
-        onus_by_id: Dict[str, Dict[str, Any]] = {o["onus_id"]: o for o in self.onus_list}
+        onus_by_id: Dict[str, Dict[str, Any]] = {
+            o["onus_id"]: o for o in self.onus_list
+        }
 
         def _tipo_upper(on: Dict[str, Any]) -> str:
             return str(on.get("tipo_divida") or "").strip().upper()
@@ -1062,7 +1141,6 @@ class CadObrReconciler:
             if "BLOQUEIO" in t:
                 return False
             return True
-
 
         for pid, evs in by_prop.items():
             evs_sorted = sorted(evs, key=lambda x: x.get("event_date") or "")
@@ -1099,13 +1177,19 @@ class CadObrReconciler:
                     basis: List[str] = ["JANELA_TEMPO"]
                     level = "C"
 
-                    if o1.get("credor_id") and o1.get("credor_id") == o2.get("credor_id"):
+                    if o1.get("credor_id") and o1.get("credor_id") == o2.get(
+                        "credor_id"
+                    ):
                         basis.append("CREDOR")
                         level = "B"
-                    if o1.get("emitente_devedor_id") and o1.get("emitente_devedor_id") == o2.get("emitente_devedor_id"):
+                    if o1.get("emitente_devedor_id") and o1.get(
+                        "emitente_devedor_id"
+                    ) == o2.get("emitente_devedor_id"):
                         basis.append("DEVEDOR")
                         level = "B"
-                    if o1.get("operation_id") and o1.get("operation_id") == o2.get("operation_id"):
+                    if o1.get("operation_id") and o1.get("operation_id") == o2.get(
+                        "operation_id"
+                    ):
                         basis.append("OPERACAO")
                         level = "A"
 
@@ -1119,7 +1203,8 @@ class CadObrReconciler:
                         "match_basis": basis,
                         "match_level": level,
                         "janela_dias": delta,
-                        "evidencias": (o1.get("anchors") or []) + (o2.get("anchors") or []),
+                        "evidencias": (o1.get("anchors") or [])
+                        + (o2.get("anchors") or []),
                     }
                     self.novacoes_list.append(nov)
 
@@ -1137,7 +1222,9 @@ class CadObrReconciler:
         self._write_jsonl(out_dir / "documentos.jsonl", self.docs_catalog)
         self._write_jsonl(out_dir / "partes.jsonl", list(self.partes_map.values()))
         self._write_jsonl(out_dir / "imoveis.jsonl", list(self.imoveis_map.values()))
-        self._write_jsonl(out_dir / "contratos_operacoes.jsonl", list(self.operacoes_map.values()))
+        self._write_jsonl(
+            out_dir / "contratos_operacoes.jsonl", list(self.operacoes_map.values())
+        )
         self._write_jsonl(out_dir / "onus_obrigacoes.jsonl", self.onus_list)
         self._write_jsonl(out_dir / "property_events.jsonl", self.events_list)
         self._write_jsonl(out_dir / "links.jsonl", self.links_list)

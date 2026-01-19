@@ -126,7 +126,6 @@ def post_process_data(data: Dict) -> Dict:
                 if isinstance(val_num, (int, float)):
                     item["valor_divida"] = format_currency(val_num)
 
-
             is_baixa = tipo.startswith("BAIXA") or tipo.startswith("CANCELAMENTO")
             is_aditivo = (
                 "ADITIVO" in tipo or "PRORROGACAO" in tipo or "RERRATIFICACAO" in tipo
@@ -338,7 +337,7 @@ def process_job(job: Dict, global_config: Dict, project_root: str):
         try:
             data = json.loads(clean_json)
 
-            if job.get("id") == "cad-obr":
+            if job.get("id") == "cad_obr":
                 print(
                     "   [INFO] Aplicando correções pós-processamento (Aditivos/Baixas)..."
                 )

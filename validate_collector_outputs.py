@@ -12,7 +12,7 @@ OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 
 # Mapeia prefixos/nome de pasta para o schema correspondente
 SCHEMA_MAP = {
-    "cad-obr": "escritura_imovel.schema.json",
+    "cad_obr": "escritura_imovel.schema.json",
     "juntada": "juntada.schema.json",  # se existir
     "processo": "processo.schema.json",
     "contrato_social": "contrato_social.schema.json",
@@ -35,7 +35,7 @@ def choose_schema_for_file(fname: str, parent_dir: Path):
     name_lower = fname.lower()
 
     # 1) Heurística por nome do diretório pai
-    if parent_dir.name in ("cad-obr", "cad_obr", "matriculas", "escrituras"):
+    if parent_dir.name in ("cad_obr", "matriculas", "escrituras"):
         return "escritura_imovel.schema.json"
     if parent_dir.name in ("juntada", "anexos"):
         return "juntada.schema.json"

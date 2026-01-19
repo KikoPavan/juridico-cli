@@ -20,7 +20,5 @@ data/
 arq-md/
 arq-js/
 docs_iplt/
-docs/
 # dados locais (não versionar)
 base_juridica/
-!docs/antigravity/

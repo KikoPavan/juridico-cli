@@ -14,7 +14,7 @@ def teste_rapido():
         return
 
     # 1. Ler o arquivo problemático
-    arquivo_alvo = "data/cad-obr/escritura_matricula_7.546.md"
+    arquivo_alvo = "data/cad_obr/escritura_matricula_7.546.md"
     if not os.path.exists(arquivo_alvo):
         print(f"❌ ERRO: Arquivo não encontrado: {arquivo_alvo}")
         return

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cad-obr/property_events.schema.json",
-  "title": "CAD-OBR Property Events (v1)",
+  "$id": "cad_obr/property_events.schema.json",
+  "title": "CAD_OBR Property Events (v1)",
   "type": "object",
   "additionalProperties": false,
   "required": ["event_id", "property_id", "event_type", "event_date", "source_doc_id"],

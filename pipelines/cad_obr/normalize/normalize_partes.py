@@ -41,9 +41,8 @@ from hashlib import sha1
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-
 META_KEY = "_partes_meta"
-META_VERSION = "cad-obr.normalize_partes.v1"
+META_VERSION = "cad_obr.normalize_partes.v1"
 
 
 # ---------------------------------------------------------------------
@@ -51,7 +50,16 @@ META_VERSION = "cad-obr.normalize_partes.v1"
 # ---------------------------------------------------------------------
 
 HONORIFICS_PREFIX = {
-    "SR", "SRA", "SENHOR", "SENHORA", "DONA", "DON", "DR", "DRA", "DOUTOR", "DOUTORA",
+    "SR",
+    "SRA",
+    "SENHOR",
+    "SENHORA",
+    "DONA",
+    "DON",
+    "DR",
+    "DRA",
+    "DOUTOR",
+    "DOUTORA",
 }
 
 SPLIT_PATTERNS_PRIMARY = [
@@ -60,7 +68,6 @@ SPLIT_PATTERNS_PRIMARY = [
     " E SUA ESPOSA",
     " E SEU ESPOSO",
 ]
-
 
 
 def digits_only(s: Any) -> str:
@@ -130,7 +137,9 @@ def normalize_name_primary(name: str) -> str:
     return s
 
 
-def party_id_from(name_primary: Optional[str], cpf: Optional[str], cnpj: Optional[str]) -> Optional[str]:
+def party_id_from(
+    name_primary: Optional[str], cpf: Optional[str], cnpj: Optional[str]
+) -> Optional[str]:
     cpf_d = digits_only(cpf) if cpf else ""
     cnpj_d = digits_only(cnpj) if cnpj else ""
 
@@ -156,6 +165,7 @@ def append_unique(lst: List[Any], value: Any) -> None:
 # ---------------------------------------------------------------------
 # Estruturas de saída (meta)
 # ---------------------------------------------------------------------
+
 
 @dataclass
 class Stats:
@@ -199,6 +209,7 @@ def add_party(
 # Normalização por estrutura conhecida
 # ---------------------------------------------------------------------
 
+
 def get_fonte_ancora(party_obj: Dict[str, Any]) -> Optional[str]:
     fonte = party_obj.get("fonte")
     if isinstance(fonte, dict):
@@ -208,7 +219,9 @@ def get_fonte_ancora(party_obj: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def normalize_party_object(party_obj: Dict[str, Any], role: str, meta: Dict[str, Any], source_path: str) -> Optional[str]:
+def normalize_party_object(
+    party_obj: Dict[str, Any], role: str, meta: Dict[str, Any], source_path: str
+) -> Optional[str]:
     """
     party_obj esperado: {"nome":..., "cpf"/"cnpj":..., "fonte": {"ancora":...}, ...}
     Injeta party_obj["id_parte"] e normaliza cpf/cnpj para digits-only quando existirem.
@@ -230,13 +243,23 @@ def normalize_party_object(party_obj: Dict[str, Any], role: str, meta: Dict[str,
 
     ancora = get_fonte_ancora(party_obj)
 
-    pid = add_party(meta, role=role, nome=nome, cpf=cpf, cnpj=cnpj, source_path=source_path, ancora=ancora)
+    pid = add_party(
+        meta,
+        role=role,
+        nome=nome,
+        cpf=cpf,
+        cnpj=cnpj,
+        source_path=source_path,
+        ancora=ancora,
+    )
     if pid:
         party_obj["id_parte"] = pid
     return pid
 
 
-def normalize_named_list_strings(names: Any, role: str, meta: Dict[str, Any], source_path: str) -> List[str]:
+def normalize_named_list_strings(
+    names: Any, role: str, meta: Dict[str, Any], source_path: str
+) -> List[str]:
     """
     names: lista de strings
     retorna lista de ids (na mesma ordem, sem None)
@@ -245,7 +268,9 @@ def normalize_named_list_strings(names: Any, role: str, meta: Dict[str, Any], so
     if isinstance(names, list):
         for i, n in enumerate(names):
             if isinstance(n, str) and n.strip():
-                pid = add_party(meta, role=role, nome=n, source_path=f"{source_path}[{i}]")
+                pid = add_party(
+                    meta, role=role, nome=n, source_path=f"{source_path}[{i}]"
+                )
                 if pid:
                     ids.append(pid)
     return ids
@@ -277,7 +302,15 @@ def normalize_socios(doc: Dict[str, Any], meta: Dict[str, Any]) -> None:
         anc = s.get("ancora_qualificacao")
         anc = anc.strip() if isinstance(anc, str) and anc.strip() else None
 
-        pid = add_party(meta, role="socio", nome=nome, cpf=cpf, cnpj=cnpj, source_path=f"socios[{i}]", ancora=anc)
+        pid = add_party(
+            meta,
+            role="socio",
+            nome=nome,
+            cpf=cpf,
+            cnpj=cnpj,
+            source_path=f"socios[{i}]",
+            ancora=anc,
+        )
         if pid:
             s["id_parte"] = pid
             ids.append(pid)
@@ -298,7 +331,6 @@ def normalize_administradores(doc: Dict[str, Any], meta: Dict[str, Any]) -> None
         documento_raw = a.get("documento")
         doc_digits = digits_only(documento_raw)
 
-
         if doc_digits:
             a["documento_norm"] = doc_digits
 
@@ -309,7 +341,15 @@ def normalize_administradores(doc: Dict[str, Any], meta: Dict[str, Any]) -> None
         anc = a.get("ancora_clausula")
         anc = anc.strip() if isinstance(anc, str) and anc.strip() else None
 
-        pid = add_party(meta, role="administrador", nome=nome, cpf=cpf, cnpj=cnpj, source_path=f"administradores[{i}]", ancora=anc)
+        pid = add_party(
+            meta,
+            role="administrador",
+            nome=nome,
+            cpf=cpf,
+            cnpj=cnpj,
+            source_path=f"administradores[{i}]",
+            ancora=anc,
+        )
         if pid:
             a["id_parte"] = pid
             ids.append(pid)
@@ -317,8 +357,12 @@ def normalize_administradores(doc: Dict[str, Any], meta: Dict[str, Any]) -> None
     meta["chaves_match"]["administradores_ids"] = ids
 
 
-def normalize_empresa_contrato_social(doc: Dict[str, Any], meta: Dict[str, Any]) -> None:
-    razao = doc.get("razao_social") if isinstance(doc.get("razao_social"), str) else None
+def normalize_empresa_contrato_social(
+    doc: Dict[str, Any], meta: Dict[str, Any]
+) -> None:
+    razao = (
+        doc.get("razao_social") if isinstance(doc.get("razao_social"), str) else None
+    )
     cnpj = doc.get("cnpj") if isinstance(doc.get("cnpj"), str) else None
 
     if cnpj:
@@ -326,7 +370,9 @@ def normalize_empresa_contrato_social(doc: Dict[str, Any], meta: Dict[str, Any])
         cnpj = doc["cnpj"]
 
     if razao or cnpj:
-        pid = add_party(meta, role="empresa", nome=razao, cnpj=cnpj, source_path="(root)")
+        pid = add_party(
+            meta, role="empresa", nome=razao, cnpj=cnpj, source_path="(root)"
+        )
         if pid:
             meta["chaves_match"]["empresa_id"] = pid
 
@@ -338,7 +384,9 @@ def normalize_escritura_hipotecaria(doc: Dict[str, Any], meta: Dict[str, Any]) -
             meta["chaves_match"]["credor_id"] = pid
 
     if isinstance(doc.get("emitente_devedor"), dict):
-        pid = normalize_party_object(doc["emitente_devedor"], "emitente_devedor", meta, "emitente_devedor")
+        pid = normalize_party_object(
+            doc["emitente_devedor"], "emitente_devedor", meta, "emitente_devedor"
+        )
         if pid:
             meta["chaves_match"]["emitente_devedor_id"] = pid
 
@@ -346,15 +394,29 @@ def normalize_escritura_hipotecaria(doc: Dict[str, Any], meta: Dict[str, Any]) -
         if isinstance(reps, list):
             rep_ids: List[str] = []
             for i, r in enumerate(reps):
-                if isinstance(r, dict) and isinstance(r.get("nome"), str) and r["nome"].strip():
-                    pidr = add_party(meta, role="representante_emitente_devedor", nome=r["nome"], source_path=f"emitente_devedor.representantes[{i}]")
+                if (
+                    isinstance(r, dict)
+                    and isinstance(r.get("nome"), str)
+                    and r["nome"].strip()
+                ):
+                    pidr = add_party(
+                        meta,
+                        role="representante_emitente_devedor",
+                        nome=r["nome"],
+                        source_path=f"emitente_devedor.representantes[{i}]",
+                    )
                     if pidr:
                         r["id_parte"] = pidr
                         rep_ids.append(pidr)
             meta["chaves_match"]["representantes_emitente_devedor_ids"] = rep_ids
 
     if isinstance(doc.get("interveniente_garante"), dict):
-        pid = normalize_party_object(doc["interveniente_garante"], "interveniente_garante", meta, "interveniente_garante")
+        pid = normalize_party_object(
+            doc["interveniente_garante"],
+            "interveniente_garante",
+            meta,
+            "interveniente_garante",
+        )
         if pid:
             meta["chaves_match"]["interveniente_garante_id"] = pid
 
@@ -362,15 +424,33 @@ def normalize_escritura_hipotecaria(doc: Dict[str, Any], meta: Dict[str, Any]) -
         if isinstance(reps, list):
             rep_ids: List[str] = []
             for i, r in enumerate(reps):
-                if isinstance(r, dict) and isinstance(r.get("nome"), str) and r["nome"].strip():
-                    pidr = add_party(meta, role="representante_interveniente_garante", nome=r["nome"], source_path=f"interveniente_garante.representantes[{i}]")
+                if (
+                    isinstance(r, dict)
+                    and isinstance(r.get("nome"), str)
+                    and r["nome"].strip()
+                ):
+                    pidr = add_party(
+                        meta,
+                        role="representante_interveniente_garante",
+                        nome=r["nome"],
+                        source_path=f"interveniente_garante.representantes[{i}]",
+                    )
                     if pidr:
                         r["id_parte"] = pidr
                         rep_ids.append(pidr)
 
                     proc = r.get("procurador")
-                    if isinstance(proc, dict) and isinstance(proc.get("nome"), str) and proc["nome"].strip():
-                        pidp = add_party(meta, role="procurador_interveniente_garante", nome=proc["nome"], source_path=f"interveniente_garante.representantes[{i}].procurador")
+                    if (
+                        isinstance(proc, dict)
+                        and isinstance(proc.get("nome"), str)
+                        and proc["nome"].strip()
+                    ):
+                        pidp = add_party(
+                            meta,
+                            role="procurador_interveniente_garante",
+                            nome=proc["nome"],
+                            source_path=f"interveniente_garante.representantes[{i}].procurador",
+                        )
                         if pidp:
                             proc["id_parte"] = pidp
             meta["chaves_match"]["representantes_interveniente_garante_ids"] = rep_ids
@@ -385,12 +465,19 @@ def normalize_escritura_imovel(doc: Dict[str, Any], meta: Dict[str, Any]) -> Non
                 continue
             c = it.get("credor")
             if isinstance(c, str) and c.strip():
-                pid = add_party(meta, role="credor_onus", nome=c, source_path=f"hipotecas_onus[{i}].credor")
+                pid = add_party(
+                    meta,
+                    role="credor_onus",
+                    nome=c,
+                    source_path=f"hipotecas_onus[{i}].credor",
+                )
                 if pid:
                     it["credor_id"] = pid
                     append_unique(credor_ids_all, pid)
             elif isinstance(c, dict):
-                pid = normalize_party_object(c, "credor_onus", meta, f"hipotecas_onus[{i}].credor")
+                pid = normalize_party_object(
+                    c, "credor_onus", meta, f"hipotecas_onus[{i}].credor"
+                )
                 if pid:
                     it["credor_id"] = pid
                     append_unique(credor_ids_all, pid)
@@ -404,8 +491,18 @@ def normalize_escritura_imovel(doc: Dict[str, Any], meta: Dict[str, Any]) -> Non
         for i, it in enumerate(tv):
             if not isinstance(it, dict):
                 continue
-            comp_ids = normalize_named_list_strings(it.get("compradores"), "comprador", meta, f"transacoes_venda[{i}].compradores")
-            vend_ids = normalize_named_list_strings(it.get("vendedores"), "vendedor", meta, f"transacoes_venda[{i}].vendedores")
+            comp_ids = normalize_named_list_strings(
+                it.get("compradores"),
+                "comprador",
+                meta,
+                f"transacoes_venda[{i}].compradores",
+            )
+            vend_ids = normalize_named_list_strings(
+                it.get("vendedores"),
+                "vendedor",
+                meta,
+                f"transacoes_venda[{i}].vendedores",
+            )
 
             if comp_ids:
                 it["compradores_ids"] = comp_ids
@@ -427,7 +524,12 @@ def normalize_escritura_imovel(doc: Dict[str, Any], meta: Dict[str, Any]) -> Non
         for i, it in enumerate(hist):
             if not isinstance(it, dict):
                 continue
-            prop_ids = normalize_named_list_strings(it.get("proprietarios"), "proprietario", meta, f"historico_titularidade[{i}].proprietarios")
+            prop_ids = normalize_named_list_strings(
+                it.get("proprietarios"),
+                "proprietario",
+                meta,
+                f"historico_titularidade[{i}].proprietarios",
+            )
             if prop_ids:
                 it["proprietarios_ids"] = prop_ids
                 for pid in prop_ids:
@@ -443,7 +545,12 @@ def normalize_escritura_imovel(doc: Dict[str, Any], meta: Dict[str, Any]) -> Non
                 continue
             b = it.get("beneficiario")
             if isinstance(b, str) and b.strip():
-                pid = add_party(meta, role="beneficiario_posse", nome=b, source_path=f"transacoes_venda_posse[{i}].beneficiario")
+                pid = add_party(
+                    meta,
+                    role="beneficiario_posse",
+                    nome=b,
+                    source_path=f"transacoes_venda_posse[{i}].beneficiario",
+                )
                 if pid:
                     it["beneficiario_id"] = pid
                     append_unique(ben_all, pid)
@@ -461,7 +568,11 @@ def normalize_document(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Stats]:
     }
 
     # contrato social
-    if "socios" in doc or "administradores" in doc or ("razao_social" in doc and "cnpj" in doc):
+    if (
+        "socios" in doc
+        or "administradores" in doc
+        or ("razao_social" in doc and "cnpj" in doc)
+    ):
         normalize_empresa_contrato_social(doc, meta)
         normalize_socios(doc, meta)
         normalize_administradores(doc, meta)
@@ -471,7 +582,15 @@ def normalize_document(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Stats]:
         normalize_escritura_hipotecaria(doc, meta)
 
     # escritura imóvel
-    if any(k in doc for k in ("hipotecas_onus", "transacoes_venda", "historico_titularidade", "transacoes_venda_posse")):
+    if any(
+        k in doc
+        for k in (
+            "hipotecas_onus",
+            "transacoes_venda",
+            "historico_titularidade",
+            "transacoes_venda_posse",
+        )
+    ):
         normalize_escritura_imovel(doc, meta)
 
     stats.parties_found = len(meta["partes"])
@@ -484,6 +603,7 @@ def normalize_document(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Stats]:
 # ---------------------------------------------------------------------
 # IO e CLI
 # ---------------------------------------------------------------------
+
 
 def iter_input_files(input_path: Path, pattern: str) -> List[Path]:
     if input_path.is_file():
@@ -504,11 +624,25 @@ def save_json(path: Path, data: Dict[str, Any]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Normalize partes (IDs + chaves_match) para conciliação CAD-OBR.")
-    ap.add_argument("--input", required=True, help="Arquivo .json ou diretório de entrada")
-    ap.add_argument("--output", required=True, help="Arquivo .json ou diretório de saída")
-    ap.add_argument("--pattern", default="*.json", help="Glob quando --input é diretório. Default: *.json")
-    ap.add_argument("--inplace", action="store_true", help="Permite sobrescrever input==output (usa tmp + move).")
+    ap = argparse.ArgumentParser(
+        description="Normalize partes (IDs + chaves_match) para conciliação CAD-OBR."
+    )
+    ap.add_argument(
+        "--input", required=True, help="Arquivo .json ou diretório de entrada"
+    )
+    ap.add_argument(
+        "--output", required=True, help="Arquivo .json ou diretório de saída"
+    )
+    ap.add_argument(
+        "--pattern",
+        default="*.json",
+        help="Glob quando --input é diretório. Default: *.json",
+    )
+    ap.add_argument(
+        "--inplace",
+        action="store_true",
+        help="Permite sobrescrever input==output (usa tmp + move).",
+    )
     args = ap.parse_args()
 
     in_path = Path(args.input)
@@ -518,12 +652,20 @@ def main() -> int:
         raise SystemExit(f"ERRO: input não existe: {in_path}")
 
     in_files = iter_input_files(in_path, args.pattern)
-    stats_total = Stats(files_in=len(in_files), files_out=0, parties_found=0, ids_written=0, docs_normalized=0)
+    stats_total = Stats(
+        files_in=len(in_files),
+        files_out=0,
+        parties_found=0,
+        ids_written=0,
+        docs_normalized=0,
+    )
 
     if not args.inplace:
         try:
             if in_path.resolve() == out_path.resolve():
-                raise SystemExit("ERRO: input e output são o mesmo caminho. Use --inplace.")
+                raise SystemExit(
+                    "ERRO: input e output são o mesmo caminho. Use --inplace."
+                )
         except Exception:
             pass
 

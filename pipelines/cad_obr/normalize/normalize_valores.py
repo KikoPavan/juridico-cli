@@ -1,7 +1,7 @@
 """
 pipelines/cad_obr/normalize/normalize_valores.py
 
-Normalização determinística de valores monetários (pt-BR) em documentos CAD-OBR.
+Normalização determinística de valores monetários (pt-BR) em documentos CAD_OBR.
 
 Regras (contrato do pipeline):
 - Strings monetárias SEM símbolo: "67.250,51"
@@ -28,10 +28,9 @@ import argparse
 import json
 import re
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
 
 CR_TO_R_FACTOR = Decimal("2750")  # 1 R$ = 2.750 CR$
 
@@ -166,7 +165,11 @@ def normalize_onus_item(item: Dict[str, Any], stats: NormalizeStats) -> bool:
         stats.onus_skipped_no_value += 1
         return False
 
-    currency = detect_currency(source) or detect_currency(val_orig) or detect_currency(val_atual)
+    currency = (
+        detect_currency(source)
+        or detect_currency(val_orig)
+        or detect_currency(val_atual)
+    )
 
     dec = parse_monetary_value(source)
     if dec is None:
@@ -247,11 +250,15 @@ def save_json(path: Path, data: Dict[str, Any]) -> None:
         f.write("\n")
 
 
-def process_directory(input_dir: Path, output_dir: Path, glob_pattern: str = "*.json") -> NormalizeStats:
+def process_directory(
+    input_dir: Path, output_dir: Path, glob_pattern: str = "*.json"
+) -> NormalizeStats:
     stats = NormalizeStats()
 
     if input_dir.resolve() == output_dir.resolve():
-        raise ValueError("input_dir e output_dir não podem ser o mesmo caminho (evita sobrescrita acidental).")
+        raise ValueError(
+            "input_dir e output_dir não podem ser o mesmo caminho (evita sobrescrita acidental)."
+        )
 
     files = sorted(input_dir.glob(glob_pattern))
     stats.files_total = len(files)
@@ -273,10 +280,22 @@ def process_directory(input_dir: Path, output_dir: Path, glob_pattern: str = "*.
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Normalize valores monetários (ônus + transações de venda) para pt-BR sem símbolo e centavos.")
-    parser.add_argument("--input", required=True, help="Diretório de entrada com JSONs do Collector (ex.: outputs/cad-obr/01_collector/escritura_imovel)")
-    parser.add_argument("--output", required=True, help="Diretório de saída (ex.: outputs/cad-obr/02_normalize/escritura_imovel)")
-    parser.add_argument("--pattern", default="*.json", help="Glob de arquivos (default: *.json)")
+    parser = argparse.ArgumentParser(
+        description="Normalize valores monetários (ônus + transações de venda) para pt-BR sem símbolo e centavos."
+    )
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Diretório de entrada com JSONs do Collector (ex.: outputs/cad_obr/01_collector/escritura_imovel)",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Diretório de saída (ex.: outputs/cad_obr/02_normalize/escritura_imovel)",
+    )
+    parser.add_argument(
+        "--pattern", default="*.json", help="Glob de arquivos (default: *.json)"
+    )
 
     args = parser.parse_args()
     input_dir = Path(args.input)

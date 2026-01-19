@@ -1,0 +1,9 @@
+[project]
+name = "mcp-server-cad_obr"
+version = "0.1.0"
+description = "MCP Server for Juridico CLI - Data & RAG"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "pydantic"
+]

@@ -23,23 +23,23 @@ def _ensure_repo_root_on_syspath() -> None:
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="reconciler_cli.py",
-        description="CAD-OBR Reconciler (incremental por camadas) - gera dataset JSONL em 04_reconciler/",
+        description="CAD_OBR Reconciler (incremental por camadas) - gera dataset JSONL em 04_reconciler/",
     )
 
     p.add_argument(
         "--input-normalize",
         required=True,
-        help="Diretório raiz do normalize (ex.: outputs/cad-obr/02_normalize)",
+        help="Diretório raiz do normalize (ex.: outputs/cad_obr/02_normalize)",
     )
     p.add_argument(
         "--input-monetary",
         required=True,
-        help="Diretório raiz do monetary (ex.: outputs/cad-obr/03_monetary)",
+        help="Diretório raiz do monetary (ex.: outputs/cad_obr/03_monetary)",
     )
     p.add_argument(
         "--output",
         required=True,
-        help="Diretório raiz de saída do reconciler (ex.: outputs/cad-obr/04_reconciler)",
+        help="Diretório raiz de saída do reconciler (ex.: outputs/cad_obr/04_reconciler)",
     )
     p.add_argument(
         "--dataset",

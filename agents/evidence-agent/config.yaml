@@ -1,3 +1,4 @@
+# agents/evidence-agent/config.yaml
 runtime:
   provider: gemini
   mode: google.genai
@@ -5,36 +6,29 @@ runtime:
   temperature: 0.0
   top_p: 0.95
   max_output_tokens: 8192
+  api_key_env: GOOGLE_API_KEY
+  response_mime_type: application/json
 
 paths:
-  prompt_file: "agents/evidence-agent/prompt.md"
+  prompt_file: agents/evidence-agent/prompt.md
+  schema_file: agents/evidence-agent/io.schema.json
 
-skills_id:
-  allowlist_file: "policies/allowlists/evidence-agent.json"
-  skills_catalog_file: "artifacts/skills/skills.catalog.json"
-  skills_prompt_file: "artifacts/skills/skills.prompt.evidence-agent.xml"
+  # pack gerado pelo evidence_pack_cli.py
+  pack_file: artifacts/evidence_packs/dataset_v1/pack_global.json
+
+  # saída do evidence-agent
+  output_dir: outputs/cad_obr/05_evidence/dataset_v1
+  output_filename: evidence_out.json
+
+  # logs de debug
+  last_prompt_filename: _last_prompt.txt
+  last_raw_filename: _last_raw.txt
+
+skills_map:
+  core: skills/evidence/evidence-agent/SKILL.core.md
 
 jobs:
-  - id: "evidence_pack"
-    name: "Evidence Pack — Manipulação de dívidas (dataset reconciliado)"
-
-    process_type_target: "ACAO_NULIDADE_GARANTIA_HIPOTECARIA"
-
-    # Use os nomes reais definidos no frontmatter das SKILLs
-    skill_name_default: "evidence_core"
-    skill_name_target: "evidence_cadeia_obrigacoes_nulidade_hipoteca"
-
-    # Output schema do próprio agent (vamos corrigir o metadata dele no próximo passo)
-    schema_file: "agents/evidence-agent/io.schema.json"
-
-    # Entrada canônica: dataset reconciliado (filesystem agora, DB depois)
-    dataset_dir: "outputs/cad-obr/04_reconciler/dataset_v1"
-    reports_dir: "outputs/cad-obr/04_reconciler/reports/dataset_v1"
-
-    # Contextos auxiliares (se você usa tipo_processo/premissas)
-    context_file: "data/context.json"
-    relacoes_file: "data/contexto_relacoes.json"
-
-    # Saída do evidence-agent (separada do reconciler determinístico)
-    output_dir: "outputs/cad-obr/05_evidence/dataset_v1"
-    output_filename: "evidence_out_relacoes_criticas.json"
+  evidence_global:
+    - id: evidence_global
+      name: "Evidências (dataset_v1)"
+      skill_key_default: core

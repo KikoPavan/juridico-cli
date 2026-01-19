@@ -35,11 +35,11 @@
       - agents/case-law-cli/io.schema.json
       - agents/case-law-cli/main.py
       - agents/case-law-cli/precedent-finder-ext.toml
-    - agents/collector-cad-obr/
-      - agents/collector-cad-obr/skills/
-      - agents/collector-cad-obr/config.yaml
-      - agents/collector-cad-obr/io.schema.json
-      - agents/collector-cad-obr/main.py
+    - agents/collector-cad_obr/
+      - agents/collector-cad_obr/skills/
+      - agents/collector-cad_obr/config.yaml
+      - agents/collector-cad_obr/io.schema.json
+      - agents/collector-cad_obr/main.py
     - agents/collector-proc/
       - agents/collector-proc/skills/
       - agents/collector-proc/config.yaml
@@ -73,22 +73,22 @@
       - agents/reconciler-cli/nodes.py
       - agents/reconciler-cli/state.py
   - arq-js/
-    - arq-js/1-monetary_out_cad-obr_escritura_matricula_7.546.json
-    - arq-js/2-collector_out_cad-obr_escritura_matricula_7.546.json
-    - arq-js/3-collector_out_cad-obr_escritura_matricula_7.546.json
-    - arq-js/4-collector_out_cad-obr_escritura_matricula_7.546.json
-    - arq-js/5-collector_out_cad-obr_escritura_matricula_7.546.json
+    - arq-js/1-monetary_out_cad_obr_escritura_matricula_7.546.json
+    - arq-js/2-collector_out_cad_obr_escritura_matricula_7.546.json
+    - arq-js/3-collector_out_cad_obr_escritura_matricula_7.546.json
+    - arq-js/4-collector_out_cad_obr_escritura_matricula_7.546.json
+    - arq-js/5-collector_out_cad_obr_escritura_matricula_7.546.json
     - arq-js/5-collector_out_juntada_escritura_hipotecaria_176700529.json
-    - arq-js/6-collector_out_cad-obr_escritura_matricula_7.546.json
+    - arq-js/6-collector_out_cad_obr_escritura_matricula_7.546.json
     - arq-js/6-collector_out_juntada_escritura_hipotecaria_176700529.json
     - arq-js/7-collector_out_juntada_escritura_hipotecaria_176700529.json
-    - arq-js/8-collector_out_cad-obr_escritura_matricula_7.546.json
-    - arq-js/8-collector_out_cad-obr_escritura_matricula_905.json
-    - arq-js/8-collector_out_cad-obr_escritura_matricula_946.json
+    - arq-js/8-collector_out_cad_obr_escritura_matricula_7.546.json
+    - arq-js/8-collector_out_cad_obr_escritura_matricula_905.json
+    - arq-js/8-collector_out_cad_obr_escritura_matricula_946.json
     - arq-js/cadeia_obrigacoes.json
-    - arq-js/collector_out_cad-obr_escritura_matricula_7.013.json
-    - arq-js/collector_out_cad-obr_escritura_matricula_905.json
-    - arq-js/collector_out_cad-obr_escritura_matricula_946.json
+    - arq-js/collector_out_cad_obr_escritura_matricula_7.013.json
+    - arq-js/collector_out_cad_obr_escritura_matricula_905.json
+    - arq-js/collector_out_cad_obr_escritura_matricula_946.json
     - arq-js/collector_out_juntada_contrato_social_jkmg_2002.json
     - arq-js/collector_out_juntada_contrato_social_JKMG_2002.json
     - arq-js/collector_out_juntada_contrato_social_jkmg_2003.json
@@ -144,10 +144,10 @@
       - base_juridica/j.j/STJ_201902284420_tipo_integra_109463375.pdf
       - base_juridica/j.j/STJ_202100675025_tipo_integra_125929289.pdf
   - data/
-    - data/cad-obr/
-      - data/cad-obr/contrato_social/
-      - data/cad-obr/escritura_hipotecaria/
-      - data/cad-obr/escritura_imovel/
+    - data/cad_obr/
+      - data/cad_obr/contrato_social/
+      - data/cad_obr/escritura_hipotecaria/
+      - data/cad_obr/escritura_imovel/
     - data/indices/
       - data/indices/Tabela_bacen_TR.csv
     - data/juntada/
@@ -155,13 +155,13 @@
     - data/context.json
     - data/contexto_relacoes.json
   - docs/
-    - docs/antigravity/
+    - docs/antigravity/ 
       - docs/antigravity/implementation_plan.md
       - docs/antigravity/levantamento_completo.md
       - docs/antigravity/relatorio_auditoria.md
       - docs/antigravity/task.md
       - docs/antigravity/walkthrough.md
-    - docs/spec_monetary_regras_cad-obr.md
+    - docs/spec_monetary_regras_cad_obr.md
   - docs_iplt/
     - docs_iplt/arquivos_processo/
       - docs_iplt/arquivos_processo/Contrato Social Pavão Supermercadfos Ltda.md
@@ -191,17 +191,17 @@
     - docs_iplt/Recomendações_Finais_por_Agente.md
   - logs/
     - logs/collector/
-  - mcp-server-cad-obr/
-    - mcp-server-cad-obr/deterministic.py
-    - mcp-server-cad-obr/pyproject.toml
-    - mcp-server-cad-obr/rag_tools.py
-    - mcp-server-cad-obr/server.py
+  - mcp-server-cad_obr/
+    - mcp-server-cad_obr/deterministic.py
+    - mcp-server-cad_obr/pyproject.toml
+    - mcp-server-cad_obr/rag_tools.py
+    - mcp-server-cad_obr/server.py
   - outputs/
-    - outputs/cad-obr/
-      - outputs/cad-obr/01_collector/
-      - outputs/cad-obr/02_normalize/
-      - outputs/cad-obr/03_monetary/
-      - outputs/cad-obr/04_reconciler/
+    - outputs/cad_obr/
+      - outputs/cad_obr/01_collector/
+      - outputs/cad_obr/02_normalize/
+      - outputs/cad_obr/03_monetary/
+      - outputs/cad_obr/04_reconciler/
     - outputs/juntada/
       - outputs/juntada/collector_out_juntada_contrato_bancario_hipoteca_176700530.json
       - outputs/juntada/collector_out_juntada_contrato_bancario_hipoteca_176700634.json
@@ -215,12 +215,12 @@
       - outputs/juntada/collector_out_juntada_procuracao_Juraci_para_Francisco.json
     - outputs/new/
     - outputs/old/
-      - outputs/old/collector_out_cad-obr_escritura_matricula_7.013.json
-      - outputs/old/collector_out_cad-obr_escritura_matricula_7.546.json
-      - outputs/old/collector_out_cad-obr_escritura_matricula_905.json
-      - outputs/old/collector_out_cad-obr_escritura_matricula_946.json
-      - outputs/old/monetary_out_cad-obr_escritura_matricula_7.546.json
-      - outputs/old/monetary_out_cad-obr_escritura_matricula_905.json
+      - outputs/old/collector_out_cad_obr_escritura_matricula_7.013.json
+      - outputs/old/collector_out_cad_obr_escritura_matricula_7.546.json
+      - outputs/old/collector_out_cad_obr_escritura_matricula_905.json
+      - outputs/old/collector_out_cad_obr_escritura_matricula_946.json
+      - outputs/old/monetary_out_cad_obr_escritura_matricula_7.546.json
+      - outputs/old/monetary_out_cad_obr_escritura_matricula_905.json
     - outputs/processo/
       - outputs/processo/collector_out_processo_consolidado.json
     - outputs/.gitkeep
@@ -236,7 +236,7 @@
   - prompts/
     - prompts/.gitkeep
     - prompts/case-law.md
-    - prompts/collector-cad-obr.md
+    - prompts/collector-cad_obr.md
     - prompts/collector-proc.md
     - prompts/collector.md
     - prompts/compliance.md
@@ -305,13 +305,13 @@
 | Agente | Path | config | io.schema | schemas/ | prompts | entrypoints | tests | docker |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | case-law-cli | agents/case-law-cli | OK | OK | FALTA | 1 | 1 | OK | 0 |
-| collector-cad-obr | agents/collector-cad-obr | OK | OK | FALTA | 5 | 1 | FALTA | 0 |
+| collector-cad_obr | agents/collector-cad_obr | OK | OK | FALTA | 5 | 1 | FALTA | 0 |
 | collector-proc | agents/collector-proc | OK | OK | FALTA | 9 | 1 | FALTA | 0 |
 | compliance-cli | agents/compliance-cli | OK | OK | FALTA | 1 | 1 | OK | 0 |
 | firac-cli | agents/firac-cli | OK | OK | FALTA | 3 | 1 | FALTA | 0 |
 | petition-cli | agents/petition-cli | OK | OK | FALTA | 1 | 1 | OK | 0 |
 | reconciler-cli | agents/reconciler-cli | OK | OK | FALTA | 3 | 1 | FALTA | 0 |
-| mcp-server-cad-obr | mcp-server-cad-obr | FALTA | FALTA | FALTA | 0 | 0 | FALTA | 0 |
+| mcp-server-cad_obr | mcp-server-cad_obr | FALTA | FALTA | FALTA | 0 | 0 | FALTA | 0 |
 
 ### case-law-cli
 - **Pasta:** `agents/case-law-cli`
@@ -385,55 +385,43 @@ def get_project_root():
     # Caminho: agents/case-law-cli/main.py -> agents/ -> root/
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-```
 - **tests:**
   - `agents/case-law-cli/tests`
 - **docker:** NÃO ENCONTRADO
 
-### collector-cad-obr
-- **Pasta:** `agents/collector-cad-obr`
-- **config:** `agents/collector-cad-obr/config.yaml`
+### collector-cad_obr
+- **Pasta:** `agents/collector-cad_obr`
+- **config:** `agents/collector-cad_obr/config.yaml`
 **Trecho (config):**
-
-```text
 runtime:
   provider: gemini
   model: gemini-2.5-flash
   temperature: 0.1
   max_output_tokens: 65536
-  agent_name: "collector-cad-obr"
+  agent_name: "collector-cad_obr"
 
 ---
 
   provider: gemini
   model: gemini-2.5-flash
-  temperature: 0.1
-  max_output_tokens: 65536
-  agent_name: "collector-cad-obr"
-
-paths:
-```
-- **io.schema:** `agents/collector-cad-obr/io.schema.json`
+  - **io.schema:** `agents/collector-cad_obr/io.schema.json`
 **Trecho (io.schema):**
-
-```text
-{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/collector-cad-obr.io.schema.json",
-  "title": "Contrato de I/O do agente collector-cad-obr",
-  "description": "Schema para padronizar a requisição/opções de execução e o relatório de execução do collector-cad-obr. A saída estruturada POR DOCUMENTO é definida pelos schemas específicos referenciados em config.yaml (schemas/escritura_imovel.schema.json, schemas/contrato_social.schema.json, schemas/escritura_hipotecaria.schema.json).",
+  "$id": "https://example.com/schemas/collector-cad_obr.io.schema.json",
+  "title": "Contrato de I/O do agente collector-cad_obr",
+  "description": "Schema para padronizar a requisição/opções de execução e o relatório de execução do collector-cad_obr. A saída estruturada POR DOCUMENTO é definida pelos schemas específicos referenciados em config.yaml (schemas/escritura_imovel.schema.json, schemas/contrato_social.schema.json, schemas/escritura_hipotecaria.schema.json).",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "agent": {
       "type": "string",
-      "const": "collector-cad-obr",
+      "const": "collector-cad_obr",
       "description": "Identificador do agente."
     },
     "io_version": {
       "type": "string",
       "description": "Versão lógica do contrato de I/O (não confundir com version das skills).",
-      "default": "collector-cad-obr-io-v1"
+      "default": "collector-cad_obr-io-v1"
     },
     "inputs": {
       "type": "object",
@@ -442,21 +430,18 @@ paths:
       "properties": {
         "config_path": {
           "type": "string",
-          "description": "Caminho do config.yaml do collector-cad-obr.",
-          "default": "agents/collector-cad-obr/config.yaml"
+          "description": "Caminho do config.yaml do collector-cad_obr.",
+          "default": "agents/collector-cad_obr/config.yaml"
         },
-        "jobs": {
-          "type": [
-```
-- **schemas/:** NÃO ENCONTRADO
+        - **schemas/:** NÃO ENCONTRADO
 - **prompts:** 5 arquivo(s)
-  - `agents/collector-cad-obr/config.yaml`
-  - `agents/collector-cad-obr/skills/SKILL.contrato_social.md`
-  - `agents/collector-cad-obr/skills/SKILL.core.md`
-  - `agents/collector-cad-obr/skills/SKILL.escritura_hipotecaria.md`
-  - `agents/collector-cad-obr/skills/SKILL.escritura_imovel.md`
+  - `agents/collector-cad_obr/config.yaml`
+  - `agents/collector-cad_obr/skills/SKILL.contrato_social.md`
+  - `agents/collector-cad_obr/skills/SKILL.core.md`
+  - `agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md`
+  - `agents/collector-cad_obr/skills/SKILL.escritura_imovel.md`
 - **entrypoints:**
-  - `agents/collector-cad-obr/main.py`
+  - `agents/collector-cad_obr/main.py`
     **Trecho (entrypoint):**
 
 ```text
@@ -845,7 +830,7 @@ paths:
         },
         "monetary_dir": {
           "type": ["string", "null"],
-          "description": "Diretório de onde foram lidos os arquivos do monetary-cli (ex.: 'outputs/cad-obr/02_monetary')."
+          "description": "Diretório de onde foram lidos os arquivos do monetary-cli (ex.: 'outputs/cad_obr/02_monetary')."
         },
 ```
 - **schemas/:** NÃO ENCONTRADO
@@ -865,8 +850,8 @@ import sys
 - **tests:** NÃO ENCONTRADO
 - **docker:** NÃO ENCONTRADO
 
-### mcp-server-cad-obr
-- **Pasta:** `mcp-server-cad-obr`
+### mcp-server-cad_obr
+- **Pasta:** `mcp-server-cad_obr`
 - **config:** NÃO ENCONTRADO
 - **io.schema:** NÃO ENCONTRADO
 - **schemas/:** NÃO ENCONTRADO
@@ -893,14 +878,14 @@ import sys
 \n        # 1. Resolver caminhos\n        prompt_file = os.path.join(project_root, paths.get("prompt_file"))\n        firac_input = os.path.join(project_root, config["paths"]["input_file"])\n        juris_output = os.path.join(project_root, config["paths"]["output_file"])\n\n        # 2. Ler prompt\n\n---\n\n        # 1. Resolver caminhos\n        prompt_file = os.path.join(project_root, paths.get("prompt_file"))\n        firac_input = os.path.join(project_root, config["paths"]["input_file"])\n        juris_output = os.path.join(project_root, config["paths"]["output_file"])\n\n        # 2. Ler prompt\n        with open(prompt_file, "r", encoding="utf-8") as p:
 ```
 
-* **collector-cad-obr**
-**config:** `agents/collector-cad-obr/config.yaml`
+* **collector-cad_obr**
+**config:** `agents/collector-cad_obr/config.yaml`
 
 ```text
-  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.1\n  max_output_tokens: 65536\n  agent_name: "collector-cad-obr"\n\npaths:\n\n---\n\n  # --- REGRA 1: data/cad-obr/escritura_imovel -> Saída 1:1 (um JSON por arquivo) ---\n  - name: "Processamento escritura_imovel"\n    id: "cad-obr-escritura-imovel"\n    input_dir: "data/cad-obr/escritura_imovel"\n    output_dir: "outputs/cad-obr/01_collector/escritura_imovel"\n    output_prefix: "collector_out_escritura_imovel_"\n    skill_key: "escritura_imovel"\n\n---\n\n  - name: "Processamento escritura_imovel"\n    id: "cad-obr-escritura-imovel"\n    input_dir: "data/cad-obr/escritura_imovel"\n    output_dir: "outputs/cad-obr/01_collector/escritura_imovel"\n    output_prefix: "collector_out_escritura_imovel_"\n    skill_key: "escritura_imovel"\n    schema_file: "schemas/escritura_imovel.schema.json"
+  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.1\n  max_output_tokens: 65536\n  agent_name: "collector-cad_obr"\n\npaths:\n\n---\n\n  # --- REGRA 1: data/cad_obr/escritura_imovel -> Saída 1:1 (um JSON por arquivo) ---\n  - name: "Processamento escritura_imovel"\n    id: "cad_obr-escritura-imovel"\n    input_dir: "data/cad_obr/escritura_imovel"\n    output_dir: "outputs/cad_obr/01_collector/escritura_imovel"\n    output_prefix: "collector_out_escritura_imovel_"\n    skill_key: "escritura_imovel"\n\n---\n\n  - name: "Processamento escritura_imovel"\n    id: "cad_obr-escritura-imovel"\n    input_dir: "data/cad_obr/escritura_imovel"\n    output_dir: "outputs/cad_obr/01_collector/escritura_imovel"\n    output_prefix: "collector_out_escritura_imovel_"\n    skill_key: "escritura_imovel"\n    schema_file: "schemas/escritura_imovel.schema.json"
 ```
 
-**code:** `agents/collector-cad-obr/main.py`
+**code:** `agents/collector-cad_obr/main.py`
 
 ```text
     client = genai.Client(api_key=api_key)\n    generate_config = types.GenerateContentConfig(\n        temperature=0.0,\n        max_output_tokens=65536,\n        response_mime_type="application/json",\n        safety_settings=[\n            types.SafetySetting(\n\n---\n\n\n\ndef assemble_prompt(\n    base_prompt: str, skill_content: str, schema_content: str, doc_content: str\n) -> str:\n    parts = [\n        base_prompt,
@@ -971,7 +956,7 @@ import sys
     print(f"--- Reconciler Agent V2 ---")\n    print(f"Target: {args.property}")\n\n    # setup inputs\n    inputs = {\n        "case_id": "auto_run",\n        "target_property": args.property,\n\n---\n\n    print(f"Target: {args.property}")\n\n    # setup inputs\n    inputs = {\n        "case_id": "auto_run",\n        "target_property": args.property,\n        "hypothesis": args.hypothesis,
 ```
 
-* **mcp-server-cad-obr**
+* **mcp-server-cad_obr**
 _Sem trechos I/O evidentes encontrados._
 
 
@@ -1006,7 +991,7 @@ _Sem trechos I/O evidentes encontrados._
 - `agents/reconciler-cli/io.schema.json`
 - `agents/compliance-cli/io.schema.json`
 - `agents/case-law-cli/io.schema.json`
-- `agents/collector-cad-obr/io.schema.json`
+- `agents/collector-cad_obr/io.schema.json`
 - `agents/collector-proc/io.schema.json`
 - `pipelines/cad_obr/schemas/common.schema.json`
 - `pipelines/cad_obr/schemas/imoveis.schema.json`
@@ -1022,13 +1007,13 @@ _Sem trechos I/O evidentes encontrados._
 
 ### Por agente (quantidade em schemas/)
 - **case-law-cli:** 0
-- **collector-cad-obr:** 0
+- **collector-cad_obr:** 0
 - **collector-proc:** 0
 - **compliance-cli:** 0
 - **firac-cli:** 0
 - **petition-cli:** 0
 - **reconciler-cli:** 0
-- **mcp-server-cad-obr:** 0
+- **mcp-server-cad_obr:** 0
 
 ---
 
@@ -1041,13 +1026,13 @@ _Sem trechos I/O evidentes encontrados._
   - source_id/sha256: **FALTA**
   - Formato de evidência/prova: **FALTA**
 
-* **collector-cad-obr**
-- **Prompt:** `agents/collector-cad-obr/config.yaml`
+* **collector-cad_obr**
+- **Prompt:** `agents/collector-cad_obr/config.yaml`
   - Literalidade / sem inferência: **FALTA**
   - Âncoras (fls/Folha/Pág.): **FALTA**
   - source_id/sha256: **FALTA**
   - Formato de evidência/prova: **FALTA**
-- **Prompt:** `agents/collector-cad-obr/skills/SKILL.contrato_social.md`
+- **Prompt:** `agents/collector-cad_obr/skills/SKILL.contrato_social.md`
   - Literalidade / sem inferência: **OK**
   - Âncoras (fls/Folha/Pág.): **FALTA**
   - source_id/sha256: **FALTA**
@@ -1062,7 +1047,7 @@ validation_rules:
 ---
 ```
 
-- **Prompt:** `agents/collector-cad-obr/skills/SKILL.core.md`
+- **Prompt:** `agents/collector-cad_obr/skills/SKILL.core.md`
   - Literalidade / sem inferência: **OK**
   - Âncoras (fls/Folha/Pág.): **OK**
   - source_id/sha256: **FALTA**
@@ -1070,7 +1055,7 @@ validation_rules:
 
 ```text
 name: core
-agent: collector-cad-obr
+agent: collector-cad_obr
 description: Regras gerais de extração e rastreabilidade para documentos jurídicos
   em Markdown (âncoras de página, literalidade e validações).
 version: 0.1.0
@@ -1078,7 +1063,7 @@ target_schema: io.schema.json
 document_types:
 ```
 
-- **Prompt:** `agents/collector-cad-obr/skills/SKILL.escritura_hipotecaria.md`
+- **Prompt:** `agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md`
   - Literalidade / sem inferência: **OK**
   - Âncoras (fls/Folha/Pág.): **OK**
   - source_id/sha256: **FALTA**
@@ -1093,7 +1078,7 @@ validation_rules:
 ---
 ```
 
-- **Prompt:** `agents/collector-cad-obr/skills/SKILL.escritura_imovel.md`
+- **Prompt:** `agents/collector-cad_obr/skills/SKILL.escritura_imovel.md`
   - Literalidade / sem inferência: **OK**
   - Âncoras (fls/Folha/Pág.): **OK**
   - source_id/sha256: **FALTA**
@@ -1336,7 +1321,7 @@ validation_rules:
 ```
 
 
-* **mcp-server-cad-obr**
+* **mcp-server-cad_obr**
 _Nenhum prompt encontrado._
 
 
@@ -1345,8 +1330,8 @@ _Nenhum prompt encontrado._
 ## 6) MCP server e tools (heurístico)
 
 ### Diretórios MCP encontrados
-- `mcp-server-cad-obr`
-  - entrypoint: `mcp-server-cad-obr/server.py`
+- `mcp-server-cad_obr`
+  - entrypoint: `mcp-server-cad_obr/server.py`
     ```text
 import sys
 
@@ -1362,7 +1347,7 @@ if not DATASET_PATH.exists():
     )
 
 ## Inicializa o servidor MCP
-mcp = FastMCP("cad-obr")
+mcp = FastMCP("cad_obr")
 
     ```
 
@@ -1379,7 +1364,7 @@ exclude = [
   ```text
 
 # Add current directory to path so we can import modules
-sys.path.append(str(Path("mcp-server-cad-obr").absolute()))
+sys.path.append(str(Path("mcp-server-cad_obr").absolute()))
 
 from deterministic import get_property, list_onus, timeline
   ```
@@ -1387,7 +1372,7 @@ from deterministic import get_property, list_onus, timeline
   ```text
 
 ## Add current directory to path
-sys.path.append(str(Path("mcp-server-cad-obr").absolute()))
+sys.path.append(str(Path("mcp-server-cad_obr").absolute()))
 
 from rag_tools import search_laws, semantic_search
   ```
@@ -1413,29 +1398,21 @@ Não gerar solicitações ao banco (sem “document request” em qualquer forma
             )
             # Na implementação real, o prompt (e o 'google_web_search' tool)
             # seria usado para guiar a busca.
-  ```
-- `tools/levantar_estado.py`
+  - `tools/levantar_estado.py`
   ```text
 - Inventário de schemas
-- Inventário de prompts + checagem de regras críticas
-- MCP server: localização + entrypoint + tools (heurístico) + consumo/ausência
-- Outputs: amostras + checagem de source_id/âncoras
-- Dependências (pyproject.toml) focadas em LangChain/LangGraph/LLMs
-  ```
-- `mcp-server-cad-obr/pyproject.toml`
+- `mcp-server-cad_obr/pyproject.toml`
   ```text
 [project]
-name = "mcp-server-cad-obr"
+name = "mcp-server-cad_obr"
 version = "0.1.0"
 description = "MCP Server for Juridico CLI - Data & RAG"
   ```
-- `mcp-server-cad-obr/server.py`
-  ```text
-
-from deterministic import DATASET_PATH, get_property, list_novacoes, list_onus, timeline
+- `mcp-server-cad_obr/server.py`
+  
 from mcp.server.fastmcp import FastMCP
 
-# Validate data path exists
+## Validate data path exists
   ```
 - `docs/antigravity/levantamento_completo.md`
   ```text
@@ -1443,7 +1420,7 @@ from mcp.server.fastmcp import FastMCP
 | Auxiliares | **OK** | `graph.py` (Estrutura LangGraph), `nodes.py` (Lógica dos nós) |
 | Dependência | **CORRIGIDO** | Mocks silenciosos removidos em `nodes.py`. Agora falha explicitamente se MCP não carregar. |
 
-### D) mcp-server-cad-obr
+### D) mcp-server-cad_obr
   ```
 
 ---
@@ -1467,11 +1444,10 @@ from mcp.server.fastmcp import FastMCP
 
 ### Amostras (JSON) + checagem de rastreabilidade
 
-- **Arquivo:** `outputs/cad-obr/01_collector/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
+- **Arquivo:** `outputs/cad_obr/01_collector/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **NÃO**
-  ```text
-{
+  {
   "tipo_documento": "CEDULA DE CRÉDITO COMERCIAL",
   "data_assinatura": "20 de dezembro de 2002",
   "credor": {
@@ -1498,17 +1474,12 @@ from mcp.server.fastmcp import FastMCP
         "arquivo_md": "documento.md",
         "ancora": "<!-- PÁGINA 1 -->"
       }
-    },
-    "forma_pagamento": {
-      "valor_total_composicao": "R$ 150.000,00",
-  ```
-
-- **Arquivo:** `outputs/cad-obr/01_collector/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
+    
+- **Arquivo:** `outputs/cad_obr/01_collector/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **SIM**
   - pistas: `\bfls\b`
-  ```text
-{
+  
   "tipo_documento": "CEDULA DE CREDITO COMERCIAL",
   "data_assinatura": "30/08/2001",
   "credor": {
@@ -1540,7 +1511,7 @@ from mcp.server.fastmcp import FastMCP
         "ancora": "[[PÁGINA 1]]"
   ```
 
-- **Arquivo:** `outputs/cad-obr/02_normalize/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
+- **Arquivo:** `outputs/cadobr/02_normalize/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **NÃO**
   ```text
@@ -1576,7 +1547,7 @@ from mcp.server.fastmcp import FastMCP
     "forma_pagamento": {
   ```
 
-- **Arquivo:** `outputs/cad-obr/02_normalize/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
+- **Arquivo:** `outputs/cad_obr/02_normalize/escritura_hipotecaria/collector_out_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **SIM**
   - pistas: `\bfls\b`
@@ -1613,7 +1584,7 @@ from mcp.server.fastmcp import FastMCP
         "rotulo_documento": null,
   ```
 
-- **Arquivo:** `outputs/cad-obr/03_monetary/escritura_hipotecaria/monetary_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
+- **Arquivo:** `outputs/cad_obr/03_monetary/escritura_hipotecaria/monetary_escritura_hipotecaria_contrato_bancario_hipoteca_176700634.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **NÃO**
   ```text
@@ -1649,7 +1620,7 @@ from mcp.server.fastmcp import FastMCP
     "forma_pagamento": {
   ```
 
-- **Arquivo:** `outputs/cad-obr/03_monetary/escritura_hipotecaria/monetary_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
+- **Arquivo:** `outputs/cad_obr/03_monetary/escritura_hipotecaria/monetary_escritura_hipotecaria_contrato_bancario_hipoteca_176700530.json`
   - source_id/sha256: **NÃO**
   - âncoras (fls/Folha/Pág.): **SIM**
   - pistas: `\bfls\b`
@@ -1697,10 +1668,10 @@ from mcp.server.fastmcp import FastMCP
   "metadados": {
     "total_obrigacoes": 0,
     "fontes": [
-      "/home/kiko/devops/juridico-cli/outputs/cad-obr/02_monetary/monetary_cad-obr_escritura_matricula_7.013.json",
-      "/home/kiko/devops/juridico-cli/outputs/cad-obr/02_monetary/monetary_cad-obr_escritura_matricula_7.546.json",
-      "/home/kiko/devops/juridico-cli/outputs/cad-obr/02_monetary/monetary_cad-obr_escritura_matricula_905.json",
-      "/home/kiko/devops/juridico-cli/outputs/cad-obr/02_monetary/monetary_cad-obr_escritura_matricula_946.json"
+      "/home/kiko/devops/juridico-cli/outputs/cad_obr/02_monetary/monetary_cad_obr_escritura_matricula_7.013.json",
+      "/home/kiko/devops/juridico-cli/outputs/cad_obr/02_monetary/monetary_cad_obr_escritura_matricula_7.546.json",
+      "/home/kiko/devops/juridico-cli/outputs/cad_obr/02_monetary/monetary_cad_obr_escritura_matricula_905.json",
+      "/home/kiko/devops/juridico-cli/outputs/cad_obr/02_monetary/monetary_cad_obr_escritura_matricula_946.json"
     ]
   }
 }
@@ -1835,11 +1806,10 @@ from mcp.server.fastmcp import FastMCP
 
 ### INCONCLUSIVO
 - case-law-cli: itens faltando (schemas/).
-- collector-cad-obr: itens faltando (schemas/).
+- collector-cad_obr: itens faltando (schemas/).
 - collector-proc: itens faltando (schemas/).
 - compliance-cli: itens faltando (schemas/).
 - firac-cli: itens faltando (schemas/).
 - petition-cli: itens faltando (schemas/).
 - reconciler-cli: itens faltando (schemas/).
-- mcp-server-cad-obr: itens faltando (config, io.schema, schemas/, prompts).
-
+- mcp-server-cad_obr: itens faltando (config, io.schema, schemas/, prompts).

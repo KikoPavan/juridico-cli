@@ -4,12 +4,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
-
 
 JSONL_FILES = [
     "documentos.jsonl",
@@ -165,7 +164,18 @@ def _extract_doc_basename(rec: Dict[str, Any]) -> str:
 def pend_msg(r: Dict[str, Any]) -> str:
     msg = _pick_nested(
         r,
-        ["mensagem", "message", "detail", "descricao", "description", "erro", "error", "texto", "reason", "motivo"],
+        [
+            "mensagem",
+            "message",
+            "detail",
+            "descricao",
+            "description",
+            "erro",
+            "error",
+            "texto",
+            "reason",
+            "motivo",
+        ],
     )
     return msg if msg else _compact_json(r)
 
@@ -180,7 +190,17 @@ def pend_property_id(r: Dict[str, Any]) -> str:
 
 
 def pend_doc_id(r: Dict[str, Any]) -> str:
-    did = _pick_nested(r, ["source_doc_id", "doc_id", "documento_id", "source_id", "source_path", "source_file"])
+    did = _pick_nested(
+        r,
+        [
+            "source_doc_id",
+            "doc_id",
+            "documento_id",
+            "source_id",
+            "source_path",
+            "source_file",
+        ],
+    )
     if isinstance(did, str) and did.strip():
         # se vier como path, mostrar só o arquivo
         if did.strip().endswith(".json"):
@@ -211,7 +231,15 @@ def pend_group_key(r: Dict[str, Any]) -> str:
     """
     Agrupador mais útil: tenta entity_type/reason_code/regra_aplicada etc.
     """
-    for k in ("tipo", "code", "kind", "categoria", "entity_type", "reason_code", "regra_aplicada"):
+    for k in (
+        "tipo",
+        "code",
+        "kind",
+        "categoria",
+        "entity_type",
+        "reason_code",
+        "regra_aplicada",
+    ):
         v = r.get(k)
         if isinstance(v, str) and v.strip():
             return v.strip()
@@ -279,7 +307,9 @@ def guess_property_ids(ds: Dataset) -> List[str]:
     return sorted(ids)
 
 
-def filter_by_property(rows: List[Dict[str, Any]], property_id: Optional[str]) -> List[Dict[str, Any]]:
+def filter_by_property(
+    rows: List[Dict[str, Any]], property_id: Optional[str]
+) -> List[Dict[str, Any]]:
     if not property_id:
         return rows
     out: List[Dict[str, Any]] = []
@@ -291,7 +321,12 @@ def filter_by_property(rows: List[Dict[str, Any]], property_id: Optional[str]) -
 
 def pick_first_anuencia_date(events: List[Dict[str, Any]]) -> Optional[str]:
     # busca event_type == "ANUENCIA_BANCO" (se existir)
-    anu = [e for e in events if e.get("event_type") == "ANUENCIA_BANCO" and isinstance(e.get("event_date"), str)]
+    anu = [
+        e
+        for e in events
+        if e.get("event_type") == "ANUENCIA_BANCO"
+        and isinstance(e.get("event_date"), str)
+    ]
     anu.sort(key=lambda x: x.get("event_date", ""))
     if anu:
         return anu[0].get("event_date")
@@ -333,7 +368,9 @@ def write_00_resumo(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> N
 
     # contagem por tipo de evento
     evs = filter_by_property(ds.property_events, property_id)
-    ev_type = Counter([e.get("event_type") for e in evs if isinstance(e.get("event_type"), str)])
+    ev_type = Counter(
+        [e.get("event_type") for e in evs if isinstance(e.get("event_type"), str)]
+    )
 
     # datas min/max (event_date)
     dates: List[str] = []
@@ -344,7 +381,6 @@ def write_00_resumo(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> N
 
     date_min = min(dates) if dates else ""
     date_max = max(dates) if dates else ""
-
 
     content = []
     content.append("# 00 — Resumo de Execução (dataset_v1)\n")
@@ -373,13 +409,17 @@ def write_00_resumo(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> N
         sample = pend[:10]
         sample_rows = []
         for r in sample:
-            sample_rows.append([
-                r.get("tipo") or r.get("code") or r.get("kind") or "",
-                r.get("mensagem") or r.get("message") or r.get("detail") or "",
-                r.get("property_id") or "",
-                r.get("source_doc_id") or r.get("doc_id") or "",
-            ])
-        content.append(md_table(["tipo", "mensagem", "property_id", "doc"], sample_rows))
+            sample_rows.append(
+                [
+                    r.get("tipo") or r.get("code") or r.get("kind") or "",
+                    r.get("mensagem") or r.get("message") or r.get("detail") or "",
+                    r.get("property_id") or "",
+                    r.get("source_doc_id") or r.get("doc_id") or "",
+                ]
+            )
+        content.append(
+            md_table(["tipo", "mensagem", "property_id", "doc"], sample_rows)
+        )
         content.append("_Obs.: revisar `04_pendencias.md` para detalhe completo._\n")
 
     (out_dir / "00_resumo_exec.md").write_text("".join(content), encoding="utf-8")
@@ -393,7 +433,9 @@ def write_01_timeline(ds: Dataset, out_dir: Path, property_id: Optional[str]) ->
     content = []
     content.append("# 01 — Timeline por matrícula (property_events)\n")
     content.append("Obs.: `event_date` segue a ordenação usada pelo reconciler.\n")
-    content.append("Campos `data_registro` e `data_efetiva` são incluídos para auditoria (ex.: diferença entre data da operação e data do registro).\n")
+    content.append(
+        "Campos `data_registro` e `data_efetiva` são incluídos para auditoria (ex.: diferença entre data da operação e data do registro).\n"
+    )
 
     for pid in pids:
         events = [e for e in ds.property_events if e.get("property_id") == pid]
@@ -415,26 +457,48 @@ def write_01_timeline(ds: Dataset, out_dir: Path, property_id: Optional[str]) ->
                 if ed_dt is not None and ed_dt > anu_dt:
                     flag_after_anu = "pós-anuência"
 
-            rows.append([
-                ed or "",
-                e.get("data_registro") or "",
-                e.get("data_efetiva") or "",
-                e.get("event_type") or "",
-                e.get("registro_ref") or "",
-                e.get("onus_id") or "",
-                e.get("credor_id") or "",
-                e.get("valor_divida_num") if e.get("valor_divida_num") is not None else "",
-                flag_after_anu,
-                e.get("delta_registro_efetiva_dias") if e.get("delta_registro_efetiva_dias") is not None else "",
-                e.get("source_doc_id") or "",
-            ])
+            rows.append(
+                [
+                    ed or "",
+                    e.get("data_registro") or "",
+                    e.get("data_efetiva") or "",
+                    e.get("event_type") or "",
+                    e.get("registro_ref") or "",
+                    e.get("onus_id") or "",
+                    e.get("credor_id") or "",
+                    e.get("valor_divida_num")
+                    if e.get("valor_divida_num") is not None
+                    else "",
+                    flag_after_anu,
+                    e.get("delta_registro_efetiva_dias")
+                    if e.get("delta_registro_efetiva_dias") is not None
+                    else "",
+                    e.get("source_doc_id") or "",
+                ]
+            )
 
-        content.append(md_table(
-            ["event_date", "data_registro", "data_efetiva", "event_type", "registro_ref", "onus_id", "credor_id", "valor_divida_num", "flag", "delta_registro_efetiva_dias", "source_doc_id"],
-            rows
-        ))
+        content.append(
+            md_table(
+                [
+                    "event_date",
+                    "data_registro",
+                    "data_efetiva",
+                    "event_type",
+                    "registro_ref",
+                    "onus_id",
+                    "credor_id",
+                    "valor_divida_num",
+                    "flag",
+                    "delta_registro_efetiva_dias",
+                    "source_doc_id",
+                ],
+                rows,
+            )
+        )
 
-    (out_dir / "01_timeline_por_matricula.md").write_text("".join(content), encoding="utf-8")
+    (out_dir / "01_timeline_por_matricula.md").write_text(
+        "".join(content), encoding="utf-8"
+    )
 
 
 def write_02_onus(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> None:
@@ -444,8 +508,12 @@ def write_02_onus(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> Non
 
     content = []
     content.append("# 02 — Ônus por matrícula (derivado de property_events)\n")
-    content.append("Este relatório deriva status de ônus a partir de `property_events.jsonl`.\n")
-    content.append("Inclui `tipo_divida` (de `onus_obrigacoes.jsonl`) e classifica **restrições judiciais** (ex.: penhora/bloqueio) como *não relevantes* para a contagem principal.\n")
+    content.append(
+        "Este relatório deriva status de ônus a partir de `property_events.jsonl`.\n"
+    )
+    content.append(
+        "Inclui `tipo_divida` (de `onus_obrigacoes.jsonl`) e classifica **restrições judiciais** (ex.: penhora/bloqueio) como *não relevantes* para a contagem principal.\n"
+    )
 
     # onus_id -> registro em onus_obrigacoes
     onus_meta: Dict[str, Dict[str, Any]] = {}
@@ -475,39 +543,67 @@ def write_02_onus(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> Non
                 last[onus_id] = e
 
         rows: List[List[Any]] = []
-        for onus_id, e in sorted(last.items(), key=lambda kv: sort_key_date_iso(kv[1], "event_date")):
+        for onus_id, e in sorted(
+            last.items(), key=lambda kv: sort_key_date_iso(kv[1], "event_date")
+        ):
             meta = onus_meta.get(onus_id) or {}
             tipo_divida = meta.get("tipo_divida") or ""
             cat = categoria_onus(str(tipo_divida))
             relevante = "SIM" if cat != "RESTRICAO_JUDICIAL" else "NAO"
 
-            rows.append([
-                onus_id,
-                status.get(onus_id, ""),
-                e.get("event_date") or "",
-                e.get("data_registro") or meta.get("data_registro") or "",
-                e.get("data_efetiva") or meta.get("data_efetiva") or "",
-                e.get("event_type") or "",
-                e.get("registro_ref") or "",
-                str(tipo_divida),
-                cat,
-                relevante,
-                e.get("credor_id") or "",
-                e.get("valor_divida_num") if e.get("valor_divida_num") is not None else "",
-                e.get("source_doc_id") or "",
-            ])
+            rows.append(
+                [
+                    onus_id,
+                    status.get(onus_id, ""),
+                    e.get("event_date") or "",
+                    e.get("data_registro") or meta.get("data_registro") or "",
+                    e.get("data_efetiva") or meta.get("data_efetiva") or "",
+                    e.get("event_type") or "",
+                    e.get("registro_ref") or "",
+                    str(tipo_divida),
+                    cat,
+                    relevante,
+                    e.get("credor_id") or "",
+                    e.get("valor_divida_num")
+                    if e.get("valor_divida_num") is not None
+                    else "",
+                    e.get("source_doc_id") or "",
+                ]
+            )
 
-        ativos_relevantes = sum(1 for r in rows if len(r) >= 10 and r[1] == "registrado" and r[9] == "SIM")
+        ativos_relevantes = sum(
+            1 for r in rows if len(r) >= 10 and r[1] == "registrado" and r[9] == "SIM"
+        )
 
         content.append(f"\n## {normalize_property_label(pid)} (`{pid}`)\n")
         content.append(f"- Ônus distintos: **{len(rows)}**\n")
-        content.append(f"- Ativos (registrados) relevantes ao caso: **{ativos_relevantes}**\n")
-        content.append(md_table(
-            ["onus_id", "status_evento", "data_evento", "data_registro", "data_efetiva", "tipo_evento", "registro_ref", "tipo_divida", "categoria", "relevante_caso", "credor_id", "valor_divida_num", "source_doc_id"],
-            rows
-        ))
+        content.append(
+            f"- Ativos (registrados) relevantes ao caso: **{ativos_relevantes}**\n"
+        )
+        content.append(
+            md_table(
+                [
+                    "onus_id",
+                    "status_evento",
+                    "data_evento",
+                    "data_registro",
+                    "data_efetiva",
+                    "tipo_evento",
+                    "registro_ref",
+                    "tipo_divida",
+                    "categoria",
+                    "relevante_caso",
+                    "credor_id",
+                    "valor_divida_num",
+                    "source_doc_id",
+                ],
+                rows,
+            )
+        )
 
-    (out_dir / "02_onus_por_matricula.md").write_text("".join(content), encoding="utf-8")
+    (out_dir / "02_onus_por_matricula.md").write_text(
+        "".join(content), encoding="utf-8"
+    )
 
 
 def write_03_novacoes(ds: Dataset, out_dir: Path, property_id: Optional[str]) -> None:
@@ -528,43 +624,63 @@ def write_03_novacoes(ds: Dataset, out_dir: Path, property_id: Optional[str]) ->
 
     for pid in pids:
         novs = grouped.get(pid, [])
-        novs.sort(key=lambda n: (rank_match_level(n.get("match_level")), n.get("janela_dias") or 9999))
+        novs.sort(
+            key=lambda n: (
+                rank_match_level(n.get("match_level")),
+                n.get("janela_dias") or 9999,
+            )
+        )
 
         content.append(f"\n## {normalize_property_label(pid)} (`{pid}`)\n")
         content.append(f"- Candidatos: **{len(novs)}**\n")
 
         rows = []
         for n in novs:
-            rows.append([
-                n.get("novacao_id") or "",
-                n.get("match_level") or "",
-                n.get("janela_dias") or "",
-                n.get("data_baixa") or "",
-                n.get("onus_id_baixado") or "",
-                n.get("data_nova_divida") or "",
-                n.get("onus_id_novo") or "",
-                n.get("match_basis") or "",
-            ])
+            rows.append(
+                [
+                    n.get("novacao_id") or "",
+                    n.get("match_level") or "",
+                    n.get("janela_dias") or "",
+                    n.get("data_baixa") or "",
+                    n.get("onus_id_baixado") or "",
+                    n.get("data_nova_divida") or "",
+                    n.get("onus_id_novo") or "",
+                    n.get("match_basis") or "",
+                ]
+            )
 
-        content.append(md_table(
-            ["novacao_id", "match_level", "janela_dias", "data_baixa", "onus_baixado", "data_nova", "onus_novo", "match_basis"],
-            rows
-        ))
+        content.append(
+            md_table(
+                [
+                    "novacao_id",
+                    "match_level",
+                    "janela_dias",
+                    "data_baixa",
+                    "onus_baixado",
+                    "data_nova",
+                    "onus_novo",
+                    "match_basis",
+                ],
+                rows,
+            )
+        )
 
         # evidências (top 5)
         if novs:
             content.append("\n### Evidências (top 5)\n")
             for n in novs[:5]:
-                content.append(f"- **{n.get('novacao_id','')}** (`{n.get('match_level','')}` / {n.get('janela_dias','')} dias)\n")
+                content.append(
+                    f"- **{n.get('novacao_id', '')}** (`{n.get('match_level', '')}` / {n.get('janela_dias', '')} dias)\n"
+                )
                 evid = n.get("evidencias")
                 if isinstance(evid, list):
                     for ev in evid[:8]:
                         if isinstance(ev, dict):
                             content.append(
-                                f"  - {md_escape(ev.get('tipo',''))} | "
-                                f"{md_escape(ev.get('registro_ref',''))} | "
-                                f"{md_escape(ev.get('event_date',''))} | "
-                                f"{md_escape(ev.get('source_doc_id',''))}\n"
+                                f"  - {md_escape(ev.get('tipo', ''))} | "
+                                f"{md_escape(ev.get('registro_ref', ''))} | "
+                                f"{md_escape(ev.get('event_date', ''))} | "
+                                f"{md_escape(ev.get('source_doc_id', ''))}\n"
                             )
                 content.append("\n")
 
@@ -596,14 +712,18 @@ def write_04_pendencias(ds: Dataset, out_dir: Path, property_id: Optional[str]) 
 
         rows: List[List[str]] = []
         for r in grouped[k]:
-            rows.append([
-                pend_msg(r),
-                pend_property_id(r),
-                pend_doc_id(r),
-                pend_registro_ref(r),
-            ])
+            rows.append(
+                [
+                    pend_msg(r),
+                    pend_property_id(r),
+                    pend_doc_id(r),
+                    pend_registro_ref(r),
+                ]
+            )
 
-        content.append(md_table(["mensagem", "property_id", "doc", "registro_ref"], rows))
+        content.append(
+            md_table(["mensagem", "property_id", "doc", "registro_ref"], rows)
+        )
         content.append("\n\n")  # separação visual entre tabelas
 
     (out_dir / "04_pendencias.md").write_text("".join(content), encoding="utf-8")
@@ -611,7 +731,7 @@ def write_04_pendencias(ds: Dataset, out_dir: Path, property_id: Optional[str]) 
 
 def write_index(out_dir: Path, property_id: Optional[str]) -> None:
     content = []
-    content.append("# Relatório CAD-OBR — Reconciler (Markdown)\n\n")
+    content.append("# Relatório CAD_OBR — Reconciler (Markdown)\n\n")
     if property_id:
         content.append(f"- Filtro: `{property_id}`\n\n")
     content.append("- [00 — Resumo de Execução](00_resumo_exec.md)\n")
@@ -630,12 +750,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--dataset",
         required=True,
-        help="Diretório do dataset (ex.: outputs/cad-obr/04_reconciler/dataset_v1)",
+        help="Diretório do dataset (ex.: outputs/cad_obr/04_reconciler/dataset_v1)",
     )
     p.add_argument(
         "--output",
         required=True,
-        help="Diretório de saída dos .md (ex.: outputs/cad-obr/04_reconciler/reports/dataset_v1)",
+        help="Diretório de saída dos .md (ex.: outputs/cad_obr/04_reconciler/reports/dataset_v1)",
     )
     p.add_argument(
         "--property-id",

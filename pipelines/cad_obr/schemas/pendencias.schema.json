@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cad-obr/pendencias.schema.json",
-  "title": "CAD-OBR Pendencias (v1)",
+  "$id": "cad_obr/pendencias.schema.json",
+  "title": "CAD_OBR Pendencias (v1)",
   "type": "object",
   "additionalProperties": false,
   "required": ["pendencia_id", "entity_type", "entity_id", "motivo", "evidencias"],
