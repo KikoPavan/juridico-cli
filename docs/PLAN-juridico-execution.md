@@ -49,33 +49,33 @@ This plan follows the "Run first, refine later" philosophy. We will execute the 
 - **Agent:** `evidence-agent`
 - **Input:** `pack_global.json`
 - **Expected Output:**
-    - `outputs/evidence_out.json` (Legacy report; may be large/truncated)
+    - `outputs/cad_obr/05_evidence/dataset_v1/evidence_out.json` (Legacy report; patched if needed)
 - **Verification:** Ensure JSON is valid.
 
-### Stage 3.5: Evidence Adapter (Manual)
+### Stage 3.5: Evidence Adapter
 **Goal:** Produce canonical evidence inputs for downstream stages.
 
-- **Agent/Tool:** evidence-agent adapt
+- **Command:** `evidence-agent adapt`
 - **Input:** `outputs/cad_obr/05_evidence/dataset_v1/evidence_out.json`
 - **Expected Output:**
-    - `outputs/cad_obr/05_evidence/dataset_v1/evidence_map.json` (Canonical claims + anchors)
+    - `outputs/cad_obr/05_evidence/dataset_v1/evidence_map.json` (Canonical input for FIRAC)
     - `outputs/cad_obr/05_evidence/dataset_v1/evidence_map_full.jsonl` (Audit trail)
-- **Verification:** No finding exists without anchors; `doc_ids`/anchors present.
+- **Verification:** `doc_ids` and anchors must be present (no finding without an anchor).
 
 ### Stage 4: Legal Reasoning (FIRAC)
 **Goal:** Construct the legal argument matrix.
 
 - **Agent:** `firac-cli`
-- **Input:** `outputs/evidence_map.json`
+- **Input:** `outputs/cad_obr/05_evidence/dataset_v1/evidence_map.json`
 - **Expected Output:**
-    - `outputs/firac_matrix.md` (Facts, Issues, Rules, Analysis, Conclusion)
+    - `outputs/relatorio_firac.md` (Facts, Issues, Rules, Analysis, Conclusion)
 - **Verification:** Check for logic gaps or missing rules.
 
 ### Stage 5: Drafting & Compliance
 **Goal:** Produce the final petition and validate it.
 
 - **Agents:** `petition-cli` -> `compliance-cli`
-- **Input:** `firac_matrix.md`
+- **Input:** `outputs/relatorio_firac.md`
 - **Expected Output:**
     - `outputs/petition_draft.md`
     - `outputs/compliance_check.md` (Pass/Fail)
@@ -95,4 +95,4 @@ This plan follows the "Run first, refine later" philosophy. We will execute the 
 3. **Proceed to Stage 2**: Generate Evidence Pack.
 
 ---
-**Ready to execute Stage 1?**
+**Ready to execute?**
