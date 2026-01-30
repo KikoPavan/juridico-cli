@@ -39,7 +39,8 @@ tags: [dados, linhagem, duckdb, pack_global, rastreabilidade]
    Ex.: `outputs/cad_obr/04_reconciler/dataset_v1/*.jsonl`
 4. **dataset_v1 → DuckDB** (`artifacts/db/cad_obr_dataset_v1.duckdb`)
 5. **DuckDB → Pack** (`artifacts/evidence_packs/dataset_v1/pack_global.json`)
-6. **Pack → evidence-agent → FIRAC → petição**
+6. **PROCESSO (collector-proc) → FIRAC-Core → petição**
+6A. **CAD_OBR Pack → evidence-agent → (opcional export) → FIRAC-Plus → petição** (quando houver CAD_OBR)
 
 ## 3) Dataset_v1 (views/tabelas no DuckDB)
 
@@ -110,6 +111,7 @@ O JSON final do evidence-agent **referencia** esses anexos em texto (ex.: “lis
 - **Evidence Pack (`pack_global.json`):** pacote consolidado do caso contendo dataset, índices e relatórios (inventário/visões) para consumo por agentes.
 - **dataset_v1 (`*.jsonl`):** conjunto tabular mínimo (JSON Lines) gerado pelo reconciler/pipeline, base para DuckDB e relatórios.
 - **DuckDB:** banco local que materializa `dataset_v1` em views/tabelas para consultas (top-N, agregações, filtros).
-- **evidence_map.json:** saída do Evidence-Agent com alegações (claims) + suportes (support) apontando `source_id` + anchors.
+- **evidence_out.json:** saída canônica do Evidence-Agent (findings + inventário + recomendações P0/P1), sempre parseável.
+- **evidence_map.json:** export/view opcional (claims + supports com `source_id` + anchors) para integrações; não é gate do FIRAC-Core.
 - **Finding:** apontamento relevante para o caso (ex.: inconsistência, ausência, indício) sempre com suporte rastreável.
 - **Fallback (modo degradado):** execução limitada quando um componente falha (ex.: sem DuckDB), priorizando inventário e recomendações.

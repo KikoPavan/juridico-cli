@@ -4,27 +4,36 @@ doc_type: architecture
 system: juridico-cli
 scope: macro
 subsystem: global
-version: v2.2
+version: v2.3
 status: active
 owner: Kiko
 audience: [human, ai]
 source_of_truth: sim
 depends_on: [doc_prd_01, doc_data_02]
-inputs: [dataset_v1_jsonl, duckdb, pack_global_json, evidence_map_json, firac_outputs]
+inputs:
+  - markdown_docs
+  - collectors_json
+  - dataset_v1_jsonl
+  - duckdb
+  - artifacts_evidence_pack_global_json   # artifacts/evidence_packs/dataset_v1/pack_global.json (canonical)
+  - evidence_out_json                     # outputs/cad_obr/05_evidence/dataset_v1/evidence_out.json
+  - optional_evidence_map_json            # export/view only (non-gate)
+  - optional_outputs_pack_copy            # outputs/cad_obr/pack_global.json (non-authoritative)
 outputs: [fluxo_end_to_end, contratos_componentes, decisoes_arquiteturais]
 acceptance_criteria_ref: doc_qa_04
 runbook_ref: doc_runbook_05
-last_updated: 2026-01-19
+last_updated: 2026-01-28
 tags: [arquitetura, agentes, pipelines, end-to-end]
 ---
 
 ## Resumo Executivo
-**O que este documento é:** Arquitetura do subsistema CAD_OBR (pipelines determinísticos + Evidence-Agent + consumo pelo FIRAC).  
-**Para que serve:** Documentar o “as-built” do CAD_OBR: dataset_v1 → DuckDB (views) → pack_global → evidências.  
-**Entradas (inputs):** `outputs/cad_obr/04_reconciler/dataset_v1`; `artifacts/db/cad_obr_dataset_v1.duckdb`; `pack_global.json`.  
-**Saídas (outputs):** views DuckDB (9); `pack_global.json`; evidências para o `firac-cli`.  
-**Critérios de aceite / Validação:** Ver `04_QA...` (DuckDB ok, views presentes, pack consistente) e `05_Runbook...` (procedimento de execução).
+**O que este documento é:** Arquitetura **macro (end-to-end)** do sistema `juridico-cli`, com o CAD_OBR (Reconciler/Evidence Pack) descrito como subfluxo determinístico e com apêndice de referência.  
+**Para que serve:** Documentar o fluxo end-to-end e os contratos globais: collectors → pipelines determinísticos → Evidence → FIRAC → jurisprudência → petição → compliance.  
+**Entradas (inputs):** collectors/processo e (quando houver CAD_OBR) `outputs/cad_obr/04_reconciler/dataset_v1`, `artifacts/db/cad_obr_dataset_v1.duckdb`, `artifacts/evidence_packs/dataset_v1/pack_global.json`.  
+**Saídas (outputs):** `evidence_out.json` (curto, canônico) + anexos; relatório FIRAC (Core process-first); e artefatos downstream (jurisprudência/petição/compliance).  
+**Critérios de aceite / Validação:** Ver `04_QA...` (JSON parseável, rastreabilidade, gates) e `05_Runbook...` (execução, fallback e incidentes).
 
+> Princípio base: **Divulgação Progressiva**, separando processamento determinístico (Python/DuckDB) da análise qualitativa (LLM/Gemini).
 
 ## 0) Escopo deste documento
 Este documento descreve a **Arquitetura e Design do Sistema** do projeto **juridico-cli**, cobrindo:
@@ -41,7 +50,7 @@ Este documento descreve a **Arquitetura e Design do Sistema** do projeto **jurid
 ## 1) Objetivo do sistema
 Transformar documentos jurídicos (Markdown + PDFs originais) em:
 1) **dados estruturados rastreáveis** (com âncoras),
-2) **mapa de evidências** e lacunas documentais,
+2) **evidências e lacunas documentais** (saída canônica: `evidence_out.json`; export opcional: `evidence_map.json`),
 3) **FIRAC** (matriz fatos–provas–regras),
 4) **jurisprudência** selecionada (auditável),
 5) **petição-esqueleto** e auditoria final (compliance).
@@ -101,7 +110,6 @@ O projeto é dividido em quatro pilares principais: **/pipelines**, **/agents**,
 ## 3) Arquitetura macro (end-to-end)
 
 ### 3.1 Desenho — Fluxo macro (visual)
-
 ```text
 [Docs Markdown brutos] + [PDFs originais]
           |
@@ -111,10 +119,10 @@ O projeto é dividido em quatro pilares principais: **/pipelines**, **/agents**,
           v
 (2) pipelines (Python): reconciler/monetary -> JSONL -> DuckDB (verdade única)
           |
-          +--> consolidator -> pack_global.json (artefato técnico reprodutível)
+          +--> evidence_pack (Python) -> artifacts/evidence_packs/dataset_v1/pack_global.json (canonical pack; optional non-authoritative copy: outputs/cad_obr/pack_global.json)
           |
           v
-(3) evidence-agent (LLM) -> evidence_map.json (curto) + anexos (completos)
+(3) evidence-agent → evidence_out.json (curto, canônico) + anexos (completo); (opcional) export evidence_map.json / evidence_map_full.jsonl
           |
           v
 (4) firac-cli -> matriz fatos–provas–regras + relatório FIRAC
@@ -127,12 +135,12 @@ O projeto é dividido em quatro pilares principais: **/pipelines**, **/agents**,
           v
 (7) compliance-cli -> checklist OK/FALHA
 
-> Note (CAD_OBR): FIRAC (Stage 4) consumes the canonical `outputs/cad_obr/05_evidence/dataset_v1/evidence_map.json`.  
-> If Evidence produces legacy `evidence_out.json`, run Stage 3.5 `evidence-agent adapt` to produce `evidence_map.json` (+ `evidence_map_full.jsonl`). Details in `03A_Arquitetura_SubSistema_CAD_OBR_Pipelines_Evidence_FIRAC.md`.
+> Note (FIRAC): FIRAC-Core is process-first and MUST run from PROCESSO (collector-proc) outputs.  
+> CAD_OBR evidence outputs may enrich FIRAC (FIRAC-Plus) when available, but must not block FIRAC-Core.  
+> Stage 3.5 `evidence-agent adapt` is an OPTIONAL export to `evidence_map.json` (+ `evidence_map_full.jsonl`) for integrations that prefer "claims/supports".
 ```
 
 ### 3.2 Contratos comuns (agentes)
-
 Cada agente segue o padrão de **4 arquivos**: `main.py`, `config.yaml`, `prompt.md`, `io.schema.json`.
 
 ---
@@ -140,38 +148,38 @@ Cada agente segue o padrão de **4 arquivos**: `main.py`, `config.yaml`, `prompt
 ## 4) Modelo de dados: “packs”, evidência e rastreabilidade
 
 ### 4.1 `pack_global.json` (definição)
-
 `pack_global.json` é o **artefato técnico** que materializa o “pack consolidado” e garante reprodutibilidade; diferente do “Evidence Pack” (entrega).
-
 Também deve existir a distinção: **pack mínimo para LLM** vs **pack completo para auditoria**.
+**Caminho canônico do pack (source of truth):**
+- `artifacts/evidence_packs/dataset_v1/pack_global.json`
+
+**Cópia opcional (não-autoritativa):**
+- `outputs/cad_obr/pack_global.json` pode existir por compatibilidade/execuções antigas, mas **não deve ser usada** se divergir do pack canônico.
+
 
 ### 4.2 Inputs do usuário: verdade operacional vs verdade probatória
-
 `data/context.json` e `data/contexto_relacoes.json` entram como **premissas (verdade operacional)**; só viram “fato provado” com **documento/âncora/trecho** (verdade probatória).
 
-### 4.3 `evidence_map.json` (saída padrão do Evidence)
-
-O Evidence deve produzir:
-
-* status por claim (suportado/parcial/não),
-* `evidence_refs` (source_id + âncora + trecho),
-* triagem P0–P3 (colheita externa só P0/P1).
+### 4.3 `evidence_out.json` (saída canônica do Evidence)
+- Sempre parseável e curta (findings + inventário + recomendações P0/P1).
+- Detalhamento e volumes vão para anexos (`*.jsonl, *.md`), preservando anti-truncamento.
+- **Export opcional:** `evidence_map.json` / `evidence_map_full.jsonl` para integrações (claims/supports com source_id + anchors); não bloqueia FIRAC-Core.
 
 ### 4.4 Regra crítica: “doc consta no pack, mas não há trecho”
-
-Se o pack lista o documento, o Evidence **não pode** afirmar “não existe documento”; deve registrar **falta de âncora/trecho**.
+- Se o pack lista o documento, o Evidence **não pode** afirmar “não existe documento”; deve registrar **falta de âncora/trecho**.
 
 ---
 
 ## 5) Armazenamentos e consultas
 
 ### 5.1 DuckDB (verdade única)
+- DuckDB atua como “verdade única”, consumindo JSONL gerados pelos pipelines, com consultas SQL rápidas para agentes/CLI.
 
-DuckDB atua como “verdade única”, consumindo JSONL gerados pelos pipelines, com consultas SQL rápidas para agentes/CLI.
-
-#### 5.1.1 Estado atual (validado em 2026-01-19)
+#### 5.1.1 Estado atual (validado em 2026-01-28)
 - **Arquivo DuckDB:** `artifacts/db/cad_obr_dataset_v1.duckdb`
 - **Gerador (determinístico):** `pipelines/cad_obr/evidence_pack/evidence_pack_cli.py` (a partir de `outputs/cad_obr/04_reconciler/dataset_v1`)
+- **Pack canônico gerado em:** `artifacts/evidence_packs/dataset_v1/pack_global.json` (source of truth)
+- **Cópia opcional (não-autoritativa):** `outputs/cad_obr/pack_global.json` (ignorar se divergir do canônico)
 - **Views criadas automaticamente (1:1 com os JSONL do dataset_v1):**
   - `contratos_operacoes`, `documentos`, `imoveis`, `links`, `novacoes_detectadas`, `onus_obrigacoes`, `partes`, `pendencias`, `property_events`
 - **Critério de integridade no pack:** `pack_global.json → inputs.duckdb_info.status == "ok"` e `inputs.duckdb_info.files == 9`
@@ -179,11 +187,8 @@ DuckDB atua como “verdade única”, consumindo JSONL gerados pelos pipelines,
 
 **Mudança v2 (obrigatória):** Evidence passa a consumir **DuckDB como fonte tratada** (top-N + agregados), em vez de ler muitos JSON/JSONL diretamente.
 
-
 ### 5.2 Qdrant (vetorial)
-
-Qdrant serve para busca semântica de:
-
+- Qdrant serve para busca semântica de:
 * trechos do processo,
 * e biblioteca jurídica (leis/jurisprudência).
 
@@ -192,20 +197,17 @@ Qdrant serve para busca semântica de:
 ## 6) Robustez de saída: JSON parseável e anti-truncamento
 
 ### 6.1 Contrato “JSON curto + anexos”
-
-O Evidence entrega:
-
-1. JSON curto (sempre parseável),
-2. anexos completos fora do JSON (ex.: `evidence_map_full.jsonl`, inventário completo, queries).
+Quando o Evidence for executado, ele entrega:
+1. `evidence_out.json` (JSON curto, sempre parseável),
+2. anexos completos fora do JSON (ex.: `evidence_map_full.jsonl` quando o export estiver habilitado; inventário completo; queries).
+**Nota:** o FIRAC-Core é process-first (collector-proc) e não deve ser bloqueado pela ausência de Evidence.
 
 ### 6.2 Regras mínimas de prompt (baseline)
-
 * máx. 6 findings; máx. 4 evidências por finding;
 * trecho máx. 320 chars; 1 linha; sem aspas duplas;
 * reduzir conteúdo antes de quebrar JSON; proibido texto fora do JSON.
 
 ### 6.3 Documentação obrigatória
-
 Criar seção/página: **“Contrato de Saída e Estratégia Anti-Truncamento”** e replicar em QA/Runbook.
 
 ---
@@ -213,24 +215,18 @@ Criar seção/página: **“Contrato de Saída e Estratégia Anti-Truncamento”
 ## 7) Base jurídica e jurisprudência (arquitetura híbrida)
 
 ### 7.1 Decisão: Opção C (híbrida)
-
 Duas bibliotecas em paralelo:
-
 * **Global:** Qdrant “biblioteca jurídica” (leis + jurisprudência geral).
 * **Pack do caso:** allowlist do tema + docs do processo + itens selecionados da global.
 
 ### 7.2 Padronização de `base_juridica/` + manifesto
-
 Cada PDF deve ter `manifesto.yml` com: tipo, tribunal, classe/número, data, tags, `sha256`, `source_id`.
 
 ### 7.3 Ingestão determinística antes do LLM
-
 Pipeline: ingestão → normalização → embeddings → indexação (Qdrant); LLM sintetiza a partir de candidatos retornados.
 
 ### 7.4 `case-law-cli` (contrato operacional)
-
 Corrigir contrato/prompt e padronizar:
-
 * Entrada: questões nucleares do FIRAC + recorte fático + filtros.
 * Operação: consulta semântica + filtros; ranking.
 * Saídas: `jurisprudencia.md` + `jurisprudencia.json` (auditável).
@@ -240,21 +236,17 @@ Corrigir contrato/prompt e padronizar:
 ## 8) MCP (opcional/recomendado) e Tools (CAD_OBR / Reconciler)
 
 Para subsistemas como CAD_OBR, um MCP server pode expor:
-
 * tools determinísticas (dataset/DB),
 * tools RAG (Qdrant),
 * builders (Evidence Pack / FIRAC Bridge).
 
 ### 8.1 Tools determinísticas (exemplos)
-
 `list_datasets`, `get_document`, `get_property`, `list_onus`, `timeline`, `get_onus`, `list_novacoes`, `link_graph`.
 
 ### 8.2 Tools RAG (exemplos)
-
 `semantic_search`, `get_chunk`, `evidence_snippets_for_onus`.
 
 ### 8.3 Builders (exemplos)
-
 `build_evidence_pack` e `build_firac_bridge`.
 
 ---
@@ -262,7 +254,6 @@ Para subsistemas como CAD_OBR, um MCP server pode expor:
 ## 9) Orquestração (LangGraph) e gates anti-alucinação
 
 Exemplo de fluxo (CAD_OBR / Reconciler):
-
 1. ClarifyGoal
 2. DeterministicScan (dataset/DB)
 3. PatternBuilder (cruzamentos)
@@ -270,9 +261,7 @@ Exemplo de fluxo (CAD_OBR / Reconciler):
 5. EvidencePack (compilação)
 6. FIRACBridge
 7. Output (md/json).
-
 Gates:
-
 * se não estiver no dataset/DB: não afirmar; registrar lacuna/narrativa,
 * se não houver snippet literal: não afirmar; apenas indicar documento necessário.
 
@@ -281,20 +270,16 @@ Gates:
 ## 10) Governança e documentação por maturidade
 
 ### 10.1) Camadas A/B/C (maturidade)
-
 Organizar evolução em camadas e exigir que cada entrega declare a camada.
 
 ### 10.2) 4 anexos mínimos obrigatórios
-
 * `PRD_curto.md`
 * `Data_minimal.md`
 * `QA_Avaliacao.md`
 * `Runbook.md`
-
 Incluindo detalhamento mínimo do Runbook/QA (monitoramento, fallback, regressão, hashes).
 
 ### 10.3) Catálogo de prompts + matriz de testes + políticas
-
 Mudanças em prompt/skill exigem versão + QA/regressão mínima.
 
 ---
@@ -309,12 +294,11 @@ Mudanças em prompt/skill exigem versão + QA/regressão mínima.
 
 ---
 
-
 ## 12) Roadmap (alto nível)
 
 F0) Documentos mínimos (PRD/Data/QA/Runbook) + Contrato Anti-Truncamento.
 F1) JSONL → DuckDB + consolidator → `pack_global.json`.
-F2) Evidence-Agent: DuckDB (top-N) → `evidence_map.json` + anexos.
+F2) Evidence-Agent: DuckDB (top-N) → `evidence_out.json` + anexos; (opcional) export `evidence_map.json`/`evidence_map_full.jsonl`.
 F3) FIRAC → case-law (híbrido) → petition → compliance.
 F4) Base jurídica: manifesto + ingestão determinística + indexação Qdrant.
 
@@ -325,23 +309,19 @@ F4) Base jurídica: manifesto + ingestão determinística + indexação Qdrant.
 > Este apêndice preserva e enquadra o documento atual do Reconciler como sub-arquitetura do sistema.
 
 ### A1) Entradas e fontes de verdade
-
 Dataset determinístico: `outputs/cad_obr/04_reconciler/dataset_v1/*.jsonl` (documentos, imóveis, partes, ônus, eventos, contratos, novações, links, pendências).
 DuckDB (derivado): `artifacts/db/cad_obr_dataset_v1.duckdb` (views 1:1 com os JSONL).
 Texto integral: Markdown/PDF convertidos com âncoras (R./AV./[[Folha]]).
 
 ### A2) Qdrant (payload mínimo)
-
 Coleção `cad_obr_chunks_v1` e payload obrigatório (doc_id, source_id/sha, property_id, anchor, chunk_type, datas, onus_id, event_type).
 
 ### A3) MCP tools e LangGraph
-
 MCP tools e fluxo LangGraph conforme seções 8 e 9.
 
 ---
 
 ### Atualização v2.2 (2026-01-19)
-
 - DuckDB do CAD_OBR validado e operacional: `artifacts/db/cad_obr_dataset_v1.duckdb`.
 - `pack_global.json` passa a registrar `duckdb_info.status = "ok"` e as views derivadas do `dataset_v1`.
 - Regra operacional: nunca pré-criar `.duckdb` vazio; o arquivo deve ser criado via `duckdb.connect()` (pipeline).
@@ -355,6 +335,7 @@ MCP tools e fluxo LangGraph conforme seções 8 e 9.
 - **Evidence Pack (`pack_global.json`):** pacote consolidado do caso contendo dataset, índices e relatórios (inventário/visões) para consumo por agentes.
 - **dataset_v1 (`*.jsonl`):** conjunto tabular mínimo (JSON Lines) gerado pelo reconciler/pipeline, base para DuckDB e relatórios.
 - **DuckDB:** banco local que materializa `dataset_v1` em views/tabelas para consultas (top-N, agregações, filtros).
-- **evidence_map.json:** saída do Evidence-Agent com alegações (claims) + suportes (support) apontando `source_id` + anchors.
+- **evidence_out.json:** saída canônica do Evidence-Agent (findings + inventário + recomendações P0/P1), sempre parseável.
+- **evidence_map.json:** export/view opcional (claims + supports com `source_id` + anchors) para integrações; não é gate do FIRAC-Core.
 - **Finding:** apontamento relevante para o caso (ex.: inconsistência, ausência, indício) sempre com suporte rastreável.
 - **Fallback (modo degradado):** execução limitada quando um componente falha (ex.: sem DuckDB), priorizando inventário e recomendações.

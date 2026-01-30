@@ -33,7 +33,8 @@ Pipeline (ordem):
 2. pipelines (normalize/monetary/reconciler) → dataset_v1
 3. load DuckDB
 4. gerar `pack_global.json` (pack mínimo + anexos completos)
-5. evidence-agent → FIRAC → petition
+5. FIRAC-Core (process-first: collector-proc) → petition
+5A. FIRAC-Plus (optional: CAD_OBR evidence outputs if available) → petition
 
 ## 2) Política anti-truncamento (obrigatória)
 
@@ -86,6 +87,7 @@ Registrar por execução:
 - **Evidence Pack (`pack_global.json`):** pacote consolidado do caso contendo dataset, índices e relatórios (inventário/visões) para consumo por agentes.
 - **dataset_v1 (`*.jsonl`):** conjunto tabular mínimo (JSON Lines) gerado pelo reconciler/pipeline, base para DuckDB e relatórios.
 - **DuckDB:** banco local que materializa `dataset_v1` em views/tabelas para consultas (top-N, agregações, filtros).
-- **evidence_map.json:** saída do Evidence-Agent com alegações (claims) + suportes (support) apontando `source_id` + anchors.
+- **evidence_out.json:** saída canônica do Evidence-Agent (findings + inventário + recomendações P0/P1), sempre parseável.
+- **evidence_map.json:** export/view opcional (claims + supports com `source_id` + anchors) para integrações; não é gate do FIRAC-Core.
 - **Finding:** apontamento relevante para o caso (ex.: inconsistência, ausência, indício) sempre com suporte rastreável.
 - **Fallback (modo degradado):** execução limitada quando um componente falha (ex.: sem DuckDB), priorizando inventário e recomendações.

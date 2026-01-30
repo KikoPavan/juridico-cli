@@ -21,7 +21,7 @@ tags: [qa, aceite, regressao, validacao]
 ## Resumo Executivo
 **O que este documento é:** Matriz de QA com critérios de aceite e cenários de regressão do sistema e dos agentes.  
 **Para que serve:** Evitar regressões e garantir que cada saída é parseável, rastreável e consistente.  
-**Entradas (inputs):** `pack_global.json`; `evidence_map.json` e anexos; outputs FIRAC/petição; logs.  
+**Entradas (inputs):** `pack_global.json`; `evidence_out.json` (canônico) + anexos; (opcional) `evidence_map.json`/`evidence_map_full.jsonl` como export; outputs FIRAC/petição; logs.  
 **Saídas (outputs):** checklists; testes mínimos; regras de falha/bloqueio; métricas de qualidade.  
 **Critérios de aceite / Validação:** Este documento é a referência de validação (executar checks antes de promover versões).
 
@@ -97,6 +97,7 @@ Use 3 pacotes/datasets representativos:
 - **Evidence Pack (`pack_global.json`):** pacote consolidado do caso contendo dataset, índices e relatórios (inventário/visões) para consumo por agentes.
 - **dataset_v1 (`*.jsonl`):** conjunto tabular mínimo (JSON Lines) gerado pelo reconciler/pipeline, base para DuckDB e relatórios.
 - **DuckDB:** banco local que materializa `dataset_v1` em views/tabelas para consultas (top-N, agregações, filtros).
-- **evidence_map.json:** saída do Evidence-Agent com alegações (claims) + suportes (support) apontando `source_id` + anchors.
+- **evidence_out.json:** saída canônica do Evidence-Agent (findings + inventário + recomendações P0/P1), sempre parseável.
+- **evidence_map.json:** export/view opcional (claims + supports com `source_id` + anchors) para integrações; não é gate do FIRAC-Core.
 - **Finding:** apontamento relevante para o caso (ex.: inconsistência, ausência, indício) sempre com suporte rastreável.
 - **Fallback (modo degradado):** execução limitada quando um componente falha (ex.: sem DuckDB), priorizando inventário e recomendações.
