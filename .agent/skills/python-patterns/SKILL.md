@@ -47,7 +47,7 @@ What are you building?
 ### Comparison Principles
 
 | Factor | FastAPI | Django | Flask |
-|--------|---------|--------|-------|
+| ------- | ------- | ------ | ----- |
 | **Best for** | APIs, microservices | Full-stack, CMS | Simple, learning |
 | **Async** | Native | Django 5.0+ | Via extensions |
 | **Admin** | Manual | Built-in | Via extensions |
@@ -97,7 +97,7 @@ Don't:
 ### Async Library Selection
 
 | Need | Async Library |
-|------|---------------|
+| ------ | -------------- |
 | HTTP client | httpx |
 | PostgreSQL | asyncpg |
 | Redis | aioredis / redis-py async |
@@ -313,7 +313,7 @@ async def create(user: UserCreate) -> UserResponse:
 ### Selection Guide
 
 | Solution | Best For |
-|----------|----------|
+| ---------- | ---------- |
 | **BackgroundTasks** | Simple, in-process tasks |
 | **Celery** | Distributed, complex workflows |
 | **ARQ** | Async, Redis-based |
@@ -373,7 +373,7 @@ Include:
 ### Testing Strategy
 
 | Type | Purpose | Tools |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | **Unit** | Business logic | pytest |
 | **Integration** | API endpoints | pytest + httpx/TestClient |
 | **E2E** | Full workflows | pytest + DB |

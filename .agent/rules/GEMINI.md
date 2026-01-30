@@ -42,14 +42,14 @@ Agent activated → Check frontmatter "skills:" field
 
 **Before ANY action, classify the request:**
 
-| Request Type | Trigger Keywords | Active Tiers | Result |
-|--------------|------------------|--------------|--------|
-| **QUESTION** | "what is", "how does", "explain" | TIER 0 only | Text Response |
-| **SURVEY/INTEL**| "analyze", "list files", "overview" | TIER 0 + Explorer | Session Intel (No File) |
-| **SIMPLE CODE** | "fix", "add", "change" (single file) | TIER 0 + TIER 1 (lite) | Inline Edit |
-| **COMPLEX CODE**| "build", "create", "implement", "refactor" | TIER 0 + TIER 1 (full) + Agent | **{task-slug}.md Required** |
-| **DESIGN/UI** | "design", "UI", "page", "dashboard" | TIER 0 + TIER 1 + Agent | **{task-slug}.md Required** |
-| **SLASH CMD** | /create, /orchestrate, /debug | Command-specific flow | Variable |
+| Request Type     | Trigger Keywords                           | Active Tiers                   | Result                     |
+|------------------|--------------------------------------------|--------------------------------|----------------------------|
+| **QUESTION**     | "what is", "how does", "explain"           | TIER 0 only                    | Text Response              |
+| **SURVEY/INTEL** | "analyze", "list files", "overview"        | TIER 0 + Explorer              | Session Intel (No File)    |
+| **SIMPLE CODE**  | "fix", "add", "change" (single file)       | TIER 0 + TIER 1 (lite)         | Inline Edit                |
+| **COMPLEX CODE** | "build", "create", "implement", "refactor" | TIER 0 + TIER 1 (full) + Agent | **{task-slug}.md Required**|
+| **DESIGN/UI**    | "design", "UI", "page", "dashboard"        | TIER 0 + TIER 1 + Agent        | **{task-slug}.md Required**|
+| **SLASH CMD**    | /create, /orchestrate, /debug              | Command-specific flow          | Variable                   |
 
 ---
 
@@ -119,9 +119,9 @@ Responda exclusivamente em português do Brasil (pt-BR), independentemente do id
 
 | Project Type | Primary Agent | Skills |
 |--------------|---------------|--------|
-| **MOBILE** (iOS, Android, RN, Flutter) | `mobile-developer` | mobile-design |
-| **WEB** (Next.js, React web) | `frontend-specialist` | frontend-design |
-| **BACKEND** (API, server, DB) | `backend-specialist` | api-patterns, database-design |
+| **MOBILE** (iOS, Android, RN, Flutter)           |  `mobile-developer` | mobile-design |
+| **WEB** (Next.js, React web)                      | `frontend-specialist` | frontend-design |
+| **BACKEND** (API, server, DB)                     | `backend-specialist` | api-patterns, database-design |
 | **CLI (Python)** (commands, pipelines, artifacts) | `backend-specialist` | python-patterns, testing-patterns, systematic-debugging, deployment-procedures |
 
 > 🔴 **Mobile + frontend-specialist = WRONG.** Mobile = mobile-developer ONLY.
@@ -144,13 +144,13 @@ If the user explicitly says: “Prosseguir direto” / “Rodar tudo sem ajustes
 - Then **proceed** with a runnable step plan (do not block with discovery).
 
 #### 📌 Decision table
-| Request Type | Questions | Action |
-|---|---:|---|
+| Request Type                       | Questions | Action |
+|------------------------------------|---: |---|
 | New Feature / Build (CLI/Pipeline) | 0–2 | Ask ONLY if any minimum item is missing; otherwise runnable plan. |
-| Code Edit / Bug Fix | 0–1 | Confirm error + expected output; ask 1 thing only if reproduction/input is missing. |
-| Vague / Simple | 1–2 | Ask objective + expected output (avoid long interviews). |
-| Full Orchestration | 0–1 | Do NOT stop subagents by default; proceed step-by-step. |
-| Direct “Proceed / No adjustments” | 0–1 | Fast-Path: do not block. |
+| Code Edit / Bug Fix                | 0–1 | Confirm error + expected output; ask 1 thing only if reproduction/input is missing. |
+| Vague / Simple                     | 1–2 | Ask objective + expected output (avoid long interviews). |
+| Full Orchestration                 | 0–1 | Do NOT stop subagents by default; proceed step-by-step. |
+| Direct “Proceed / No adjustments”  | 0–1 | Fast-Path: do not block. |
 
 #### 🔐 Safety override (always applies)
 Any action that modifies files/system MUST require explicit confirmation:
@@ -162,10 +162,10 @@ Any action that modifies files/system MUST require explicit confirmation:
 
 **CLI note:** For CLI-only repos, treat "Done" as: Security + Lint/Format + Schema (if any) + Tests (unit + smoke). UX/SEO/Lighthouse/E2E are N/A unless there is a UI/URL.
 
-| Task Stage | Command | Purpose |
-|------------|---------|---------|
-| **Manual Audit** | `python .agent/scripts/checklist.py .` | Priority-based project audit |
-| **Pre-Deploy** | `python .agent/scripts/checklist.py . --url <URL>` | Full Suite + Performance + E2E |
+| Task Stage       | Command                                            | Purpose |
+|------------------|----------------------------------------------------|---------|
+| **Manual Audit** | `python .agent/scripts/checklist.py .`             | Priority-based project audit |
+| **Pre-Deploy**   | `python .agent/scripts/checklist.py . --url <URL>` | Full Suite + Performance + E2E |
 
 **Priority Execution Order:**
 1. **Security** → 2. **Lint** → 3. **Schema** → 4. **Tests** → 5. **UX** → 6. **SEO** → 7. **Lighthouse/E2E**
@@ -175,20 +175,20 @@ Any action that modifies files/system MUST require explicit confirmation:
 - **Reporting:** If it fails, fix the **Critical** blockers first (Security/Lint).
 
 **Available Scripts (12 total):**
-| Script | Skill | When to Use |
-|--------|-------|-------------|
-| `security_scan.py` | vulnerability-scanner | Always on deploy |
-| `dependency_analyzer.py` | vulnerability-scanner | Weekly / Deploy |
-| `lint_runner.py` | lint-and-validate | Every code change |
-| `test_runner.py` | testing-patterns | After logic change |
-| `schema_validator.py` | database-design | After DB change |
-| `ux_audit.py` | frontend-design | After UI change |
-| `accessibility_checker.py` | frontend-design | After UI change |
-| `seo_checker.py` | seo-fundamentals | After page change |
-| `bundle_analyzer.py` | performance-profiling | Before deploy |
-| `mobile_audit.py` | mobile-design | After mobile change |
-| `lighthouse_audit.py` | performance-profiling | Before deploy |
-| `playwright_runner.py` | webapp-testing | Before deploy |
+| Script                     | Skill                 | When to Use |
+|----------------------------|-----------------------|-------------|
+| `security_scan.py`         | vulnerability-scanner | Always on deploy |
+| `dependency_analyzer.py`   | vulnerability-scanner | Weekly / Deploy |
+| `lint_runner.py`           | lint-and-validate     | Every code change |
+| `test_runner.py`           | testing-patterns      | After logic change |
+| `schema_validator.py`      | database-design       | After DB change |
+| `ux_audit.py`              | frontend-design       | After UI change |
+| `accessibility_checker.py` | frontend-design       | After UI change |
+| `seo_checker.py`           | seo-fundamentals      | After page change |
+| `bundle_analyzer.py`       | performance-profiling | Before deploy |
+| `mobile_audit.py`          | mobile-design         | After mobile change |
+| `lighthouse_audit.py`      | performance-profiling | Before deploy |
+| `playwright_runner.py`     | webapp-testing        | Before deploy |
 
 > 🔴 **Agents & Skills can invoke ANY script** via `python .agent/skills/<skill>/scripts/<script>.py`
 
@@ -196,24 +196,24 @@ Any action that modifies files/system MUST require explicit confirmation:
 
 ### 🎭 Gemini Mode Mapping
 
-| Mode | Agent | Behavior |
-|------|-------|----------|
+| Mode     | Agent             | Behavior                                     |
+|----------|-------------------|----------------------------------------------|
 | **plan** | `project-planner` | 4-phase methodology. NO CODE before Phase 4. |
-| **ask** | - | Focus on understanding. Ask questions. |
-| **edit** | `orchestrator` | Execute. Check `{task-slug}.md` first. |
+| **ask**  | -                 | Focus on understanding. Ask questions.       |
+| **edit** | `orchestrator`    | Execute. Check `{task-slug}.md` first.       |
 
 ---
 
 ### Script Locations
 
-| Script | Path |
-|--------|------|
-| Full verify | `.agent/scripts/verify_all.py` |
-| Checklist | `.agent/scripts/checklist.py` |
+| Script        | Path |
+|---------------|------|
+| Full verify   | `.agent/scripts/verify_all.py` |
+| Checklist     | `.agent/scripts/checklist.py` |
 | Security scan | `.agent/skills/vulnerability-scanner/scripts/security_scan.py` |
-| UX audit | `.agent/skills/frontend-design/scripts/ux_audit.py` |
-| Mobile audit | `.agent/skills/mobile-design/scripts/mobile_audit.py` |
-| Lighthouse | `.agent/skills/performance-profiling/scripts/lighthouse_audit.py` |
-| Playwright | `.agent/skills/webapp-testing/scripts/playwright_runner.py` |
+| UX audit      | `.agent/skills/frontend-design/scripts/ux_audit.py` |
+| Mobile audit  | `.agent/skills/mobile-design/scripts/mobile_audit.py` |
+| Lighthouse    | `.agent/skills/performance-profiling/scripts/lighthouse_audit.py` |
+| Playwright    | `.agent/skills/webapp-testing/scripts/playwright_runner.py` |
 
 ---

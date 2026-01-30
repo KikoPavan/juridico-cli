@@ -26,7 +26,7 @@ Who are the API consumers?
 ## Comparison
 
 | Factor | REST | GraphQL | tRPC |
-|--------|------|---------|------|
+| -------- | ------ | --------- | ------ |
 | **Best for** | Public APIs | Complex apps | TS monorepos |
 | **Learning curve** | Low | Medium | Low (if TS) |
 | **Over/under fetching** | Common | Solved | Solved |

@@ -18,7 +18,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 ## 📑 Content Map
 
 | File | Description | When to Read |
-|------|-------------|--------------|
+| ------ | ----------- | ------------ |
 | `api-style.md` | REST vs GraphQL vs tRPC decision tree | Choosing API type |
 | `rest.md` | Resource naming, HTTP methods, status codes | Designing REST API |
 | `response.md` | Envelope pattern, error format, pagination | Response structure |
@@ -35,7 +35,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 ## 🔗 Related Skills
 
 | Need | Skill |
-|------|-------|
+| ------ | ------- |
 | API implementation | `@[skills/backend-development]` |
 | Data structure | `@[skills/database-design]` |
 | Security details | `@[skills/security-hardening]` |
@@ -76,6 +76,5 @@ Before designing an API:
 ## Script
 
 | Script | Purpose | Command |
-|--------|---------|---------|
+| -------- | --------- | --------- |
 | `scripts/api_validator.py` | API endpoint validation | `python scripts/api_validator.py <project_path>` |
-
