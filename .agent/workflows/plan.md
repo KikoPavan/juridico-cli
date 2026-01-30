@@ -13,7 +13,7 @@ $ARGUMENTS
 1. **NO CODE WRITING** - This command creates a plan file only
 2. **Use project-planner agent** - NOT Claude Code's native Plan subagent
 3. **Canonical Context** - MUST read `docs/antigravity/juridico-cli/INDEX.md` first
-4. **References Section** - Plan MUST include `## Referências` citing used docs
+4. **References Section** - Plan MUST include `## Referências` using RELATIVE PATHS (no `file:///`)
 5. **Dynamic Naming** - Plan file name derived from task (kebab-case, max 30 chars)
 6. **STOP AFTER PLAN** - Do not run `/create` or any implementation steps
 
@@ -40,7 +40,11 @@ RULES:
 1. **READ FIRST:** `docs/antigravity/juridico-cli/INDEX.md` to understand the project (Context Check).
 2. **CONSULT:** Follow links in INDEX.md only if relevant to the specific request.
 3. **PLAN:** Create ./{slug}.md in project root with task breakdown.
-4. **REFERENCES:** Include a section `## Referências` in the plan, listing INDEX.md and standardizing links to other specific docs/sections used (e.g., `03_...md#Section`).
+4. **REFERENCES:** Include a section `## Referências` in the plan:
+   - List `docs/antigravity/juridico-cli/INDEX.md` as the base.
+   - List any other file used using **relative paths** (e.g. `docs/...md`).
+   - **DO NOT** use `file:///` URI scheme.
+   - **MUST** use section anchors for deep links (e.g. `docs/...md#Seção`).
 5. **DO NOT** write or modify any other files.
 6. **REPORT** the exact file name created.
 7. **END** after reporting (no execution).
@@ -51,9 +55,9 @@ RULES:
 ## Expected Output
 
 | Deliverable | Location |
-|-------------|----------|
+| ------------- | ---------- |
 | Project Plan | `./{task-slug}.md` |
-| References | `## Referências` section in plan |
+| References | `## Referências` section (Relative paths + Anchors) |
 | Task Breakdown | Inside plan file |
 | Agent Assignments | Inside plan file |
 | Verification Checklist | Inside plan file (Phase X) |
@@ -77,7 +81,7 @@ Next steps (manual):
 ## Naming Examples
 
 | Request | Plan File |
-|---------|-----------|
+| --------- | ----------- |
 | `/plan e-commerce site with cart` | `./ecommerce-cart.md` |
 | `/plan mobile app for fitness` | `./fitness-app.md` |
 | `/plan add dark mode feature` | `./dark-mode.md` |
