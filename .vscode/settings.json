@@ -3,20 +3,16 @@
         "basse",
         "Especificos",
         "firac",
-        "gemini",
         "genai",
         "Julg",
         "peticao",
         "reqdo",
         "reqte"
     ],
-    "python-envs.pythonProjects": [],
     "python.defaultInterpreterPath": "/home/kiko/devops/juridico-cli/.venv/bin/python",
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": false,
-    "gemini-cli.debug.logging.enabled": true,
-
-    "ruff.importStrategy": "fromEnvironment",  
+    "ruff.importStrategy": "fromEnvironment",
     "ruff.nativeServer": "on",
     "ruff.lint.enable": true,
     "ruff.organizeImports": true,
@@ -26,8 +22,9 @@
     "ruff.format.preview": true,
     "ruff.lint.preview": true,
     "ruff.format.backend": "ruff",
-    "ruff.path": ["/home/kiko/devops/juridico-cli/.venv/bin/ruff"],  
-
+    "ruff.path": [
+        "/home/kiko/devops/juridico-cli/.venv/bin/ruff"
+    ],
     "explorer.excludeGitIgnore": false,
     "files.exclude": {
         "**/.venv": false
@@ -37,7 +34,39 @@
     },
     "files.watcherExclude": {
         "**/.venv/**": true
-}
+    },
+    "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "off",
+    "prettier.printWidth": 88,
+    "prettier.proseWrap": "preserve",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.markdownlint": "explicit"
+    }
+  },
 
+  "markdownlint.config": {
+    "default": true,
+    "MD003": false,
+    "MD004": false,
+    "MD007": false,
+    "MD011": false,
+    "MD012": false,
+    "MD013": false,
+    "MD022": false,
+    "MD024": false,
+    "MD026": false,
+    "MD031": false,
+    "MD032": false,
+    "MD033": false,
+    "MD036": false,
+    "MD040": false,
+    "MD041": false,
+    "MD046": false,
+    "MD052": false,
+    "MD059": false
+  },
+  "prettier.requireConfig": false
 
 }
