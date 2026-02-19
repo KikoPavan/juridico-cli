@@ -1,0 +1,7 @@
+agents/case-law-cli/main.py
+agents/collector-cad_obr/main.py
+agents/collector-proc/main.py
+agents/compliance-cli/main.py
+agents/evidence-agent/main.py
+agents/firac-cli/main.py
+agents/petition-cli/main.py

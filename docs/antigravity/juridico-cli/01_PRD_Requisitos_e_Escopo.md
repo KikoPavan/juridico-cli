@@ -19,6 +19,7 @@ tags: [prd, requisitos, escopo, kpis]
 ---
 
 ## Resumo Executivo
+
 - **O que este documento é:** PRD do juridico-cli com objetivos, escopo, entregáveis e critérios de sucesso.
 - **Para que serve:** Definir o “porquê” e o “o quê” do sistema para orientar implementação e priorização.
 - **Entradas (inputs):** necessidade do caso; restrições operacionais; premissas de rastreabilidade.
@@ -27,33 +28,36 @@ tags: [prd, requisitos, escopo, kpis]
 
 ## 1) Objetivo
 
-* **Construir um pipeline local (juridico-cli)** que transforma documentos jurídicos em entregáveis com rastreabilidade (âncoras/source_id) e priorização P0/P1, com dois modos:
-- **FIRAC-Core (principal / process-first):** gerar relatório/matriz FIRAC do processo a partir do collector-proc, mesmo sem CAD_OBR/evidence.
-- **FIRAC-Plus (opcional):** enriquecer o FIRAC quando existirem outputs do CAD_OBR/Evidence (ex.: evidence_out.json e anexos; evidence_map.json apenas como export).
-- **Petição-esqueleto:** derivada do FIRAC (Core ou Plus), com revisão humana final.
+- **Construir um pipeline local (juridico-cli)** que transforma documentos jurídicos em entregáveis com rastreabilidade (âncoras/source_id) e priorização P0/P1, com dois modos:
+
+* **FIRAC-Core (principal / process-first):** gerar relatório/matriz FIRAC do processo a partir do collector-proc, mesmo sem CAD_OBR/evidence.
+* **FIRAC-Plus (opcional):** enriquecer o FIRAC quando existirem outputs do CAD_OBR/Evidence (ex.: evidence_out.json e anexos; evidence_map.json apenas como export).
+* **Petição-esqueleto:** derivada do FIRAC (Core ou Plus), com revisão humana final.
 
 ## 2) Problema que resolve
 
-* Hoje a colheita de documentos e a montagem de evidências tende a ser ampla, lenta e com risco de “levantar documentação irrelevante”.
-* O projeto precisa **triagem objetiva**: o que é relevante (P0/P1) e o que tem prova ancorada vs o que apenas é premissa e exige colheita.
+- Hoje a colheita de documentos e a montagem de evidências tende a ser ampla, lenta e com risco de “levantar documentação irrelevante”.
+- O projeto precisa **triagem objetiva**: o que é relevante (P0/P1) e o que tem prova ancorada vs o que apenas é premissa e exige colheita.
 
 ## 3) Usuários e uso
 
-* **Usuário operador (você)**: roda pipeline, alimenta contexto, revisa outputs.
-* **Jurídico/advogado**: usa FIRAC + petição-esqueleto para revisão e protocolo.
-* **Apoio/perícia**: usa anexos (inventário completo, mapas de evidências, linhas do tempo).
+- **Usuário operador (você)**: roda pipeline, alimenta contexto, revisa outputs.
+- **Jurídico/advogado**: usa FIRAC + petição-esqueleto para revisão e protocolo.
+- **Apoio/perícia**: usa anexos (inventário completo, mapas de evidências, linhas do tempo).
 
 ## 4) Escopo
 
 **Inclui:**
-* Ingestão (Markdown) → extrações (collector-*) → normalização/cálculo/reconciliação (pipelines) → **DuckDB “verdade única”** → **Pack** → evidence/firac/petição.
-* Nota de fluxo: o sistema suporta FIRAC-Core (process-first via collector-proc) independentemente da execução de CAD_OBR/Evidence. Outputs do Evidence podem existir ou não; quando existirem, são usados apenas no modo FIRAC-Plus.
-* Jurisprudência: seleção via **case-law-cli** usando base local (base_juridica + Qdrant).
+
+- Ingestão (Markdown) → extrações (collector-\*) → normalização/cálculo/reconciliação (pipelines) → **DuckDB “verdade única”** → **Pack** → evidence/firac/petição.
+- Nota de fluxo: o sistema suporta FIRAC-Core (process-first via collector-proc) independentemente da execução de CAD_OBR/Evidence. Outputs do Evidence podem existir ou não; quando existirem, são usados apenas no modo FIRAC-Plus.
+- Jurisprudência: seleção via **case-law-cli** usando base local (base_juridica + Qdrant).
 
 **Não inclui (fora de escopo agora):**
-* Automação de busca web aberta (somente base local / conectores controlados).
-* Substituir revisão humana final.
-* Decidir “veracidade”: o sistema trata premissas do usuário como **verdade operacional** e exige prova documental para findings.
+
+- Automação de busca web aberta (somente base local / conectores controlados).
+- Substituir revisão humana final.
+- Decidir “veracidade”: o sistema trata premissas do usuário como **verdade operacional** e exige prova documental para findings.
 
 ## 5) Artefatos de saída (contratos)
 
@@ -68,18 +72,21 @@ tags: [prd, requisitos, escopo, kpis]
 
 ## 6) KPIs (mínimo)
 
-* **Confiabilidade**: 100% das saídas LLM parseáveis (JSON válido quando exigido).
-* **Cobertura P0/P1**: % de premissas P0/P1 com “documento recomendado” definido e justificativa.
-* **Rastreabilidade**: % de findings com evidência ancorada (source_id/âncora/referência).
-* **Eficiência**: redução do tempo manual para montar evidências e inventário.
+- **Confiabilidade**: 100% das saídas LLM parseáveis (JSON válido quando exigido).
+- **Cobertura P0/P1**: % de premissas P0/P1 com “documento recomendado” definido e justificativa.
+- **Rastreabilidade**: % de findings com evidência ancorada (source_id/âncora/referência).
+- **Eficiência**: redução do tempo manual para montar evidências e inventário.
 
 ## 7) Restrições e princípios
 
-* “Divulgação progressiva”: dados tratados (Python/DuckDB) antes de análise qualitativa (LLM).
-* Governança por allowlists/skills.
-* Anti-truncamento: JSON curto + anexos.
+- “Divulgação progressiva”: dados tratados (Python/DuckDB) antes de análise qualitativa (LLM).
+- Governança por allowlists/skills.
+- Anti-truncamento: JSON curto + anexos.
+
 ---
+
 ## Glossário mínimo (termos operacionais)
+
 - **Fonte probatória (PDF original):** documento original que pode ser anexado em petição; serve como prova primária.
 - **Fonte operacional (Markdown):** versão convertida do PDF usada para extração; não substitui a prova.
 - **source_id:** identificador estável do documento/trecho (normalmente derivado de hash + metadados), usado para rastreabilidade.

@@ -16,6 +16,7 @@ htmlcov/
 logs/
 outputs/
 backup/
+backups/
 data/
 arq-md/
 arq-js/

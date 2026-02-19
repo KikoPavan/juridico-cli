@@ -1,0 +1,237 @@
+=== collector-cad_obr (keys) ===
+agents/collector-cad_obr/main.py:624:def call_llm_provider(prompt_text: str, config: Dict) -> str:
+agents/collector-cad_obr/main.py:629:    model_name = "gemini-2.5-flash"
+agents/collector-cad_obr/main.py:633:        temperature=0.0,
+agents/collector-cad_obr/main.py:634:        max_output_tokens=65536,
+agents/collector-cad_obr/main.py:657:        response = client.models.generate_content(
+agents/collector-cad_obr/main.py:658:            model=model_name, contents=prompt_text, config=generate_config
+agents/collector-cad_obr/main.py:670:    base_prompt: str, skill_content: str, schema_content: str, doc_content: str
+agents/collector-cad_obr/main.py:676:        schema_content,
+agents/collector-cad_obr/main.py:688:    input_dir = os.path.join(project_root, job["input_dir"])
+agents/collector-cad_obr/main.py:689:    output_dir = os.path.join(project_root, job["output_dir"])
+agents/collector-cad_obr/main.py:701:    schema_file = os.path.join(project_root, job["schema_file"])
+agents/collector-cad_obr/main.py:705:    schema_content = read_file(schema_file)
+agents/collector-cad_obr/main.py:707:    md_files = glob.glob(os.path.join(input_dir, "*.md"))
+agents/collector-cad_obr/main.py:709:        print(f"   [AVISO] Sem arquivos .md em {input_dir}")
+agents/collector-cad_obr/main.py:713:    prefix = job.get("output_prefix", "")
+agents/collector-cad_obr/main.py:731:            save_json(data, os.path.join(output_dir, out_name))
+agents/collector-cad_obr/main.py:738:                os.path.join(output_dir, f"{prefix}{file_base_name}.error.json"),
+agents/collector-cad_obr/main.py:746:                base_prompt, skill_content, schema_content, read_file(fpath)
+agents/collector-cad_obr/main.py:748:            resp = call_llm_provider(full_prompt, global_config)
+agents/collector-cad_obr/main.py:760:            base_prompt, skill_content, schema_content, all_content
+agents/collector-cad_obr/main.py:762:        resp = call_llm_provider(full_prompt, global_config)
+agents/collector-cad_obr/main.py:763:        out_name = job.get("output_filename", "consolidated.json").replace(
+agents/collector-cad_obr/config.yaml:2:  provider: gemini
+agents/collector-cad_obr/config.yaml:3:  model: gemini-2.5-flash
+agents/collector-cad_obr/config.yaml:4:  temperature: 0.1
+agents/collector-cad_obr/config.yaml:5:  max_output_tokens: 65536
+agents/collector-cad_obr/config.yaml:22:    input_dir: "data/cad_obr/escritura_imovel"
+agents/collector-cad_obr/config.yaml:23:    output_dir: "outputs/cad_obr/01_collector/escritura_imovel"
+agents/collector-cad_obr/config.yaml:24:    output_prefix: "collector_out_escritura_imovel_"
+agents/collector-cad_obr/config.yaml:26:    schema_file: "schemas/escritura_imovel.schema.json"
+agents/collector-cad_obr/config.yaml:32:    input_dir: "data/cad_obr/contrato_social"
+agents/collector-cad_obr/config.yaml:33:    output_dir: "outputs/cad_obr/01_collector/contrato_social"
+agents/collector-cad_obr/config.yaml:34:    output_prefix: "collector_out_contrato_social_"
+agents/collector-cad_obr/config.yaml:36:    schema_file: "schemas/contrato_social.schema.json"
+agents/collector-cad_obr/config.yaml:42:    input_dir: "data/cad_obr/escritura_hipotecaria"
+agents/collector-cad_obr/config.yaml:43:    output_dir: "outputs/cad_obr/01_collector/escritura_hipotecaria"
+agents/collector-cad_obr/config.yaml:44:    output_prefix: "collector_out_escritura_hipotecaria_"
+agents/collector-cad_obr/config.yaml:46:    schema_file: "schemas/escritura_hipotecaria.schema.json"
+agents/collector-cad_obr/io.schema.json:2:  "$schema": "https://json-schema.org/draft/2020-12/schema",
+agents/collector-cad_obr/io.schema.json:3:  "$id": "https://example.com/schemas/collector-cad_obr.io.schema.json",
+agents/collector-cad_obr/io.schema.json:5:  "description": "Schema para padronizar a requisição/opções de execução e o relatório de execução do collector-cad_obr. A saída estruturada POR DOCUMENTO é definida pelos schemas específicos referenciados em config.yaml (schemas/escritura_imovel.schema.json, schemas/contrato_social.schema.json, schemas/escritura_hipotecaria.schema.json).",
+agents/collector-cad_obr/io.schema.json:47:            "input_dir": {
+agents/collector-cad_obr/io.schema.json:52:              "description": "Sobrescreve o input_dir de TODOS os jobs (uso pontual para testes)."
+agents/collector-cad_obr/io.schema.json:54:            "output_dir": {
+agents/collector-cad_obr/io.schema.json:59:              "description": "Sobrescreve o output_dir de TODOS os jobs (uso pontual para testes)."
+agents/collector-cad_obr/io.schema.json:255:        "schema_file": {
+agents/collector-cad_obr/io.schema.json:261:        "input_dir": {
+agents/collector-cad_obr/io.schema.json:267:        "output_dir": {
+agents/collector-cad_obr/io.schema.json:299:        "input_md": {
+agents/collector-cad_obr/io.schema.json:302:        "output_json": {
+agents/collector-cad_obr/io.schema.json:330:        "input_md",
+agents/collector-cad_obr/skills/SKILL.core.md:7:target_schema: io.schema.json
+agents/collector-cad_obr/skills/SKILL.core.md:14:input_format: markdown com marcadores de paginação
+agents/collector-cad_obr/skills/SKILL.core.md:15:output_format: JSON estruturado
+agents/collector-cad_obr/skills/SKILL.core.md:24:  - o schema JSON do tipo de documento (escritura_imovel, contrato_social, escritura_hipotecaria),
+agents/collector-cad_obr/skills/SKILL.core.md:25:  - o `io.schema.json` do próprio collector.
+agents/collector-cad_obr/skills/SKILL.core.md:27:  - com os campos definidos no schema,
+agents/collector-cad_obr/skills/SKILL.core.md:38:  - um JSON que respeite o schema do tipo de documento;
+agents/collector-cad_obr/skills/SKILL.core.md:48:- **Formato**: Respeitar estritamente os tipos de dados do schema (array vs string, etc).
+agents/collector-cad_obr/skills/SKILL.contrato_social.md:12:target_schema: schemas/contrato_social.schema.json
+agents/collector-cad_obr/skills/SKILL.contrato_social.md:41:- `quotas` e `socios` conforme o schema (sem inferência).
+agents/collector-cad_obr/skills/SKILL.contrato_social.md:47:- Cláusulas relevantes: `clausulas_*` existentes no schema.
+agents/collector-cad_obr/skills/SKILL.contrato_social.md:75:Se houver partes ilegíveis, registrar em `observacoes_extracao` (ou campo equivalente no schema) de forma objetiva.
+agents/collector-cad_obr/skills/SKILL.escritura_imovel.md:9:target_schema: schemas/escritura_imovel.schema.json
+agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md:13:target_schema: schemas/escritura_hipotecaria.schema.json
+agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md:34:## 0) Identificação do tipo dentro do mesmo schema
+agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md:35:Este schema cobre dois padrões comuns:
+
+=== collector-proc (keys) ===
+agents/collector-proc/main.py:240:def call_llm_provider(prompt_text: str, config: Dict) -> str:
+agents/collector-proc/main.py:245:    model_name = "gemini-2.5-flash"
+agents/collector-proc/main.py:249:        temperature=0.0,
+agents/collector-proc/main.py:250:        max_output_tokens=65536,
+agents/collector-proc/main.py:273:        response = client.models.generate_content(
+agents/collector-proc/main.py:274:            model=model_name, contents=prompt_text, config=generate_config
+agents/collector-proc/main.py:286:    base_prompt: str, skill_content: str, schema_content: str, doc_content: str
+agents/collector-proc/main.py:292:        schema_content,
+agents/collector-proc/main.py:304:    input_dir = os.path.join(project_root, job["input_dir"])
+agents/collector-proc/main.py:305:    output_dir = os.path.join(project_root, job["output_dir"])
+agents/collector-proc/main.py:317:    schema_file = os.path.join(project_root, job["schema_file"])
+agents/collector-proc/main.py:321:    schema_content = read_file(schema_file)
+agents/collector-proc/main.py:323:    md_files = glob.glob(os.path.join(input_dir, "*.md"))
+agents/collector-proc/main.py:325:        print(f"   [AVISO] Sem arquivos .md em {input_dir}")
+agents/collector-proc/main.py:329:    prefix = job.get("output_prefix", "")
+agents/collector-proc/main.py:347:            save_json(data, os.path.join(output_dir, out_name))
+agents/collector-proc/main.py:354:                os.path.join(output_dir, f"{prefix}{file_base_name}.error.json"),
+agents/collector-proc/main.py:362:                base_prompt, skill_content, schema_content, read_file(fpath)
+agents/collector-proc/main.py:364:            resp = call_llm_provider(full_prompt, global_config)
+agents/collector-proc/main.py:376:            base_prompt, skill_content, schema_content, all_content
+agents/collector-proc/main.py:378:        resp = call_llm_provider(full_prompt, global_config)
+agents/collector-proc/main.py:379:        out_name = job.get("output_filename", "consolidated.json").replace(
+agents/collector-proc/config.yaml:6:  provider: "google"
+agents/collector-proc/config.yaml:7:  model: "gemini-2.0-flash"
+agents/collector-proc/config.yaml:8:  temperature: 0.1
+agents/collector-proc/config.yaml:9:  top_p: 0.95
+agents/collector-proc/config.yaml:10:  max_output_tokens: 8192
+agents/collector-proc/config.yaml:15:  schemas_dir: "schemas"
+agents/collector-proc/config.yaml:16:  io_schema: "agents/collector-proc/io.schema.json"
+agents/collector-proc/config.yaml:18:  output_base_dir: "outputs/processo/01_collector"
+agents/collector-proc/config.yaml:19:  triage_dir: "outputs/processo/00_triage"
+agents/collector-proc/config.yaml:20:  logs_dir: "outputs/processo/99_logs"
+agents/collector-proc/config.yaml:27:    - target_schema
+agents/collector-proc/config.yaml:38:  json_schema_draft: "2020-12"
+agents/collector-proc/config.yaml:40:  # Se true, recusa quando skill_key/target_schema do front matter não bater com o roteamento
+agents/collector-proc/config.yaml:48:  # document_type -> skill/schema/output/modes
+agents/collector-proc/config.yaml:52:      schema_individual: "schemas/processo.schema.json"
+agents/collector-proc/config.yaml:53:      output_dir: "processo"
+agents/collector-proc/config.yaml:59:      schema_individual: "schemas/cabecalho_processo.schema.json"
+agents/collector-proc/config.yaml:60:      schema_consolidated: "schemas/cabecalho_processo.consolidated.schema.json"
+agents/collector-proc/config.yaml:61:      output_dir: "cabecalho_processo"
+agents/collector-proc/config.yaml:67:      schema_individual: "schemas/peticao_processo.schema.json"
+agents/collector-proc/config.yaml:68:      schema_consolidated: "schemas/peticao_processo.consolidated.schema.json"
+agents/collector-proc/config.yaml:69:      output_dir: "peticao_processo"
+agents/collector-proc/config.yaml:75:      schema_individual: "schemas/contestacao_processo.schema.json"
+agents/collector-proc/config.yaml:76:      schema_consolidated: "schemas/contestacao_processo.consolidated.schema.json"
+agents/collector-proc/config.yaml:77:      output_dir: "contestacao_processo"
+agents/collector-proc/config.yaml:83:      schema_individual: "schemas/decisao_processo.schema.json"
+agents/collector-proc/config.yaml:84:      schema_consolidated: "schemas/decisao_processo.consolidated.schema.json"
+agents/collector-proc/config.yaml:85:      output_dir: "decisao_processo"
+agents/collector-proc/config.yaml:91:      schema_individual: "schemas/procuracao.schema.json"
+agents/collector-proc/config.yaml:92:      schema_consolidated: "schemas/procuracao.consolidated.schema.json"
+agents/collector-proc/config.yaml:93:      output_dir: "procuracao"
+agents/collector-proc/config.yaml:99:      schema_individual: "schemas/mandato_processo.schema.json"
+agents/collector-proc/config.yaml:100:      schema_consolidated: "schemas/mandato_processo.consolidated.schema.json"
+agents/collector-proc/config.yaml:101:      output_dir: "mandato_processo"
+agents/collector-proc/config.yaml:118:    input_dir: "data/processo"
+agents/collector-proc/config.yaml:132:output_naming:
+agents/collector-proc/config.yaml:136:  schema_error_suffix: ".schema_error.json"
+agents/collector-proc/io.schema.json:2:  "$schema": "https://json-schema.org/draft/2020-12/schema",
+agents/collector-proc/io.schema.json:3:  "$id": "https://juridico-cli.local/agents/collector-proc/io.schema.json",
+agents/collector-proc/io.schema.json:27:      "$ref": "../../schemas/defs/common.schema.json#/$defs/NonEmptyString"
+agents/collector-proc/io.schema.json:30:      "$ref": "../../schemas/defs/common.schema.json#/$defs/UUID"
+agents/collector-proc/io.schema.json:33:      "$ref": "../../schemas/defs/common.schema.json#/$defs/ISODateTime"
+agents/collector-proc/io.schema.json:36:      "$ref": "../../schemas/defs/common.schema.json#/$defs/DocumentType"
+agents/collector-proc/io.schema.json:50:        "$ref": "../../schemas/defs/common.schema.json#/$defs/SourceRef"
+agents/collector-proc/io.schema.json:109:          "payload": { "$ref": "../../schemas/processo.schema.json" }
+agents/collector-proc/io.schema.json:125:          "payload": { "$ref": "../../schemas/cabecalho_processo.schema.json" }
+agents/collector-proc/io.schema.json:140:          "payload": { "$ref": "../../schemas/cabecalho_processo.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:156:          "payload": { "$ref": "../../schemas/peticao_processo.schema.json" }
+agents/collector-proc/io.schema.json:171:          "payload": { "$ref": "../../schemas/peticao_processo.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:187:          "payload": { "$ref": "../../schemas/contestacao_processo.schema.json" }
+agents/collector-proc/io.schema.json:202:          "payload": { "$ref": "../../schemas/contestacao_processo.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:218:          "payload": { "$ref": "../../schemas/decisao_processo.schema.json" }
+agents/collector-proc/io.schema.json:233:          "payload": { "$ref": "../../schemas/decisao_processo.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:249:          "payload": { "$ref": "../../schemas/procuracao.schema.json" }
+agents/collector-proc/io.schema.json:264:          "payload": { "$ref": "../../schemas/procuracao.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:280:          "payload": { "$ref": "../../schemas/mandato_processo.schema.json" }
+agents/collector-proc/io.schema.json:295:          "payload": { "$ref": "../../schemas/mandato_processo.consolidated.schema.json" }
+agents/collector-proc/io.schema.json:306:        "code": { "$ref": "../../schemas/defs/common.schema.json#/$defs/NonEmptyString" },
+agents/collector-proc/skills/SKILL.contestacao_processo.md:5:target_schema: "schemas/contestacao_processo.schema.json"
+agents/collector-proc/skills/SKILL.contestacao_processo.md:39:- Se houver título/cabeçalho da peça (ex.: “CONTESTAÇÃO”, “RESPOSTA”, “IMPUGNAÇÃO”), preencher `contestacao_identification` (ou equivalente do schema) com âncora.
+agents/collector-proc/skills/SKILL.contestacao_processo.md:74:### 8) Consolidação (quando o schema for consolidated)
+agents/collector-proc/skills/SKILL.core.md:6:  de documentos jurídicos já convertidos para Markdown, respeitando schemas
+agents/collector-proc/skills/SKILL.core.md:9:input_format: markdown com marcadores de paginação
+agents/collector-proc/skills/SKILL.core.md:10:output_format: JSON estruturado
+agents/collector-proc/skills/SKILL.core.md:12:target_schema: io.schema.json
+agents/collector-proc/skills/SKILL.core.md:27:  - json_estrito_schema
+agents/collector-proc/skills/SKILL.core.md:39:- Obedeça **estritamente** ao schema injetado (tipos, required, enums, estruturas).
+agents/collector-proc/skills/SKILL.core.md:40:- Não crie campos fora do schema.
+agents/collector-proc/skills/SKILL.core.md:62:- Se o schema for `consolidated`:
+agents/collector-proc/skills/SKILL.core.md:63:  - respeite `sources`, `merge_meta`, `conflicts` conforme o schema exigir
+agents/collector-proc/skills/SKILL.core.md:65:- Se o schema for `individual`:
+agents/collector-proc/skills/SKILL.core.md:66:  - não incluir campos de consolidação (ex.: `sources`, `merge_meta`, `conflicts`) **se o schema não prever**
+agents/collector-proc/skills/SKILL.decisao_processo.md:5:target_schema: "schemas/decisao_processo.schema.json"
+agents/collector-proc/skills/SKILL.decisao_processo.md:42:  - Se não indicar, usar `outro` e preencher `value_raw` quando o schema permitir.
+agents/collector-proc/skills/SKILL.decisao_processo.md:57:- Se o texto for ambíguo, não inferir: omitir `outcome` ou usar `outro` com `value_raw` quando o schema permitir.
+agents/collector-proc/skills/SKILL.decisao_processo.md:67:### 7) Consolidação (quando o schema for consolidated)
+agents/collector-proc/skills/SKILL.procuracao.md:5:target_schema: "schemas/procuracao.schema.json"
+agents/collector-proc/skills/SKILL.procuracao.md:69:### 8) Consolidação (quando o schema for consolidated)
+agents/collector-proc/skills/SKILL.procuracao.md:71:- Se houver divergências materiais (ex.: outorgados diferentes, poderes incompatíveis), registrar em `conflicts` no schema consolidated (não apagar).
+agents/collector-proc/skills/SKILL.mandato_processo.md:5:target_schema: "schemas/mandato_processo.schema.json"
+agents/collector-proc/skills/SKILL.mandato_processo.md:57:- Só classificar `power_type` (quando existir no schema) se o texto indicar explicitamente (“gerais”, “especiais”); caso contrário, usar apenas `text`.
+agents/collector-proc/skills/SKILL.mandato_processo.md:75:### 9) Consolidação (quando o schema for consolidated)
+agents/collector-proc/skills/SKILL.mandato_processo.md:77:- Divergências materiais (mandante/mandatário/poderes incompatíveis) devem ir para `conflicts` no schema consolidated (não apagar).
+agents/collector-proc/skills/SKILL.cabecalho_processo.md:5:target_schema: "schemas/cabecalho_processo.schema.json"
+agents/collector-proc/skills/SKILL.processo.md:5:target_schema: "schemas/processo.schema.json"
+agents/collector-proc/skills/SKILL.processo.md:52:- Se o texto listar peças (petição inicial, contestação, decisão, procuração etc.), registre como “documentos referenciados” (ou equivalente do schema).
+agents/collector-proc/skills/SKILL.peticao_processo.md:5:target_schema: "schemas/peticao_processo.schema.json"
+agents/collector-proc/skills/SKILL.peticao_processo.md:40:- Se houver título/cabeçalho da peça (ex.: “PETIÇÃO INICIAL”, “EMENDA À INICIAL”, “MANIFESTAÇÃO”), preencher `peticao_identification` (ou equivalente do schema) com âncora.
+agents/collector-proc/skills/SKILL.peticao_processo.md:74:### 8) Consolidação (quando o schema for consolidated)
+
+=== evidence-agent (keys) ===
+agents/evidence-agent/main.py:18:    import jsonschema  # type: ignore
+agents/evidence-agent/main.py:21:        "Dependência ausente: jsonschema. Instale no seu venv (uv/pip)."
+agents/evidence-agent/main.py:61:            "Não foi possível localizar início de objeto JSON na resposta do modelo."
+agents/evidence-agent/main.py:76:        raise ValueError("Falha ao parsear JSON extraído da resposta do modelo.") from e
+agents/evidence-agent/main.py:83:def _validate_schema(schema_path: str, envelope: Dict[str, Any]) -> None:
+agents/evidence-agent/main.py:84:    schema = _read_json(schema_path)
+agents/evidence-agent/main.py:85:    validator = jsonschema.Draft202012Validator(schema)
+agents/evidence-agent/main.py:289:def _call_model(
+agents/evidence-agent/main.py:309:    model = str(runtime.get("model") or "gemini-2.5-flash")
+agents/evidence-agent/main.py:310:    temperature = float(runtime.get("temperature", 0.0))
+agents/evidence-agent/main.py:311:    top_p = float(runtime.get("top_p", 0.95))
+agents/evidence-agent/main.py:312:    max_output_tokens = int(runtime.get("max_output_tokens", 8192))
+agents/evidence-agent/main.py:316:        temperature=temperature,
+agents/evidence-agent/main.py:317:        top_p=top_p,
+agents/evidence-agent/main.py:318:        max_output_tokens=max_output_tokens,
+agents/evidence-agent/main.py:322:    resp = client.models.generate_content(
+agents/evidence-agent/main.py:323:        model=model,
+agents/evidence-agent/main.py:329:    model_used = model
+agents/evidence-agent/main.py:331:        mv = getattr(resp, "model_version", None)
+agents/evidence-agent/main.py:333:            model_used = str(mv)
+agents/evidence-agent/main.py:337:    return raw, model_used
+agents/evidence-agent/main.py:355:    schema_file = str(paths["schema_file"])
+agents/evidence-agent/main.py:358:    out_dir = str(paths.get("output_dir", "outputs/cad_obr/05_evidence/dataset_v1"))
+agents/evidence-agent/main.py:359:    out_name = str(paths.get("output_filename", "evidence_out.json"))
+agents/evidence-agent/main.py:402:    raw, model_used = _call_model(runtime, prompt, api_key_override=args.api_key)
+agents/evidence-agent/main.py:425:                "model_used": model_used,
+agents/evidence-agent/main.py:431:    _validate_schema(schema_file, envelope)
+agents/evidence-agent/main.py:438:    print(f"Model: {model_used}")
+agents/evidence-agent/config.yaml:3:  provider: gemini
+agents/evidence-agent/config.yaml:5:  model: gemini-2.5-flash
+agents/evidence-agent/config.yaml:6:  temperature: 0.0
+agents/evidence-agent/config.yaml:7:  top_p: 0.95
+agents/evidence-agent/config.yaml:8:  max_output_tokens: 8192
+agents/evidence-agent/config.yaml:14:  schema_file: agents/evidence-agent/io.schema.json
+agents/evidence-agent/config.yaml:20:  output_dir: outputs/cad_obr/05_evidence/dataset_v1
+agents/evidence-agent/config.yaml:21:  output_filename: evidence_out.json
+agents/evidence-agent/io.schema.json:2:  "$schema": "https://json-schema.org/draft/2020-12/schema",
+agents/evidence-agent/io.schema.json:3:  "$id": "https://juridico-cli.local/schemas/evidence-agent/io.schema.json",
+
+=== firac-cli (keys) ===
+agents/firac-cli/main.py:19:        provider = runtime.get("provider")
+agents/firac-cli/main.py:23:        print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
+agents/firac-cli/main.py:28:        command = ["gemini", "skill", skill_name]
+agents/firac-cli/io.schema.json:2:  "$schema": "http://json-schema.org/draft-07/schema#",
+agents/firac-cli/config.yaml:2:  provider: gemini
+agents/firac-cli/config.yaml:3:  model: gemini-2.5-flash
+agents/firac-cli/config.yaml:4:  temperature: 0.0
+agents/firac-cli/config.yaml:5:  max_output_tokens: 8192  # FIRAC pode precisar de respostas maiores
+agents/firac-cli/config.yaml:16:  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+agents/firac-cli/config.yaml:17:  input_collector_json: outputs/collector_out.json
+agents/firac-cli/config.yaml:18:  input_contexto_societario: inputs/contexto/contexto_societario.json
+agents/firac-cli/config.yaml:19:  input_hipotese_juridica: inputs/contexto/hipotese_juridica.md
+agents/firac-cli/config.yaml:21:  output_relatorio_firac: outputs/relatorio_firac.md
+

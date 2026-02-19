@@ -1,0 +1,7 @@
+agents/case-law-cli/io.schema.json
+agents/collector-cad_obr/io.schema.json
+agents/collector-proc/io.schema.json
+agents/compliance-cli/io.schema.json
+agents/evidence-agent/io.schema.json
+agents/firac-cli/io.schema.json
+agents/petition-cli/io.schema.json

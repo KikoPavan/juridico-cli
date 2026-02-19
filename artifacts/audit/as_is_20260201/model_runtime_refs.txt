@@ -1,0 +1,69 @@
+.env:2:GOOGLE_MODEL_NAME=gemini-2.5-flash
+agents/collector-proc/main.py:240:def call_llm_provider(prompt_text: str, config: Dict) -> str:
+agents/collector-proc/main.py:245:    model_name = "gemini-2.5-flash"
+agents/collector-proc/main.py:249:        temperature=0.0,
+agents/collector-proc/main.py:273:        response = client.models.generate_content(
+agents/collector-proc/main.py:274:            model=model_name, contents=prompt_text, config=generate_config
+agents/collector-proc/main.py:364:            resp = call_llm_provider(full_prompt, global_config)
+agents/collector-proc/main.py:378:        resp = call_llm_provider(full_prompt, global_config)
+agents/collector-proc/config.yaml:6:  provider: "google"
+agents/collector-proc/config.yaml:7:  model: "gemini-2.0-flash"
+agents/collector-proc/config.yaml:8:  temperature: 0.1
+agents/collector-proc/config.yaml:9:  top_p: 0.95
+agents/collector-cad_obr/main.py:624:def call_llm_provider(prompt_text: str, config: Dict) -> str:
+agents/collector-cad_obr/main.py:629:    model_name = "gemini-2.5-flash"
+agents/collector-cad_obr/main.py:633:        temperature=0.0,
+agents/collector-cad_obr/main.py:657:        response = client.models.generate_content(
+agents/collector-cad_obr/main.py:658:            model=model_name, contents=prompt_text, config=generate_config
+agents/collector-cad_obr/main.py:748:            resp = call_llm_provider(full_prompt, global_config)
+agents/collector-cad_obr/main.py:762:        resp = call_llm_provider(full_prompt, global_config)
+agents/collector-cad_obr/config.yaml:2:  provider: gemini
+agents/collector-cad_obr/config.yaml:3:  model: gemini-2.5-flash
+agents/collector-cad_obr/config.yaml:4:  temperature: 0.1
+agents/firac-cli/main.py:19:        provider = runtime.get("provider")
+agents/firac-cli/main.py:23:        print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
+agents/firac-cli/main.py:28:        command = ["gemini", "skill", skill_name]
+agents/firac-cli/config.yaml:2:  provider: gemini
+agents/firac-cli/config.yaml:3:  model: gemini-2.5-flash
+agents/firac-cli/config.yaml:4:  temperature: 0.0
+agents/compliance-cli/main.py:19:        provider = runtime.get("provider")
+agents/compliance-cli/main.py:23:        print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
+agents/compliance-cli/main.py:28:        command = ["gemini", "skill", skill_name]
+agents/case-law-cli/main.py:26:        provider = runtime.get("provider")
+agents/case-law-cli/main.py:30:        print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
+agents/case-law-cli/main.py:45:            "gemini",
+agents/compliance-cli/config.yaml:2:  provider: gemini
+agents/compliance-cli/config.yaml:3:  model: gemini-2.5-flash
+agents/compliance-cli/config.yaml:4:  temperature: 0.0
+agents/petition-cli/main.py:19:        provider = runtime.get("provider")
+agents/petition-cli/main.py:23:        print(f"--- Iniciando Agente: {agent_name} (Provedor: {provider}) ---")
+agents/petition-cli/main.py:28:        command = ["gemini", "skill", skill_name]
+agents/case-law-cli/config.yaml:2:  provider: gemini
+agents/case-law-cli/config.yaml:3:  model: gemini-2.5-flash
+agents/case-law-cli/config.yaml:4:  temperature: 0.0
+agents/petition-cli/config.yaml:2:  provider: gemini
+agents/petition-cli/config.yaml:3:  model: gemini-2.5-flash
+agents/petition-cli/config.yaml:4:  temperature: 0.0
+agents/evidence-agent/config.yaml:3:  provider: gemini
+agents/evidence-agent/config.yaml:5:  model: gemini-2.5-flash
+agents/evidence-agent/config.yaml:6:  temperature: 0.0
+agents/evidence-agent/config.yaml:7:  top_p: 0.95
+agents/evidence-agent/main.py:61:            "Não foi possível localizar início de objeto JSON na resposta do modelo."
+agents/evidence-agent/main.py:76:        raise ValueError("Falha ao parsear JSON extraído da resposta do modelo.") from e
+agents/evidence-agent/main.py:289:def _call_model(
+agents/evidence-agent/main.py:296:        or os.getenv("GEMINI_API_KEY")
+agents/evidence-agent/main.py:301:            "GOOGLE_API_KEY não está definido no ambiente (nem GEMINI_API_KEY)."
+agents/evidence-agent/main.py:309:    model = str(runtime.get("model") or "gemini-2.5-flash")
+agents/evidence-agent/main.py:310:    temperature = float(runtime.get("temperature", 0.0))
+agents/evidence-agent/main.py:311:    top_p = float(runtime.get("top_p", 0.95))
+agents/evidence-agent/main.py:316:        temperature=temperature,
+agents/evidence-agent/main.py:317:        top_p=top_p,
+agents/evidence-agent/main.py:322:    resp = client.models.generate_content(
+agents/evidence-agent/main.py:323:        model=model,
+agents/evidence-agent/main.py:329:    model_used = model
+agents/evidence-agent/main.py:331:        mv = getattr(resp, "model_version", None)
+agents/evidence-agent/main.py:333:            model_used = str(mv)
+agents/evidence-agent/main.py:337:    return raw, model_used
+agents/evidence-agent/main.py:402:    raw, model_used = _call_model(runtime, prompt, api_key_override=args.api_key)
+agents/evidence-agent/main.py:425:                "model_used": model_used,
+agents/evidence-agent/main.py:438:    print(f"Model: {model_used}")

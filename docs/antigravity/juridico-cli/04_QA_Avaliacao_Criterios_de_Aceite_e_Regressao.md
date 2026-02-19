@@ -19,6 +19,7 @@ tags: [qa, aceite, regressao, validacao]
 ---
 
 ## Resumo Executivo
+
 **O que este documento é:** Matriz de QA com critérios de aceite e cenários de regressão do sistema e dos agentes.  
 **Para que serve:** Evitar regressões e garantir que cada saída é parseável, rastreável e consistente.  
 **Entradas (inputs):** `pack_global.json`; `evidence_out.json` (canônico) + anexos; (opcional) `evidence_map.json`/`evidence_map_full.jsonl` como export; outputs FIRAC/petição; logs.  
@@ -29,9 +30,9 @@ tags: [qa, aceite, regressao, validacao]
 
 Garantir que o pipeline rode ponta-a-ponta com:
 
-* saídas parseáveis,
-* rastreabilidade mínima,
-* regressão controlada quando skills/schemas mudarem.
+- saídas parseáveis,
+- rastreabilidade mínima,
+- regressão controlada quando skills/schemas mudarem.
 
 ## 2) Conjuntos mínimos de teste
 
@@ -45,51 +46,53 @@ Use 3 pacotes/datasets representativos:
 
 **Collector**
 
-* Extrai fatos literais sem inferência
-* Preserva referência (página/folha/âncora quando existir)
-* JSON válido e conforme schema
+- Extrai fatos literais sem inferência
+- Preserva referência (página/folha/âncora quando existir)
+- JSON válido e conforme schema
 
 **Pipelines (normalize/monetary/reconciler)**
 
-* Geram `dataset_v1/*.jsonl` completos
-* Coerência mínima: ids estáveis; datas parseáveis; valores coerentes
-* Produzem `pendencias.jsonl` quando faltam peças para prova
+- Geram `dataset_v1/*.jsonl` completos
+- Coerência mínima: ids estáveis; datas parseáveis; valores coerentes
+- Produzem `pendencias.jsonl` quando faltam peças para prova
 
 **DuckDB**
 
-* Consegue carregar todas as tabelas do `dataset_v1`
-* Consultas de agregação retornam linhas (não vazio inesperado)
+- Consegue carregar todas as tabelas do `dataset_v1`
+- Consultas de agregação retornam linhas (não vazio inesperado)
 
 **Pack**
 
-* `pack_global.json` gerado sem duplicidade grosseira
-* Pack mínimo tem agregados + top-N + inventário limitado + P0/P1
+- `pack_global.json` gerado sem duplicidade grosseira
+- Pack mínimo tem agregados + top-N + inventário limitado + P0/P1
 
 **Evidence-Agent**
 
-* **Sempre retorna JSON parseável**
-* Respeita orçamento:
+- **Sempre retorna JSON parseável**
+- Respeita orçamento:
+  - findings ≤ 6
+  - evidências/finding ≤ 4
+  - inventário lista ≤ 20
 
-  * findings ≤ 6
-  * evidências/finding ≤ 4
-  * inventário lista ≤ 20
-* Não cria finding sem evidência
-* Gera recomendações P0/P1 padronizadas
+- Não cria finding sem evidência
+- Gera recomendações P0/P1 padronizadas
 
 **FIRAC / Petition**
 
-* Não afirma sem referência ao FIRAC/jurisprudência
-* Mantém conectores e remissões (rastreabilidade textual)
+- Não afirma sem referência ao FIRAC/jurisprudência
+- Mantém conectores e remissões (rastreabilidade textual)
 
 ## 4) Critérios de aceite
 
-* 0 falhas de parsing em 10 execuções seguidas no caso “denso”
-* 100% findings com evidência ancorada
-* Recomendações externas apenas P0/P1
-* Logs e hashes presentes quando aplicável
+- 0 falhas de parsing em 10 execuções seguidas no caso “denso”
+- 100% findings com evidência ancorada
+- Recomendações externas apenas P0/P1
+- Logs e hashes presentes quando aplicável
+
 ---
 
 ## Glossário mínimo (termos operacionais)
+
 - **Fonte probatória (PDF original):** documento original que pode ser anexado em petição; serve como prova primária.
 - **Fonte operacional (Markdown):** versão convertida do PDF usada para extração; não substitui a prova.
 - **source_id:** identificador estável do documento/trecho (normalmente derivado de hash + metadados), usado para rastreabilidade.

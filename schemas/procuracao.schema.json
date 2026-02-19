@@ -1,183 +1,155 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://juridico-cli.local/schemas/procuracao.schema.json",
-  "title": "procuracao — v2 (1:1)",
-  "description": "Extração 1:1 de procuração. Conteúdo literal, com âncoras em outorgante/outorgados e poderes.",
+  "title": "procuracao — v3.1 (v0-content + metacampos)",
+  "description": "Procuração 1:1 com campos compatíveis com o conteúdo do v0 + metacampos. Campos obrigatórios não podem ficar vazios; sem inferências.",
   "type": "object",
-  "required": ["document_type"],
+  "required": [
+    "document_type",
+    "arquivo_origem",
+    "schema_utilizado",
+    "status",
+    "tipo_evidencia",
+    "origem",
+    "tipo_documento",
+    "data_outorga",
+    "outorgantes",
+    "outorgados",
+    "transfere_poderes_pj",
+    "transfere_poderes_pf",
+    "descricao_poderes",
+    "poderes_especificos",
+    "fonte"
+  ],
   "properties": {
     "document_type": { "const": "procuracao" },
 
-    "process_number": { "$ref": "#/$defs/AnchoredString" },
+    "arquivo_origem": {
+      "type": "string",
+      "description": "Nome do arquivo de entrada (.md), sem caminho.",
+      "minLength": 1,
+      "pattern": "^[^/\\\\]+\\.md$",
+      "not": { "const": "collector-proc.md" }
+    },
 
-    "outorgante": {
-      "$ref": "#/$defs/Person",
-      "description": "Outorgante (quem confere poderes), se constar."
+    "schema_utilizado": {
+      "type": "string",
+      "description": "Identificador do schema utilizado.",
+      "minLength": 1
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["sucesso", "falha"]
+    },
+
+    "tipo_evidencia": {
+      "type": "string",
+      "enum": ["juntada", "processo"]
+    },
+
+    "origem": {
+      "type": "string",
+      "enum": ["juntada", "processo"]
+    },
+
+    "tipo_documento": {
+      "type": "string",
+      "description": "Tipo humano do documento (ex.: 'Procuração').",
+      "minLength": 1,
+      "maxLength": 200
+    },
+
+    "data_outorga": {
+      "type": "string",
+      "description": "Data literal de outorga/assinatura se explícita; caso contrário, ''.",
+      "minLength": 0,
+      "maxLength": 200
+    },
+
+    "outorgantes": {
+      "type": "array",
+      "description": "Nomes literais dos outorgantes (strings).",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
     },
 
     "outorgados": {
       "type": "array",
-      "items": { "$ref": "#/$defs/Person" },
-      "description": "Outorgados (quem recebe poderes), se constar."
+      "description": "Nomes literais dos outorgados/procuradores (strings).",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
     },
 
-    "poderes": {
+    "transfere_poderes_pj": {
+      "type": "boolean",
+      "description": "true somente se o texto indicar explicitamente que os OUTORGANTES são PJ (CNPJ/razão social/\"pessoa jurídica\")."
+    },
+
+    "transfere_poderes_pf": {
+      "type": "boolean",
+      "description": "true somente se o texto indicar explicitamente que os OUTORGANTES são PF (CPF/RG/qualificação/\"pessoa física\")."
+    },
+
+    "descricao_poderes": {
+      "type": "string",
+      "description": "Descrição curta derivada apenas de poderes_especificos (sem adicionar poderes).",
+      "minLength": 1,
+      "maxLength": 6000
+    },
+
+    "poderes_especificos": {
       "type": "array",
-      "items": { "$ref": "#/$defs/Power" },
-      "description": "Poderes conferidos (itens literais)."
+      "description": "Lista de poderes/cláusulas (strings literais).",
+      "items": { "type": "string", "minLength": 1, "maxLength": 6000 },
+      "minItems": 1
     },
 
-    "data": {
-      "$ref": "#/$defs/AnchoredDate",
-      "description": "Data da procuração, se explícita."
+    "fonte": {
+      "type": "object",
+      "required": ["arquivo_md", "fls", "rotulo_documento"],
+      "properties": {
+        "arquivo_md": {
+          "type": "string",
+          "description": "Nome do arquivo .md de origem (basename).",
+          "minLength": 1,
+          "pattern": "^[^/\\\\]+\\.md$",
+          "not": { "const": "collector-proc.md" }
+        },
+        "fls": {
+          "type": "string",
+          "description": "Folha/página quando explícito; senão ''.",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "rotulo_documento": {
+          "type": "string",
+          "description": "Rótulo descritivo quando explícito; senão ''.",
+          "minLength": 0,
+          "maxLength": 500
+        }
+      },
+      "unevaluatedProperties": false
     },
 
     "local": {
-      "$ref": "#/$defs/AnchoredString",
-      "description": "Local de assinatura, se explícito."
+      "type": "string",
+      "description": "Local quando explícito; senão ''.",
+      "minLength": 0,
+      "maxLength": 200
     },
 
     "restricoes_ou_limitacoes": {
       "type": "array",
-      "items": { "$ref": "#/$defs/AnchoredTextItem" },
-      "description": "Restrições/limitações/observações, se constarem."
+      "description": "Restrições/limitações explícitas.",
+      "items": { "type": "string", "minLength": 1, "maxLength": 6000 }
     },
 
     "assinantes": {
       "type": "array",
-      "items": { "$ref": "#/$defs/Person" },
-      "description": "Assinantes (quando constar explicitamente)."
-    },
-
-    "anchors": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/Anchor" },
-      "description": "Âncoras gerais (opcional). Preferir âncoras por itens."
+      "description": "Assinantes nominados quando explícitos.",
+      "items": { "type": "string", "minLength": 1, "maxLength": 4000 }
     }
   },
-
-  "anyOf": [
-    { "required": ["poderes"] },
-    { "required": ["outorgante"] },
-    { "required": ["outorgados"] }
-  ],
-
-  "unevaluatedProperties": false,
-
-  "$defs": {
-    "Anchor": {
-      "$ref": "defs/common.schema.json#/$defs/Anchor"
-    },
-
-    "AnchoredString": {
-      "type": "object",
-      "required": ["value", "anchors"],
-      "properties": {
-        "value": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
-        "anchors": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/Anchor" }
-        }
-      },
-      "unevaluatedProperties": false
-    },
-
-    "AnchoredDate": {
-      "type": "object",
-      "required": ["value", "anchors"],
-      "properties": {
-        "value": { "$ref": "defs/common.schema.json#/$defs/ISODate" },
-        "anchors": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/Anchor" }
-        }
-      },
-      "unevaluatedProperties": false
-    },
-
-    "AnchoredTextItem": {
-      "type": "object",
-      "required": ["text", "anchors"],
-      "properties": {
-        "text": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 6000,
-          "description": "Trecho literal relevante (não resumir; pode ser parágrafo curto)."
-        },
-        "label": {
-          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
-          "description": "Rótulo curto opcional."
-        },
-        "anchors": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/Anchor" }
-        }
-      },
-      "unevaluatedProperties": false
-    },
-
-    "Person": {
-      "type": "object",
-      "required": ["name", "anchors"],
-      "properties": {
-        "name": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
-        "qualification": {
-          "type": "string",
-          "maxLength": 4000,
-          "description": "Qualificação literal, se constar."
-        },
-        "document_ids": {
-          "type": "array",
-          "items": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
-          "description": "IDs explícitos (CPF/CNPJ/RG etc.), se constarem."
-        },
-        "oab": {
-          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
-          "description": "OAB, se constar para advogados."
-        },
-        "anchors": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/Anchor" }
-        }
-      },
-      "unevaluatedProperties": false
-    },
-
-    "Power": {
-      "type": "object",
-      "required": ["text", "anchors"],
-      "properties": {
-        "text": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 4000,
-          "description": "Texto literal do poder."
-        },
-        "label": {
-          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
-          "description": "Rótulo curto opcional (ex.: 'Poderes gerais', 'Poderes especiais', 'ad judicia')."
-        },
-        "power_type": {
-          "type": "string",
-          "enum": ["gerais", "especiais", "outro"],
-          "description": "Classificação opcional; só usar se o documento explicitamente indicar."
-        },
-        "power_type_raw": {
-          "$ref": "defs/common.schema.json#/$defs/NonEmptyString",
-          "description": "Texto literal da classificação, quando necessário."
-        },
-        "anchors": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/Anchor" }
-        }
-      },
-      "unevaluatedProperties": false
-    }
-  }
+  "unevaluatedProperties": false
 }

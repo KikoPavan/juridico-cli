@@ -10,7 +10,7 @@ runtime:
   max_output_tokens: 8192
 
 paths:
-  prompt_base: "agents/collector-proc/prompts/collector-proc.md"
+  prompt_file: "agents/collector-proc/prompt.md"
   skills_dir: "agents/collector-proc/skills"
   schemas_dir: "schemas"
   io_schema: "agents/collector-proc/io.schema.json"
@@ -113,24 +113,94 @@ skills_map:
   mandato_processo: "agents/collector-proc/skills/SKILL.mandato_processo.md"
 
 jobs:
-  - id: "collector-proc-router"
-    name: "Router (front matter) — individual + optional consolidation"
+  # --- REGRA 1: data/juntada/<tipo> -> Saída 1:1 (um JSON por arquivo, por tipo) ---
+
+  - id: "collector-proc-juntada-procuracao"
+    name: "Juntada — procuracao (1:1)"
+    input_dir: "data/juntada/procuracao"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "procuracao"
+    schema_file: "schemas/procuracao.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  - id: "collector-proc-juntada-cabecalho"
+    name: "Juntada — cabecalho_processo (1:1)"
+    input_dir: "data/juntada/cabecalho_processo"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "cabecalho_processo"
+    schema_file: "schemas/cabecalho_processo.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  - id: "collector-proc-juntada-peticao"
+    name: "Juntada — peticao_processo (1:1)"
+    input_dir: "data/juntada/peticao_processo"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "peticao_processo"
+    schema_file: "schemas/peticao_processo.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  - id: "collector-proc-juntada-contestacao"
+    name: "Juntada — contestacao_processo (1:1)"
+    input_dir: "data/juntada/contestacao_processo"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "contestacao_processo"
+    schema_file: "schemas/contestacao_processo.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  - id: "collector-proc-juntada-decisao"
+    name: "Juntada — decisao_processo (1:1)"
+    input_dir: "data/juntada/decisao_processo"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "decisao_processo"
+    schema_file: "schemas/decisao_processo.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  - id: "collector-proc-juntada-mandato"
+    name: "Juntada — mandato_processo (1:1)"
+    input_dir: "data/juntada/mandato_processo"
+    file_glob: "**/*.md"
+    output_dir: "outputs/juntada/01_collector"
+    output_prefix: "collector_out_juntada_"
+    mode: "individual"
+    skill_key: "mandato_processo"
+    schema_file: "schemas/mandato_processo.schema.json"
+    run_individual: true
+    run_consolidated: false
+
+  # --- REGRA 2: data/processo -> Saída N:1 (consolidado) ---
+  - id: "collector-proc-processo-consolidated"
+    name: "Processo — consolidated (N:1)"
     input_dir: "data/processo"
     file_glob: "**/*.md"
-
-    run_individual: true
+    output_dir: "outputs/processo/01_collector"
+    output_prefix: "collector_out_processo_"
+    mode: "consolidated"
+    skill_key: "processo"
+    schema_file: "schemas/processo.schema.json"
+    run_individual: false
     run_consolidated: true
-
     consolidation:
-      # Regra crítica: consolidar SEMPRE por document_type; case_id é opcional
       group_by:
         - document_type
         - case_id
-      # Se case_id não existir, o runner deve consolidar somente por document_type dentro do mesmo job/run
       require_case_id: false
-
-output_naming:
-  individual_suffix: ".json"
-  consolidated_suffix: ".consolidated.json"
-  error_suffix: ".error.json"
-  schema_error_suffix: ".schema_error.json"

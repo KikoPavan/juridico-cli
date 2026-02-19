@@ -1,0 +1,5 @@
+304:    input_dir = os.path.join(project_root, job["input_dir"])
+323:    md_files = glob.glob(os.path.join(input_dir, "*.md"))
+325:        print(f"   [AVISO] Sem arquivos .md em {input_dir}")
+367:    elif mode == "consolidated":
+379:        out_name = job.get("output_filename", "consolidated.json").replace(

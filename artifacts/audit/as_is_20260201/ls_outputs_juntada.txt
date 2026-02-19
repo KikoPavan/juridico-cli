@@ -1,0 +1,13 @@
+total 96
+drwxr-xr-x 2 kiko kiko  4096 Dec 11 14:09 .
+drwxr-xr-x 5 kiko kiko  4096 Jan 23 16:10 ..
+-rw-r--r-- 1 kiko kiko  7659 Dec  6 14:31 collector_out_juntada_contrato_bancario_hipoteca_176700530.json
+-rw-r--r-- 1 kiko kiko 11486 Dec  9 14:34 collector_out_juntada_contrato_bancario_hipoteca_176700634.json
+-rw-r--r-- 1 kiko kiko 15739 Dec  6 14:32 collector_out_juntada_contrato_bancario_hipoteca_aditivo_176700530.json
+-rw-r--r-- 1 kiko kiko  3808 Dec  9 14:33 collector_out_juntada_contrato_bancario_hipoteca_aditivo_176700634.json
+-rw-r--r-- 1 kiko kiko  8414 Dec 12 11:55 collector_out_juntada_contrato_social_JKMG_2002.json
+-rw-r--r-- 1 kiko kiko  5061 Dec 12 11:56 collector_out_juntada_contrato_social_JKMG_2003.json
+-rw-r--r-- 1 kiko kiko  3423 Dec  9 14:35 collector_out_juntada_contrato_social_pavao_supermercados_ltda_2001.json
+-rw-r--r-- 1 kiko kiko 10349 Dec  6 14:30 collector_out_juntada_escritura_hipotecaria_176700529.json
+-rw-r--r-- 1 kiko kiko  7014 Dec  9 14:35 collector_out_juntada_processo_divida_ativa_funcafe.json
+-rw-r--r-- 1 kiko kiko  1507 Dec  9 13:24 collector_out_juntada_procuracao_Juraci_para_Francisco.json

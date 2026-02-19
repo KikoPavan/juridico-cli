@@ -1,0 +1,519 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/contrato_social.schema.json",
+  "title": "Contrato Social / Alteração Contratual",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "id_documento": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Identificador interno único do documento estruturado."
+    },
+    "tipo_documento": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Tipo lógico do documento (ex.: CONTRATO_SOCIAL, ALTERACAO_CONTRATUAL)."
+    },
+    "arquivo_origem": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Nome do arquivo de origem em formato Markdown."
+    },
+    "hash_origem": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Hash (ex.: SHA256) do arquivo original para cadeia de custódia."
+    },
+    "data_extracao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Data/hora da extração estruturada (ISO 8601 se possível)."
+    },
+    "ancoras_paginas": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista de âncoras de páginas relevantes (ex.: \"[[Folha 3]]\", \"[Pág. 10]\").",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fonte_sistema": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Sistema que gerou o Markdown (ex.: pdf_legal_br, ocr_project)."
+    },
+    "observacoes_extracao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Observações gerais sobre a extração."
+    },
+    "razao_social": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Razão social da sociedade."
+    },
+    "nome_fantasia": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Nome fantasia, se houver."
+    },
+    "cnpj": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "CNPJ da sociedade."
+    },
+    "nire": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Número de registro na junta comercial (NIRE), se houver."
+    },
+    "tipo_societario": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Tipo societário (ex.: LTDA, SA, EIRELI)."
+    },
+    "junta_comercial": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Nome da junta comercial (ex.: JUCESP)."
+    },
+    "numero_registro": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Número de registro ou arquivamento do contrato/alteração."
+    },
+    "data_registro": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Data de registro do contrato/alteração."
+    },
+    "data_ultima_alteracao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Data da última alteração contratual descrita no documento."
+    },
+    "sede_endereco": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Endereço completo da sede."
+    },
+    "sede_matriz_filial": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Indicação se é matriz, sede ou filial, se constar."
+    },
+    "objeto_social": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Objeto social principal, em forma textual (pode conter múltiplas linhas ou itens separados por ponto e vírgula)."
+    },
+    "capital_social_total": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Valor total do capital social, em literal com moeda (ex.: \"R$ 920.000,00\")."
+    },
+    "capital_moeda": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Moeda do capital social (ex.: BRL)."
+    },
+    "integralizacao_descricao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Descrição textual de como o capital é integralizado (bens, dinheiro, quotas, etc.)."
+    },
+    "quotas": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista textual do quadro de quotas/ações por sócio (visão agregada).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "socios": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista estruturada de sócios com dados mínimos para cruzamento e análise.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nome": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nome completo do sócio."
+          },
+          "documento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CPF ou outro documento principal do sócio."
+          },
+          "tipo_documento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Tipo de documento (ex.: CPF, CNPJ, RG), se relevante."
+          },
+          "papel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Papel do sócio (ex.: SÓCIO, SÓCIO ADMINISTRADOR)."
+          },
+          "cotas": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Número de quotas atribuídas ao sócio, em literal (ex.: \"340.000\")."
+          },
+          "valor_cotas": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor das quotas atribuídas ao sócio, em literal (ex.: \"R$ 340.000,00\")."
+          },
+          "participacao_percentual": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Participação do sócio no capital social, em percentual literal (ex.: \"36,96%\")."
+          },
+          "ancora_qualificacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Âncora para a folha/página onde está a qualificação completa do sócio (ex.: \"[[Folha 2]]\")."
+          },
+          "observacoes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Observações relevantes sobre o sócio (ex.: regime de bens, vínculo com outro sócio)."
+          }
+        }
+      }
+    },
+    "administradores": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista estruturada de administradores com indicação de poderes e limitações.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nome": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nome completo do administrador."
+          },
+          "documento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CPF ou outro documento principal do administrador."
+          },
+          "papel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Papel/cargo (ex.: ADMINISTRADOR, DIRETOR, GERENTE)."
+          },
+          "poderes_resumidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Resumo dos poderes de administração atribuídos (ex.: poderes de gestão plena, poderes conjuntos, etc.)."
+          },
+          "limitacoes_resumidas": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Resumo das limitações específicas aos atos de administração (ex.: vedação para onerar imóveis sem unanimidade)."
+          },
+          "ancora_clausula": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Âncora para a cláusula que descreve poderes/limitações (ex.: \"[[Folha 5]]\")."
+          },
+          "observacoes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Observações adicionais sobre o administrador (ex.: mandato, substituições, condições especiais)."
+          }
+        }
+      }
+    },
+    "regras_administracao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Trechos que descrevem regras gerais de administração da sociedade (administração isolada, conjunta, etc.)."
+    },
+    "limitacoes_ato_administracao": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Trechos que limitem atos de administração, especialmente oneração de bens e concessão de garantias."
+    },
+    "clausulas_oneracao_bens_imoveis": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista de trechos de cláusulas sobre oneração de bens imóveis (hipoteca, alienação fiduciária etc.), com ou sem paráfrase.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clausulas_garantia_obrigacoes_terceiros": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista de trechos sobre prestação de garantias em favor de terceiros.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clausulas_vetos_garantias": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Lista de trechos que proíbam ou limitem garantias/oneracão de bens.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clausulas_quorum_especial": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Trechos que exijam quórum especial para certos atos (ex.: oneração de imóveis, garantias).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clausulas_responsabilidade_socios": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Trechos sobre responsabilidade dos sócios (limitada, ilimitada, solidariedade etc.)."
+    },
+    "clausulas_vigencia": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Trechos sobre vigência do contrato/alteração."
+    },
+    "clausula_foro": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Trecho da cláusula de foro."
+    },
+    "data_assinatura": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Data de assinatura do contrato social ou da alteração consolidada."
+    },
+    "imoveis_integralizados": {
+      "type": "array",
+      "description": "Lista de imóveis integralizados/incorporados ao capital social (para cruzamento com escrituras e matrículas).",
+      "items": {
+        "type": "object",
+        "description": "Imóvel/bem imóvel integralizado/incorporado ao capital social, conforme descrito no contrato social.",
+        "additionalProperties": true,
+        "properties": {
+          "matricula_numero": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Número da matrícula do imóvel."
+          },
+          "registro_imoveis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cartório/Registro de Imóveis, quando constar."
+          },
+          "descricao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Descrição do imóvel (texto resumido, preservando termos essenciais)."
+          },
+          "percentual_parte_ideal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Percentual/parte ideal quando indicado (ex.: 44,37%)."
+          },
+          "area": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Área do imóvel quando indicada."
+          },
+          "localizacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Endereço/localização quando indicado."
+          },
+          "valor_venal_original": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor venal/original literal (ex.: Cr$ 32.107,00)."
+          },
+          "valor_atribuido": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor atribuído/contábil literal (ex.: R$ 6.570,95)."
+          },
+          "valor_avaliacao_original": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Avaliação original literal quando houver (ex.: Cr$ 30.321,50)."
+          },
+          "valor_avaliacao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Avaliação em R$ quando houver."
+          },
+          "onus_ou_dividas_mencionadas": {
+            "type": "array",
+            "description": "Lista de menções explícitas de ônus/dívidas/gravames associados ao imóvel (texto literal curto).",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "observacoes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Observações relevantes (ex.: constituto possessório, responsabilidade solidária dos sócios etc.)."
+          },
+          "fonte": {
+            "type": "object",
+            "description": "Origem no documento para rastreabilidade.",
+            "additionalProperties": true,
+            "properties": {
+              "arquivo_md": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ancora": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "default": []
+    }
+  }
+}

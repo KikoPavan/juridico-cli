@@ -19,6 +19,7 @@ tags: [operacao, runbook, fallback, anti-truncamento]
 ---
 
 ## Resumo Executivo
+
 **O que este documento é:** Runbook operacional do pipeline (execução, fallbacks, incident response, anti-truncamento).  
 **Para que serve:** Padronizar operação local e diagnóstico rápido de falhas.  
 **Entradas (inputs):** comandos de execução; paths de artefatos; limites de saída (JSON curto + anexos).  
@@ -29,12 +30,12 @@ tags: [operacao, runbook, fallback, anti-truncamento]
 
 Pipeline (ordem):
 
-1. collector-*
+1. collector-\*
 2. pipelines (normalize/monetary/reconciler) → dataset_v1
 3. load DuckDB
 4. gerar `pack_global.json` (pack mínimo + anexos completos)
 5. FIRAC-Core (process-first: collector-proc) → petition
-5A. FIRAC-Plus (optional: CAD_OBR evidence outputs if available) → petition
+   5A. FIRAC-Plus (optional: CAD_OBR evidence outputs if available) → petition
 
 ## 2) Política anti-truncamento (obrigatória)
 
@@ -42,44 +43,45 @@ Pipeline (ordem):
 
 Orçamento padrão do evidence-agent:
 
-* findings ≤ 6 (preferir 4 em caso denso)
-* evidências por finding ≤ 4 (preferir 3 em caso denso)
-* `documentos_apresentados.lista` ≤ 20
-* `documentos_faltantes` ≤ 15
-* `documentos_recomendados_para_colheita` ≤ 15
-* `trecho` ≤ 320 chars, 1 linha, sem aspas duplas
-* `resumo_executivo` ≤ 1000 chars, 1 linha
+- findings ≤ 6 (preferir 4 em caso denso)
+- evidências por finding ≤ 4 (preferir 3 em caso denso)
+- `documentos_apresentados.lista` ≤ 20
+- `documentos_faltantes` ≤ 15
+- `documentos_recomendados_para_colheita` ≤ 15
+- `trecho` ≤ 320 chars, 1 linha, sem aspas duplas
+- `resumo_executivo` ≤ 1000 chars, 1 linha
 
 ## 3) Logs mínimos (para auditoria e depuração)
 
 Registrar por execução:
 
-* versões de schemas/skills usadas
-* hash do pack (`pack_global.json`) e do dataset (lista de JSONL + hash)
-* caminho dos anexos gerados
-* raw output do modelo (para post-mortem quando falhar)
+- versões de schemas/skills usadas
+- hash do pack (`pack_global.json`) e do dataset (lista de JSONL + hash)
+- caminho dos anexos gerados
+- raw output do modelo (para post-mortem quando falhar)
 
 ## 4) Fallbacks (quando algo falhar)
 
-* **DuckDB falhou / vazio inesperado**: evidence roda em modo “inventário + recomendações P0/P1”, sem findings.
-* **Parsing falhou (JSON truncado)**: reduzir orçamento (4 findings, 3 evidências, 240 chars) e reexecutar.
-* **Pack grande demais**: mover mais conteúdo para anexos e manter no pack apenas agregados + top-N.
+- **DuckDB falhou / vazio inesperado**: evidence roda em modo “inventário + recomendações P0/P1”, sem findings.
+- **Parsing falhou (JSON truncado)**: reduzir orçamento (4 findings, 3 evidências, 240 chars) e reexecutar.
+- **Pack grande demais**: mover mais conteúdo para anexos e manter no pack apenas agregados + top-N.
 
 ## 5) Resposta a incidentes
 
-* Classificar severidade:
+- Classificar severidade:
+  - S1: pipeline não gera outputs
+  - S2: outputs gerados mas evidence não parseia
+  - S3: qualidade (findings sem evidência, recomendações excessivas)
 
-  * S1: pipeline não gera outputs
-  * S2: outputs gerados mas evidence não parseia
-  * S3: qualidade (findings sem evidência, recomendações excessivas)
-* Procedimento:
-
+- Procedimento:
   1. identificar etapa que falhou
   2. coletar logs + raw + hash do pack
   3. corrigir e revalidar com QA “caso denso”
+
 ---
 
 ## Glossário mínimo (termos operacionais)
+
 - **Fonte probatória (PDF original):** documento original que pode ser anexado em petição; serve como prova primária.
 - **Fonte operacional (Markdown):** versão convertida do PDF usada para extração; não substitui a prova.
 - **source_id:** identificador estável do documento/trecho (normalmente derivado de hash + metadados), usado para rastreabilidade.

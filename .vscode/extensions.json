@@ -4,6 +4,7 @@
     "charliermarsh.ruff",
     "tamasfe.even-better-toml",
     "redhat.vscode-yaml",
-    "mikestead.dotenv"
+    "mikestead.dotenv",
+    "tomoki1207.pdf"
   ]
 }

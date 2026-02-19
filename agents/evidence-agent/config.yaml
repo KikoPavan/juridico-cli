@@ -25,7 +25,7 @@ paths:
   last_raw_filename: _last_raw.txt
 
 skills_map:
-  core: skills/evidence/evidence-agent/SKILL.core.md
+  core: agents/evidence-agent/skills/SKILL.core.md
 
 jobs:
   evidence_global:

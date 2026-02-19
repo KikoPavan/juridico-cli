@@ -18,6 +18,8 @@ dependencies = [
     "langgraph>=1.0.5",
     "langchain-core>=1.2.6",
     "duckdb>=1.4.3",
+    "qdrant-client>=1.16.2",
+    "sentence-transformers>=5.2.3",
 ]
 # No seu pyproject.toml
 [tool.ruff]

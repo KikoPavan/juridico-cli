@@ -7,7 +7,7 @@ runtime:
 
 paths:
   # prompt base do collector-cad_obr
-  prompt_file: "prompts/collector-cad_obr.md"
+  prompt_file: "agents/collector-cad_obr/prompt.md" 
 
 skills_map:
   core: "agents/collector-cad_obr/skills/SKILL.core.md"

@@ -1,0 +1,246 @@
+=== collector-cad_obr ===
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.1
+  max_output_tokens: 65536
+  agent_name: "collector-cad_obr"
+
+paths:
+  # prompt base do collector-cad_obr
+  prompt_file: "prompts/collector-cad_obr.md"
+
+skills_map:
+  core: "agents/collector-cad_obr/skills/SKILL.core.md"
+  escritura_imovel: "agents/collector-cad_obr/skills/SKILL.escritura_imovel.md"
+  contrato_social: "agents/collector-cad_obr/skills/SKILL.contrato_social.md"
+  escritura_hipotecaria: "agents/collector-cad_obr/skills/SKILL.escritura_hipotecaria.md"
+
+jobs:
+  # --- REGRA 1: data/cad_obr/escritura_imovel -> Saída 1:1 (um JSON por arquivo) ---
+  - name: "Processamento escritura_imovel"
+    id: "cad_obr-escritura-imovel"
+    input_dir: "data/cad_obr/escritura_imovel"
+    output_dir: "outputs/cad_obr/01_collector/escritura_imovel"
+    output_prefix: "collector_out_escritura_imovel_"
+    skill_key: "escritura_imovel"
+    schema_file: "schemas/escritura_imovel.schema.json"
+    mode: "individual"   # 1:1
+
+  # --- REGRA 2: data/cad_obr/contrato_social -> Saída 1:1 (um JSON por arquivo) ---
+  - name: "Processamento contrato_social"
+    id: "cad_obr-contrato-social"
+    input_dir: "data/cad_obr/contrato_social"
+    output_dir: "outputs/cad_obr/01_collector/contrato_social"
+    output_prefix: "collector_out_contrato_social_"
+    skill_key: "contrato_social"
+    schema_file: "schemas/contrato_social.schema.json"
+    mode: "individual"   # 1:1
+
+  # --- REGRA 3: data/cad_obr/escritura_hipotecaria -> Saída 1:1 (um JSON por arquivo) ---
+  - name: "Processamento escritura_hipotecaria"
+    id: "cad_obr-escritura-hipotecaria"
+    input_dir: "data/cad_obr/escritura_hipotecaria"
+    output_dir: "outputs/cad_obr/01_collector/escritura_hipotecaria"
+    output_prefix: "collector_out_escritura_hipotecaria_"
+    skill_key: "escritura_hipotecaria"
+    schema_file: "schemas/escritura_hipotecaria.schema.json"
+    mode: "individual"   # 1:1
+
+=== collector-proc ===
+agent:
+  name: collector-proc
+  version: "0.2.0"
+
+runtime:
+  provider: "google"
+  model: "gemini-2.0-flash"
+  temperature: 0.1
+  top_p: 0.95
+  max_output_tokens: 8192
+
+paths:
+  prompt_base: "agents/collector-proc/prompts/collector-proc.md"
+  skills_dir: "agents/collector-proc/skills"
+  schemas_dir: "schemas"
+  io_schema: "agents/collector-proc/io.schema.json"
+
+  output_base_dir: "outputs/processo/01_collector"
+  triage_dir: "outputs/processo/00_triage"
+  logs_dir: "outputs/processo/99_logs"
+
+front_matter:
+  # Campos que devem existir no topo do .md (YAML front matter)
+  required:
+    - document_type
+    - skill_key
+    - target_schema
+    - source_id
+    - source_sha256
+    - source_filename
+    - language
+    - created_at
+  optional:
+    - case_id
+  document_type_field: "document_type"
+
+validation:
+  json_schema_draft: "2020-12"
+  strict: true
+  # Se true, recusa quando skill_key/target_schema do front matter não bater com o roteamento
+  enforce_front_matter_consistency: true
+
+routing:
+  default_mode: "individual" # individual | consolidated
+  on_unknown_document_type: "triage" # triage | fail
+  on_missing_front_matter: "fail" # triage | fail
+
+  # document_type -> skill/schema/output/modes
+  map:
+    processo:
+      skill_key: "processo"
+      schema_individual: "schemas/processo.schema.json"
+      output_dir: "processo"
+      allow_individual: true
+      allow_consolidated: false
+
+    cabecalho_processo:
+      skill_key: "cabecalho_processo"
+      schema_individual: "schemas/cabecalho_processo.schema.json"
+      schema_consolidated: "schemas/cabecalho_processo.consolidated.schema.json"
+      output_dir: "cabecalho_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    peticao_processo:
+      skill_key: "peticao_processo"
+      schema_individual: "schemas/peticao_processo.schema.json"
+      schema_consolidated: "schemas/peticao_processo.consolidated.schema.json"
+      output_dir: "peticao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    contestacao_processo:
+      skill_key: "contestacao_processo"
+      schema_individual: "schemas/contestacao_processo.schema.json"
+      schema_consolidated: "schemas/contestacao_processo.consolidated.schema.json"
+      output_dir: "contestacao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    decisao_processo:
+      skill_key: "decisao_processo"
+      schema_individual: "schemas/decisao_processo.schema.json"
+      schema_consolidated: "schemas/decisao_processo.consolidated.schema.json"
+      output_dir: "decisao_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+    procuracao:
+      skill_key: "procuracao"
+      schema_individual: "schemas/procuracao.schema.json"
+      schema_consolidated: "schemas/procuracao.consolidated.schema.json"
+      output_dir: "procuracao"
+      allow_individual: true
+      allow_consolidated: true
+
+    mandato_processo:
+      skill_key: "mandato_processo"
+      schema_individual: "schemas/mandato_processo.schema.json"
+      schema_consolidated: "schemas/mandato_processo.consolidated.schema.json"
+      output_dir: "mandato_processo"
+      allow_individual: true
+      allow_consolidated: true
+
+skills_map:
+  core: "agents/collector-proc/skills/SKILL.core.md"
+  processo: "agents/collector-proc/skills/SKILL.processo.md"
+  cabecalho_processo: "agents/collector-proc/skills/SKILL.cabecalho_processo.md"
+  peticao_processo: "agents/collector-proc/skills/SKILL.peticao_processo.md"
+  contestacao_processo: "agents/collector-proc/skills/SKILL.contestacao_processo.md"
+  decisao_processo: "agents/collector-proc/skills/SKILL.decisao_processo.md"
+  procuracao: "agents/collector-proc/skills/SKILL.procuracao.md"
+  mandato_processo: "agents/collector-proc/skills/SKILL.mandato_processo.md"
+
+jobs:
+  - id: "collector-proc-router"
+    name: "Router (front matter) — individual + optional consolidation"
+    input_dir: "data/processo"
+    file_glob: "**/*.md"
+
+    run_individual: true
+    run_consolidated: true
+
+    consolidation:
+      # Regra crítica: consolidar SEMPRE por document_type; case_id é opcional
+      group_by:
+        - document_type
+        - case_id
+      # Se case_id não existir, o runner deve consolidar somente por document_type dentro do mesmo job/run
+      require_case_id: false
+
+output_naming:
+  individual_suffix: ".json"
+  consolidated_suffix: ".consolidated.json"
+  error_suffix: ".error.json"
+  schema_error_suffix: ".schema_error.json"
+
+=== evidence-agent ===
+# agents/evidence-agent/config.yaml
+runtime:
+  provider: gemini
+  mode: google.genai
+  model: gemini-2.5-flash
+  temperature: 0.0
+  top_p: 0.95
+  max_output_tokens: 8192
+  api_key_env: GOOGLE_API_KEY
+  response_mime_type: application/json
+
+paths:
+  prompt_file: agents/evidence-agent/prompt.md
+  schema_file: agents/evidence-agent/io.schema.json
+
+  # pack gerado pelo evidence_pack_cli.py
+  pack_file: artifacts/evidence_packs/dataset_v1/pack_global.json
+
+  # saída do evidence-agent
+  output_dir: outputs/cad_obr/05_evidence/dataset_v1
+  output_filename: evidence_out.json
+
+  # logs de debug
+  last_prompt_filename: _last_prompt.txt
+  last_raw_filename: _last_raw.txt
+
+skills_map:
+  core: skills/evidence/evidence-agent/SKILL.core.md
+
+jobs:
+  evidence_global:
+    - id: evidence_global
+      name: "Evidências (dataset_v1)"
+      skill_key_default: core
+
+=== firac-cli ===
+runtime:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 8192  # FIRAC pode precisar de respostas maiores
+
+rag:
+  enabled: true
+  stores:
+    - evidencias_caso     # fatos, documentos, cadeia de obrigações
+    - base_normativa      # leis, códigos, doutrina
+    - jurisprudencia      # decisões usadas como insumo preliminar
+
+paths:
+  prompt_file: prompts/firac.md
+  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
+  input_collector_json: outputs/collector_out.json
+  input_contexto_societario: inputs/contexto/contexto_societario.json
+  input_hipotese_juridica: inputs/contexto/hipotese_juridica.md
+  template_relatorio: templates/relatorio_base.md
+  output_relatorio_firac: outputs/relatorio_firac.md
+
