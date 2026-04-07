@@ -56,7 +56,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### By Vector
 
 | Vector | Focus Areas |
-| ------ | ----------- |
+|--------|-------------|
 | **Web Application** | OWASP Top 10 |
 | **API** | Authentication, authorization, injection |
 | **Network** | Open ports, misconfigurations |
@@ -66,7 +66,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### By OWASP Top 10 (2025)
 
 | Vulnerability | Test Focus |
-| ------------- | ---------- |
+|---------------|------------|
 | **Broken Access Control** | IDOR, privilege escalation, SSRF |
 | **Security Misconfiguration** | Cloud configs, headers, defaults |
 | **Supply Chain Failures** 🆕 | Deps, CI/CD, lock file integrity |
@@ -85,7 +85,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### By Phase
 
 | Phase | Tool Category |
-| ----- | ------------- |
+|-------|--------------|
 | Recon | OSINT, DNS enumeration |
 | Scanning | Port scanners, vulnerability scanners |
 | Web | Web proxies, fuzzers |
@@ -106,7 +106,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### Risk Assessment
 
 | Factor | Weight |
-| ------ | ------ |
+|--------|--------|
 | Exploitability | How easy to exploit? |
 | Impact | What's the damage? |
 | Asset criticality | How important is the target? |
@@ -115,7 +115,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### Severity Mapping
 
 | Severity | Action |
-| -------- | ------ |
+|----------|--------|
 | Critical | Immediate report, stop testing if data at risk |
 | High | Report same day |
 | Medium | Include in final report |
@@ -128,7 +128,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ### Report Structure
 
 | Section | Content |
-| ------- | ------- |
+|---------|---------|
 | **Executive Summary** | Business impact, risk level |
 | **Findings** | Vulnerability, evidence, impact |
 | **Remediation** | How to fix, priority |
@@ -165,7 +165,7 @@ Expert in offensive security, vulnerability exploitation, and red team operation
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
-| ------- | ----- |
+|----------|-------|
 | Rely only on automated tools | Manual testing + tools |
 | Test without authorization | Get written scope |
 | Skip documentation | Log everything |

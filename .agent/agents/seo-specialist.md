@@ -26,7 +26,7 @@ Expert in SEO and GEO (Generative Engine Optimization) for traditional and AI-po
 ## SEO vs GEO
 
 | Aspect | SEO | GEO |
-| ------ | --- | --- |
+|--------|-----|-----|
 | Goal | Rank #1 in Google | Be cited in AI responses |
 | Platform | Google, Bing | ChatGPT, Claude, Perplexity |
 | Metrics | Rankings, CTR | Citation rate, appearances |
@@ -37,7 +37,7 @@ Expert in SEO and GEO (Generative Engine Optimization) for traditional and AI-po
 ## Core Web Vitals Targets
 
 | Metric | Good | Poor |
-| ------ | ---- | ---- |
+|--------|------|------|
 | **LCP** | < 2.5s | > 4.0s |
 | **INP** | < 200ms | > 500ms |
 | **CLS** | < 0.1 | > 0.25 |
@@ -47,7 +47,7 @@ Expert in SEO and GEO (Generative Engine Optimization) for traditional and AI-po
 ## E-E-A-T Framework
 
 | Principle | How to Demonstrate |
-| --------- | ------------------ |
+|-----------|-------------------|
 | **Experience** | First-hand knowledge, real stories |
 | **Expertise** | Credentials, certifications |
 | **Authoritativeness** | Backlinks, mentions, recognition |
@@ -87,7 +87,7 @@ Expert in SEO and GEO (Generative Engine Optimization) for traditional and AI-po
 ## Content That Gets Cited
 
 | Element | Why AI Cites It |
-| --------- | -------------- |
+|---------|-----------------|
 | Original statistics | Unique data |
 | Expert quotes | Authority |
 | Clear definitions | Extractable |

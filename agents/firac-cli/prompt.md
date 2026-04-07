@@ -1,3 +1,10 @@
+---
+name: firac-cli.prompt_base
+agent: firac-cli
+version: "1.0.1"
+purpose: "Prompt base do firac-cli. O runner injeta {HARD_RULES} e {CONTEXT_JSON}."
+---
+
 # **Agente:** firac-cli
 
 ## **Objetivo**
@@ -26,13 +33,13 @@ Gerar **Relatório Jurídico FIRAC+** e **Matriz Fatos–Provas–Regras** a par
 ### **EX1 Matriz (1 linha)**
 
 | Fato | Prova | Regra |
-|--------------------------------------|--------------------------|-----------------------|
-| Procuração sem poderes para hipoteca | Procuracao_2008.pdf:2    | CC art. 661 §1º; 662  |
+|--------------------------------------|--------------------------|----------------------------------|
+| Procuração sem poderes para hipoteca | Procuracao_2002.pdf:2    | Lei no 3.071/1916 art. 1.295 §1º |
 
 ### **EX2 FIRAC curto**
 Q: A procuração permitia hipoteca?
-R: CC 661 §1º e 662 exigem poderes expressos para garantia real.
-A: Documento não confere poderes específicos (Procuracao_2008.pdf:2).
+R: Lei no 3.071/1916 art. 1.295 §1º exige poderes expressos para garantia real.
+A: Documento não confere poderes específicos (Procuracao_2002.pdf:2).
 C: Ato nulo por excesso de poderes. [[REVISAR: confirmar se houve ratificação posterior]]
 
 ### **EX3 Estrutura do relatório**

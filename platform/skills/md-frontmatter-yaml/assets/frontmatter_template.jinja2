@@ -1,0 +1,19 @@
+---
+title: {{ title | default(null) | to_yaml_scalar }}
+document_type: {{ document_type | default("document") }}
+source_file: {{ source_file }}
+source_path: {{ source_path }}
+document_date: {{ document_date | default(null) | to_yaml_scalar }}
+author: {{ author | default(null) | to_yaml_scalar }}
+language: {{ language | default("pt-BR") }}
+tags:
+{% if tags %}
+{% for tag in tags %}
+  - {{ tag }}
+{% endfor %}
+{% else %}
+  []
+{% endif %}
+status: {{ status | default("raw") }}
+created_by_skill: md-frontmatter-yaml
+---

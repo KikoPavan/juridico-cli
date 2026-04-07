@@ -109,6 +109,7 @@ skills_map:
   peticao_processo: "agents/collector-proc/skills/SKILL.peticao_processo.md"
   contestacao_processo: "agents/collector-proc/skills/SKILL.contestacao_processo.md"
   decisao_processo: "agents/collector-proc/skills/SKILL.decisao_processo.md"
+  juntada: "agents/collector-proc/skills/SKILL.juntada.md"  
   procuracao: "agents/collector-proc/skills/SKILL.procuracao.md"
   mandato_processo: "agents/collector-proc/skills/SKILL.mandato_processo.md"
 

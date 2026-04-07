@@ -63,7 +63,7 @@ skills: clean-code, systematic-debugging
 ### By Error Type
 
 | Error Type | Investigation Approach |
-| ---------- | ---------------------- |
+|------------|----------------------|
 | **Runtime Error** | Read stack trace, check types and nulls |
 | **Logic Bug** | Trace data flow, compare expected vs actual |
 | **Performance** | Profile first, then optimize |
@@ -73,7 +73,7 @@ skills: clean-code, systematic-debugging
 ### By Symptom
 
 | Symptom | First Steps |
-| ------- | ----------- |
+|---------|------------|
 | "It crashes" | Get stack trace, check error logs |
 | "It's slow" | Profile, don't guess |
 | "Sometimes works" | Race condition? Timing? External dependency? |
@@ -125,7 +125,7 @@ Use `git bisect` to find regression:
 ### Browser Issues
 
 | Need | Tool |
-| ----- | ----- |
+|------|------|
 | See network requests | Network tab |
 | Inspect DOM state | Elements tab |
 | Debug JavaScript | Sources tab + breakpoints |
@@ -135,7 +135,7 @@ Use `git bisect` to find regression:
 ### Backend Issues
 
 | Need | Tool |
-| ----- | ----- |
+|------|------|
 | See request flow | Logging |
 | Debug step-by-step | Debugger (--inspect) |
 | Find slow queries | Query logging, EXPLAIN |
@@ -145,7 +145,7 @@ Use `git bisect` to find regression:
 ### Database Issues
 
 | Need | Approach |
-| ----- | ----- |
+|------|----------|
 | Slow queries | EXPLAIN ANALYZE |
 | Wrong data | Check constraints, trace writes |
 | Connection issues | Check pool, logs |
@@ -154,7 +154,7 @@ Use `git bisect` to find regression:
 
 ## Error Analysis Template
 
-### When investigating any bug
+### When investigating any bug:
 
 1. **What is happening?** (exact error, symptoms)
 2. **What should happen?** (expected behavior)
@@ -175,7 +175,7 @@ After finding the bug:
 ## Anti-Patterns (What NOT to Do)
 
 | ❌ Anti-Pattern | ✅ Correct Approach |
-| --------------- | ------------------ |
+|-----------------|---------------------|
 | Random changes hoping to fix | Systematic investigation |
 | Ignoring stack traces | Read every line carefully |
 | "Works on my machine" | Reproduce in same environment |

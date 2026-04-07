@@ -97,6 +97,33 @@ def safe_stem(md_path: Path, md_root: Path) -> str:
     return rel.with_suffix("").as_posix().replace("/", "__")
 
 
+def _outputs_for_stem(stem: str, json_dir: Path, rep_dir: Path) -> list[Path]:
+    raw_p = (json_dir / "raw" / f"{stem}.raw.json").resolve()
+    rag_p = (json_dir / "rag" / f"{stem}.rag.json").resolve()
+    qa_p = (rep_dir / "qa" / f"{stem}.qa.json").resolve()
+    rep_p = (rep_dir / "logs" / f"{stem}.md_rag.report.md").resolve()
+    return [raw_p, rag_p, qa_p, rep_p]
+
+
+def _is_fresh(md_path: Path, stem: str, json_dir: Path, rep_dir: Path) -> bool:
+    """
+    True => já processado e atualizado:
+      - todos os artefatos existem
+      - todos têm mtime >= mtime do MD
+    """
+    md_mtime = md_path.stat().st_mtime
+    outs = _outputs_for_stem(stem, json_dir, rep_dir)
+    for p in outs:
+        if not p.exists():
+            return False
+        try:
+            if p.stat().st_mtime < md_mtime:
+                return False
+        except OSError:
+            return False
+    return True
+
+
 # -----------------------------
 # MD parsing
 # -----------------------------
@@ -1090,6 +1117,11 @@ def main() -> int:
     ap.add_argument(
         "--limit", type=int, default=0, help="Limita quantidade de MDs (0=sem limite)"
     )
+    ap.add_argument(
+        "--only-new",
+        action="store_true",
+        help="Processa apenas MDs novos/alterados (pula se outputs existirem e forem mais novos que o MD).",
+    )
     args = ap.parse_args()
 
     project_root = find_project_root(Path(__file__).resolve())
@@ -1135,6 +1167,12 @@ def main() -> int:
 
         for md_path in md_files:
             stem = safe_stem(md_path, md_dir)
+            if args.only_new:
+                if _is_fresh(md_path, stem, json_dir, rep_dir):
+                    # opcional: log curto
+                    print(f"[skip] {md_path.relative_to(md_dir)} (já atualizado)")
+                    continue
+
             doc = parse_md(md_path, stem=stem)
             rules.build(
                 doc, profile_id=profile_id, out_json_dir=json_dir, out_rep_dir=rep_dir

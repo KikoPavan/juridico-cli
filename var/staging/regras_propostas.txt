@@ -1,0 +1,13 @@
+# PROPOSED CLEANING RULES
+# Review and remove lines that should NOT be cleaned.
+# Each line represents text that will be removed from documents.
+
+# [Found 16 times]
+AV. PINHEIRO MACHADO, 1201 | CENTRO
+
+# [Found 16 times]
+CEP 18705.370 | AVARÉ | SP +55 (14) 3733.6561 | wWW.KURTZBRUNOAMARILHAZEQUI.COM.BR
+
+# [Found 3 times]
+Ramalho, brasileira, viúva, comerciante, portadora da Cédula de Identidade RG n.
+

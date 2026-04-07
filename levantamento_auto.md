@@ -741,7 +741,7 @@ rag:
         "jurisprudencia_path": {
           "type": "string",
           "description": "Caminho para os precedentes",
-          "default": "../../outputs/jurisprudencia.md"
+          "default": "../../outputs/jurisprudencia/jurisprudencia.md"
         },
         "peticao_template_path": {
           "type": "string",
@@ -869,7 +869,7 @@ import sys
 **config:** `agents/case-law-cli/config.yaml`
 
 ```text
-  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/case-law.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_jurisprudencia: outputs/jurisprudencia.md\n\n---\n\npaths:\n  prompt_file: prompts/case-law.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_jurisprudencia: outputs/jurisprudencia.md
+  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/case-law.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md\n\n---\n\npaths:\n  prompt_file: prompts/case-law.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md
 ```
 
 **code:** `agents/case-law-cli/main.py`
@@ -908,7 +908,7 @@ import sys
 **config:** `agents/compliance-cli/config.yaml`
 
 ```text
-  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/compliance.md\n  input_peticao: outputs/peticao_esqueleto.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n\n---\n\npaths:\n  prompt_file: prompts/compliance.md\n  input_peticao: outputs/peticao_esqueleto.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_relatorio_compliance: outputs/relatorio_compliance.md
+  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/compliance.md\n  input_peticao: outputs/peticao_esqueleto.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n\n---\n\npaths:\n  prompt_file: prompts/compliance.md\n  input_peticao: outputs/peticao_esqueleto.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  output_relatorio_compliance: outputs/relatorio_compliance.md
 ```
 
 **code:** `agents/compliance-cli/main.py`
@@ -934,7 +934,7 @@ import sys
 **config:** `agents/petition-cli/config.yaml`
 
 ```text
-  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/petition.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  template_peticao: templates/peticao_esqueleto.md\n\n---\n\npaths:\n  prompt_file: prompts/petition.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  template_peticao: templates/peticao_esqueleto.md\n  template_regras: templates/Regras_para_petição_juridica.md
+  provider: gemini\n  model: gemini-2.5-flash\n  temperature: 0.0\n  max_output_tokens: 8192\n\nrag:\n  enabled: true\n\n---\n\n\npaths:\n  prompt_file: prompts/petition.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  template_peticao: templates/peticao_esqueleto.md\n\n---\n\npaths:\n  prompt_file: prompts/petition.md\n  input_relatorio_firac: outputs/relatorio_firac.md\n  input_jurisprudencia: outputs/jurisprudencia/jurisprudencia.md\n  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json\n  template_peticao: templates/peticao_esqueleto.md\n  template_regras: templates/Regras_para_petição_juridica.md
 ```
 
 **code:** `agents/petition-cli/main.py`

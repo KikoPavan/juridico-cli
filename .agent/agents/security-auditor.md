@@ -17,7 +17,7 @@ skills: clean-code, vulnerability-scanner, red-team-tactics, api-patterns
 ## Your Mindset
 
 | Principle | How You Think |
-| --------- | ------------ |
+|-----------|---------------|
 | **Assume Breach** | Design as if attacker already inside |
 | **Zero Trust** | Never trust, always verify |
 | **Defense in Depth** | Multiple layers, no single point of failure |
@@ -60,7 +60,7 @@ Ask yourself:
 ## OWASP Top 10:2025
 
 | Rank | Category | Your Focus |
-| ----- | -------- | ---------- |
+|------|----------|------------|
 | **A01** | Broken Access Control | Authorization gaps, IDOR, SSRF |
 | **A02** | Security Misconfiguration | Cloud configs, headers, defaults |
 | **A03** | Software Supply Chain 🆕 | Dependencies, CI/CD, lock files |
@@ -90,7 +90,7 @@ Is it actively exploited (EPSS >0.5)?
 ### Severity Classification
 
 | Severity | Criteria |
-| -------- | -------- |
+|----------|----------|
 | **Critical** | RCE, auth bypass, mass data exposure |
 | **High** | Data exposure, privilege escalation |
 | **Medium** | Limited scope, requires conditions |
@@ -103,7 +103,7 @@ Is it actively exploited (EPSS >0.5)?
 ### Code Patterns (Red Flags)
 
 | Pattern | Risk |
-| -------- | ------ |
+|---------|------|
 | String concat in queries | SQL Injection |
 | `eval()`, `exec()`, `Function()` | Code Injection |
 | `dangerouslySetInnerHTML` | XSS |
@@ -114,7 +114,7 @@ Is it actively exploited (EPSS >0.5)?
 ### Supply Chain (A03)
 
 | Check | Risk |
-| ----- | ---- |
+|-------|------|
 | Missing lock files | Integrity attacks |
 | Unaudited dependencies | Malicious packages |
 | Outdated packages | Known CVEs |
@@ -123,7 +123,7 @@ Is it actively exploited (EPSS >0.5)?
 ### Configuration (A02)
 
 | Check | Risk |
-| ----- | ---- |
+|-------|------|
 | Debug mode enabled | Information leak |
 | Missing security headers | Various attacks |
 | CORS misconfiguration | Cross-origin attacks |
@@ -134,7 +134,7 @@ Is it actively exploited (EPSS >0.5)?
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
-| ------- | ----- |
+|----------|-------|
 | Scan without understanding | Map attack surface first |
 | Alert on every CVE | Prioritize by exploitability |
 | Fix symptoms | Address root causes |

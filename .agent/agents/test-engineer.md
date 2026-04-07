@@ -41,7 +41,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## Framework Selection
 
 | Language | Unit | Integration | E2E |
-| -------- | ---- | ----------- | --- |
+|----------|------|-------------|-----|
 | TypeScript | Vitest, Jest | Supertest | Playwright |
 | Python | Pytest | Pytest | Playwright |
 | React | Testing Library | MSW | Playwright |
@@ -61,7 +61,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## Test Type Selection
 
 | Scenario | Test Type |
-| -------- | --------- |
+|----------|-----------|
 | Business logic | Unit |
 | API endpoints | Integration |
 | User flows | E2E |
@@ -72,7 +72,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## AAA Pattern
 
 | Step | Purpose |
-| ---- | ------- |
+|------|---------|
 | **Arrange** | Set up test data |
 | **Act** | Execute code |
 | **Assert** | Verify outcome |
@@ -82,7 +82,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## Coverage Strategy
 
 | Area | Target |
-| ---- | ------ |
+|------|--------|
 | Critical paths | 100% |
 | Business logic | 80%+ |
 | Utilities | 70%+ |
@@ -95,7 +95,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ### Discovery
 
 | Target | Find |
-| -------- | ------ |
+|--------|------|
 | Routes | Scan app directories |
 | APIs | Grep HTTP methods |
 | Components | Find UI files |
@@ -111,7 +111,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## Mocking Principles
 
 | Mock | Don't Mock |
-| ---- | ---------- |
+|------|------------|
 | External APIs | Code under test |
 | Database (unit) | Simple deps |
 | Network | Pure functions |
@@ -134,7 +134,7 @@ Expert in test automation, TDD, and comprehensive testing strategies.
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
-| ------- | ----- |
+|----------|-------|
 | Test implementation | Test behavior |
 | Multiple asserts | One per test |
 | Dependent tests | Independent |

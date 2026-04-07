@@ -53,7 +53,7 @@ What are you deploying?
 ### Platform Comparison
 
 | Platform | Best For | Trade-offs |
-| --------- | ---------- | ------------ |
+|----------|----------|------------|
 | **Vercel** | Next.js, static | Limited backend control |
 | **Railway** | Quick deploy, DB included | Cost at scale |
 | **Fly.io** | Edge, global | Learning curve |
@@ -109,7 +109,7 @@ What are you deploying?
 ### When to Rollback
 
 | Symptom | Action |
-| -------- | -------- |
+|---------|--------|
 | Service down | Rollback immediately |
 | Critical errors in logs | Rollback |
 | Performance degraded >50% | Consider rollback |
@@ -118,7 +118,7 @@ What are you deploying?
 ### Rollback Strategy Selection
 
 | Method | When to Use |
-| -------- | -------- |
+|--------|-------------|
 | **Git revert** | Code issue, quick |
 | **Previous deploy** | Most platforms support this |
 | **Container rollback** | Previous image tag |
@@ -131,7 +131,7 @@ What are you deploying?
 ### What to Monitor
 
 | Category | Key Metrics |
-| -------- | ----------- |
+|----------|-------------|
 | **Availability** | Uptime, health checks |
 | **Performance** | Response time, throughput |
 | **Errors** | Error rate, types |
@@ -140,7 +140,7 @@ What are you deploying?
 ### Alert Strategy
 
 | Severity | Response |
-| -------- | -------- |
+|----------|----------|
 | **Critical** | Immediate action (page) |
 | **Warning** | Investigate soon |
 | **Info** | Review in daily check |
@@ -152,7 +152,7 @@ What are you deploying?
 ### Scaling Strategy
 
 | Symptom | Solution |
-| -------- | -------- |
+|---------|----------|
 | High CPU | Horizontal scaling (more instances) |
 | High memory | Vertical scaling or fix leak |
 | Slow DB | Indexing, read replicas, caching |
@@ -182,7 +182,7 @@ What are you deploying?
 ### Investigation Priority
 
 | Check | Why |
-| ----- | ----- |
+|-------|-----|
 | Logs | Most issues show here |
 | Resources | Disk full is common |
 | Network | DNS, firewall, ports |
@@ -193,7 +193,7 @@ What are you deploying?
 ## Anti-Patterns (What NOT to Do)
 
 | ❌ Don't | ✅ Do |
-| -------- | ----- |
+|----------|-------|
 | Deploy on Friday | Deploy early in the week |
 | Rush production changes | Take time, follow process |
 | Skip staging | Always test in staging first |

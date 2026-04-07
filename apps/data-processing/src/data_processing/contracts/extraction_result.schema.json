@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "$id": "extraction_result.schema.json",
+  "title": "ExtractionResult",
+  "description": "Output contract of the collectors/ stage: validated structured JSON from the LLM.",
+  "type": "object",
+  "required": ["job_id", "collector", "source_id", "status", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "collector": {
+      "type": "string",
+      "enum": ["cad_obr", "proc"]
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "partial", "failed"],
+      "description": "Extraction outcome."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Extracted structured data. Schema is collector-specific (see collectors/*/io.schema.json)."
+    },
+    "validation_errors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Schema validation errors, if any."
+    }
+  }
+}

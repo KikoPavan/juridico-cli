@@ -1,5 +1,5 @@
 ---
-description: Create project plan using project-planner agent. Planning only: write one plan file in project root; no code writing.
+description: Create project plan using project-planner agent. No code writing - only plan file generation.
 ---
 
 # /plan - Project Planning Mode
@@ -10,12 +10,10 @@ $ARGUMENTS
 
 ## 🔴 CRITICAL RULES
 
-1. **NO CODE WRITING** - This command creates a plan file only
-2. **Use project-planner agent** - NOT Claude Code's native Plan subagent
-3. **Canonical Context** - MUST read `docs/antigravity/juridico-cli/INDEX.md` first
-4. **References Section** - Plan MUST include `## Referências` using RELATIVE PATHS (no `file:///`)
-5. **Dynamic Naming** - Plan file name derived from task (kebab-case, max 30 chars)
-6. **STOP AFTER PLAN** - Do not run `/create` or any implementation steps
+1. **NO CODE WRITING** - This command creates plan file only
+2. **Use project-planner agent** - NOT Antigravity Agent's native Plan mode
+3. **Socratic Gate** - Ask clarifying questions before planning
+4. **Dynamic Naming** - Plan file named based on task
 
 ---
 
@@ -27,27 +25,20 @@ Use the `project-planner` agent with this context:
 CONTEXT:
 - User Request: $ARGUMENTS
 - Mode: PLANNING ONLY (no code)
-- Output: ./{task-slug}.md (project root)
-- Canonical Docs: docs/antigravity/juridico-cli/INDEX.md
+- Output: docs/PLAN-{task-slug}.md (dynamic naming)
 
 NAMING RULES:
 1. Extract 2-3 key words from request
-2. Lowercase, hyphen-separated (kebab-case)
+2. Lowercase, hyphen-separated
 3. Max 30 characters
-4. Example: "e-commerce cart" → ecommerce-cart.md
+4. Example: "e-commerce cart" → PLAN-ecommerce-cart.md
 
 RULES:
-1. **READ FIRST:** `docs/antigravity/juridico-cli/INDEX.md` to understand the project (Context Check).
-2. **CONSULT:** Follow links in INDEX.md only if relevant to the specific request.
-3. **PLAN:** Create ./{slug}.md in project root with task breakdown.
-4. **REFERENCES:** Include a section `## Referências` in the plan:
-   - List `docs/antigravity/juridico-cli/INDEX.md` as the base.
-   - List any other file used using **relative paths** (e.g. `docs/...md`).
-   - **DO NOT** use `file:///` URI scheme.
-   - **MUST** use section anchors for deep links (e.g. `docs/...md#Seção`).
-5. **DO NOT** write or modify any other files.
-6. **REPORT** the exact file name created.
-7. **END** after reporting (no execution).
+1. Follow project-planner.md Phase -1 (Context Check)
+2. Follow project-planner.md Phase 0 (Socratic Gate)
+3. Create PLAN-{slug}.md with task breakdown
+4. DO NOT write any code files
+5. REPORT the exact file name created
 ```
 
 ---
@@ -55,12 +46,11 @@ RULES:
 ## Expected Output
 
 | Deliverable | Location |
-| ------------- | ---------- |
-| Project Plan | `./{task-slug}.md` |
-| References | `## Referências` section (Relative paths + Anchors) |
+|-------------|----------|
+| Project Plan | `docs/PLAN-{task-slug}.md` |
 | Task Breakdown | Inside plan file |
 | Agent Assignments | Inside plan file |
-| Verification Checklist | Inside plan file (Phase X) |
+| Verification Checklist | Phase X in plan file |
 
 ---
 
@@ -68,12 +58,12 @@ RULES:
 
 Tell user:
 ```
-[OK] Plan created: ./{slug}.md
+[OK] Plan created: docs/PLAN-{slug}.md
 
-Next steps (manual):
-
-• Review/adjust the plan
-• When ready, run `/create` using the plan
+Next steps:
+- Review the plan
+- Run `/create` to start implementation
+- Or modify plan manually
 ```
 
 ---
@@ -81,12 +71,12 @@ Next steps (manual):
 ## Naming Examples
 
 | Request | Plan File |
-| --------- | ----------- |
-| `/plan e-commerce site with cart` | `./ecommerce-cart.md` |
-| `/plan mobile app for fitness` | `./fitness-app.md` |
-| `/plan add dark mode feature` | `./dark-mode.md` |
-| `/plan fix authentication bug` | `./auth-fix.md` |
-| `/plan SaaS dashboard` | `./saas-dashboard.md` |
+|---------|-----------|
+| `/plan e-commerce site with cart` | `docs/PLAN-ecommerce-cart.md` |
+| `/plan mobile app for fitness` | `docs/PLAN-fitness-app.md` |
+| `/plan add dark mode feature` | `docs/PLAN-dark-mode.md` |
+| `/plan fix authentication bug` | `docs/PLAN-auth-fix.md` |
+| `/plan SaaS dashboard` | `docs/PLAN-saas-dashboard.md` |
 
 ---
 

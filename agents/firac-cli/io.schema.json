@@ -1,53 +1,287 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Schema IO do 'firac-cli'",
-  "description": "Define o contrato de dados para as entradas e saídas do agente 'firac-cli'",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://juridico-cli.local/agents/firac-cli/io.schema.json",
+  "title": "firac-cli IO Envelope — v1.0",
+  "description": "Contrato de entrada/saída do firac-cli (FIRAC-Core e FIRAC-Plus). Saída canônica: relatorio_firac.json com rastreabilidade e distinção premissa/prova/lacuna.",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_name",
+    "agent_version",
+    "job_id",
+    "run_id",
+    "created_at",
+    "document_type",
+    "mode",
+    "status",
+    "sources",
+    "output"
+  ],
   "properties": {
-    "inputs": {
+    "agent_name": { "const": "firac-cli" },
+    "agent_version": { "type": "string", "minLength": 1 },
+    "job_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "document_type": { "const": "relatorio_firac" },
+    "mode": {
+      "type": "string",
+      "enum": ["firac_core", "firac_plus"],
+      "description": "firac_core = somente PROCESSO; firac_plus = incorpora evidence_out quando disponível."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warning", "fail"]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/SourceInput" }
+    },
+    "output": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["relatorio_firac", "artifacts"],
       "properties": {
-        "collector_out_path": {
-          "type": "string",
-          "description": "Caminho para a coleta de fatos",
-          "default": "../../outputs/collector_out.md"
-        },
-        "relatorio_base_path": {
-          "type": "string",
-          "description": "Caminho para o template do relatório base",
-          "default": "../../templates/relatorio_base.md"
+        "relatorio_firac": { "$ref": "#/$defs/RelatorioFirac" },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["json_path", "md_path"],
+          "properties": {
+            "json_path": { "type": "string", "minLength": 1 },
+            "md_path": { "type": "string", "minLength": 1 }
+          }
         }
+      }
+    }
+  },
+  "$defs": {
+    "SourceInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "kind", "path"],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identificador estável do input (ex.: 'processo:consolidado_v1', 'cad_obr:evidence_out_v1')."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["processo", "evidence", "dataset", "pack", "other"]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$",
+          "description": "Opcional, mas recomendado para cadeia de custódia."
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "RelatorioFirac": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "case", "firac", "gaps", "truncation", "meta"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "case": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["case_id", "title"],
+          "properties": {
+            "case_id": { "type": "string", "minLength": 1 },
+            "title": { "type": "string", "minLength": 1 },
+            "parties": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "summary": { "type": "string" }
+          }
+        },
+        "firac": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["facts", "issues", "rules", "analysis", "conclusion"],
+          "properties": {
+            "facts": { "$ref": "#/$defs/FiracSection" },
+            "issues": { "$ref": "#/$defs/FiracSection" },
+            "rules": { "$ref": "#/$defs/FiracSection" },
+            "analysis": { "$ref": "#/$defs/FiracSection" },
+            "conclusion": { "$ref": "#/$defs/FiracSection" }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GapItem" }
+        },
+        "truncation": { "$ref": "#/$defs/Truncation" },
+        "meta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["generated_by", "generated_at"],
+          "properties": {
+            "generated_by": { "type": "string", "minLength": 1 },
+            "generated_at": { "type": "string", "format": "date-time" },
+            "inputs_used": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Lista de source_id efetivamente usados para gerar o FIRAC."
+            },
+            "warnings": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "FiracSection": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FiracItem" }
+    },
+    "FiracItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "epistemic_status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "epistemic_status": {
+          "type": "string",
+          "enum": ["premise", "evidence", "inference", "gap"],
+          "description": "premise = verdade operacional; evidence = verdade probatória; inference = conclusão derivada com suporte; gap = ausência de dado/prova."
+        },
+        "supports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EvidenceRef" }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "related_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notes": { "type": "string" },
+        "gap_priority": {
+          "type": "string",
+          "enum": ["P0", "P1", "P2", "P3"]
+        },
+        "recommendation": { "type": "string" }
       },
-      "required": [
-        "collector_out_path"
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "epistemic_status": { "enum": ["evidence", "inference"] }
+            }
+          },
+          "then": {
+            "required": ["supports"],
+            "properties": {
+              "supports": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "epistemic_status": { "const": "gap" }
+            }
+          },
+          "then": {
+            "required": ["gap_priority", "recommendation"]
+          }
+        }
       ]
     },
-    "outputs": {
-      "description": "Define a saída do relatório FIRAC",
+    "EvidenceRef": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "anchor"],
       "properties": {
-        "relatorio_firac_path": {
+        "source_id": {
           "type": "string",
-          "description": "Caminho para o Markdown de saída do FIRAC.",
-          "default": "../../outputs/relatorio_firac.md"
+          "minLength": 1,
+          "description": "Deve referir um SourceInput.source_id (ex.: 'processo:consolidado_v1', 'cad_obr:evidence_out_v1')."
+        },
+        "anchor": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Ponto rastreável: fls., página, seção, id interno, ou âncora canônica do markdown/pack."
+        },
+        "path": { "type": "string" },
+        "locator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": { "type": "integer", "minimum": 1 },
+            "line_start": { "type": "integer", "minimum": 1 },
+            "line_end": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "excerpt": {
+          "type": "string",
+          "maxLength": 1200,
+          "description": "Trecho curto para auditoria humana (não obrigatório)."
         }
-      },
-      "required": [
-        "relatorio_firac_path"
-      ]
+      }
     },
-    "logs": {
+    "GapItem": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "priority", "recommendation"],
       "properties": {
-        "log_file": {
-          "type": "string",
-          "default": "logs/firac.log"
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+        "recommendation": { "type": "string", "minLength": 1 },
+        "related_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "Truncation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["was_truncated", "budgets", "dropped_counts"],
+      "properties": {
+        "was_truncated": { "type": "boolean" },
+        "budgets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["facts", "issues", "rules", "analysis", "conclusion", "gaps"],
+          "properties": {
+            "facts": { "type": "integer", "minimum": 1 },
+            "issues": { "type": "integer", "minimum": 1 },
+            "rules": { "type": "integer", "minimum": 1 },
+            "analysis": { "type": "integer", "minimum": 1 },
+            "conclusion": { "type": "integer", "minimum": 1 },
+            "gaps": { "type": "integer", "minimum": 0 }
+          }
         },
-        "questions_identified": {
-          "type": "integer"
+        "dropped_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["facts", "issues", "rules", "analysis", "conclusion", "gaps"],
+          "properties": {
+            "facts": { "type": "integer", "minimum": 0 },
+            "issues": { "type": "integer", "minimum": 0 },
+            "rules": { "type": "integer", "minimum": 0 },
+            "analysis": { "type": "integer", "minimum": 0 },
+            "conclusion": { "type": "integer", "minimum": 0 },
+            "gaps": { "type": "integer", "minimum": 0 }
+          }
         },
-        "matrix_rows_generated": {
-          "type": "integer"
+        "overflow_note": { "type": "string" },
+        "overflow_artifacts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths opcionais para arquivos de overflow (ex.: jsonl/md) quando houver chunking."
         }
       }
     }

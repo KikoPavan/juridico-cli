@@ -11,9 +11,13 @@ rag:
     - jurisprudencia      # valida alegações sobre entendimento dominante
 
 paths:
-  prompt_file: prompts/compliance.md
-  input_peticao: outputs/peticao_esqueleto.md
-  input_relatorio_firac: outputs/relatorio_firac.md
-  input_jurisprudencia: outputs/jurisprudencia.md
-  input_cadeia_obrigacoes: outputs/cadeia_obrigacoes.json
-  output_relatorio_compliance: outputs/relatorio_compliance.md
+  prompt_file: "agents/compliance-cli/prompt.md"
+  input_peticao: "outputs/peticao_esqueleto.md"
+  input_relatorio_firac: "outputs/relatorio_firac.md"
+  input_jurisprudencia: "outputs/jurisprudencia/jurisprudencia.md"
+  input_jurisprudencia_json: "outputs/jurisprudencia/jurisprudencia.json"
+  input_cadeia_obrigacoes: "outputs/cadeia_obrigacoes.json"
+  output_relatorio_compliance: "outputs/relatorio_compliance.md"
+
+skills_map:
+  core: "agents/compliance-cli/skills/SKILL.core.md"

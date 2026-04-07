@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Jus-Breve FIRAC Output Schema",
+  "description": "Schema de validação para output da skill Jus-Breve (método FIRAC)",
+  "type": "object",
+  "required": ["skill", "versao", "status_analise", "metadados", "firac", "avaliacao_risco", "qualidade"],
+  "additionalProperties": false,
+  "properties": {
+    "skill": {
+      "type": "string",
+      "const": "jus-breve"
+    },
+    "versao": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "status_analise": {
+      "type": "string",
+      "enum": ["COMPLETO", "PARCIAL", "BLOQUEADO"]
+    },
+    "motivo_bloqueio": {
+      "type": ["string", "null"],
+      "description": "Obrigatório quando status_analise == BLOQUEADO"
+    },
+    "metadados": {
+      "type": "object",
+      "required": ["tipo_peca", "ramo_direito", "objetivo_analise"],
+      "additionalProperties": false,
+      "properties": {
+        "tipo_peca": {
+          "type": "string",
+          "enum": [
+            "PETICAO_INICIAL", "CONTESTACAO", "RECURSO", "SENTENCA",
+            "ACORDAO", "CONTRATO", "EMENTA", "PARECER",
+            "RELATORIO_AUDITORIA", "LAUDO_PERICIAL", "ATO_NOTARIAL", "OUTROS"
+          ]
+        },
+        "ramo_direito": {
+          "type": "string",
+          "enum": [
+            "CIVIL", "PROCESSO_CIVIL", "PENAL", "PROCESSO_PENAL",
+            "TRABALHISTA", "TRIBUTARIO", "ADMINISTRATIVO", "CONSTITUCIONAL",
+            "EMPRESARIAL", "CONSUMIDOR", "IMOBILIARIO", "SUCESSOES",
+            "FAMILIA", "OUTROS"
+          ]
+        },
+        "objetivo_analise": {
+          "type": "string",
+          "enum": ["AUDITORIA", "DUE_DILIGENCE", "CASE_BRIEF", "RELATORIO", "TRIAGEM"]
+        },
+        "partes": {
+          "type": ["object", "null"],
+          "properties": {
+            "polo_ativo": { "type": "string" },
+            "polo_passivo": { "type": "string" }
+          }
+        },
+        "tribunal_juizo": { "type": ["string", "null"] },
+        "data_peca": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "periodo_fatos": {
+          "type": ["object", "null"],
+          "properties": {
+            "inicio": { "type": ["string", "null"] },
+            "fim": { "type": ["string", "null"] }
+          }
+        },
+        "numero_processo": { "type": ["string", "null"] }
+      }
+    },
+    "firac": {
+      "type": "object",
+      "required": ["facts", "issue", "rule", "application", "conclusion"],
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "descricao", "tipo", "fonte", "status_probatorio"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^F-\\d{2}$"
+              },
+              "descricao": { "type": "string", "minLength": 5 },
+              "tipo": {
+                "type": "string",
+                "enum": [
+                  "CONTRATUAL", "TEMPORAL", "PATRIMONIAL", "COMPORTAMENTAL",
+                  "PROCESSUAL", "REGISTRAL", "FINANCEIRO", "OUTROS"
+                ]
+              },
+              "fonte": {
+                "type": "string",
+                "enum": [
+                  "CITACAO_DIRETA", "INFERENCIA_NECESSARIA", "INFERENCIA_ESPECULATIVA"
+                ]
+              },
+              "status_probatorio": {
+                "type": "string",
+                "enum": ["COMPROVADO", "CONTROVERTIDO", "ESPECULATIVO"]
+              },
+              "pagina_ref": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "issue": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "required": ["id", "questao", "prejudicial", "facts_ref"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^I-\\d{2}$"
+              },
+              "questao": { "type": "string", "minLength": 10 },
+              "prejudicial": { "type": "boolean" },
+              "facts_ref": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "rule": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "required": ["id", "diploma", "artigo", "enunciado", "hierarquia", "tipo_norma", "issue_ref"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^R-\\d{2}$"
+              },
+              "diploma": { "type": "string" },
+              "artigo": { "type": "string" },
+              "enunciado": { "type": "string", "maxLength": 200 },
+              "hierarquia": {
+                "type": "string",
+                "enum": [
+                  "CF", "LEI_FEDERAL", "LEI_COMPLEMENTAR", "LEI_ESTADUAL",
+                  "LEI_MUNICIPAL", "REGULAMENTO", "SUMULA_VINCULANTE",
+                  "SUMULA", "TESE_REPERCUSSAO", "ENUNCIADO_FONAJE"
+                ]
+              },
+              "tipo_norma": {
+                "type": "string",
+                "enum": ["RATIO_DECIDENDI", "OBITER_DICTUM", "NORMA_DIRETA", "ANALOGIA"]
+              },
+              "issue_ref": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "application": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "required": ["id", "fact_ref", "rule_ref", "elemento_norma", "status", "contexto"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^A-\\d{2}$"
+              },
+              "fact_ref": { "type": "string" },
+              "rule_ref": { "type": "string" },
+              "elemento_norma": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["PRESENTE", "AUSENTE", "PARCIAL", "CONTROVERSO", "DEPENDENTE_PROVA"]
+              },
+              "contexto": { "type": "string", "minLength": 10 },
+              "contrafactual": { "type": ["string", "null"] },
+              "precedente_ref": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "conclusion": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "required": ["id", "issue_ref", "resposta", "fundamento", "nivel_risco"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^C-\\d{2}$"
+              },
+              "issue_ref": { "type": "string" },
+              "resposta": {
+                "type": "string",
+                "enum": ["SIM", "NAO", "CONDICIONAL", "INCONCLUSIVO"]
+              },
+              "fundamento": { "type": "string", "minLength": 10 },
+              "tese_juridica": { "type": ["string", "null"] },
+              "dispositivo": { "type": ["string", "null"] },
+              "nivel_risco": {
+                "type": "string",
+                "enum": ["CRITICO", "RELEVANTE", "MODERADO", "BAIXO", "NULO"]
+              },
+              "condicao": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "avaliacao_risco": {
+      "type": "object",
+      "required": ["nivel_geral", "riscos"],
+      "additionalProperties": false,
+      "properties": {
+        "nivel_geral": {
+          "type": "string",
+          "enum": ["CRITICO", "RELEVANTE", "MODERADO", "BAIXO", "NULO"]
+        },
+        "riscos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["descricao", "nivel"],
+            "additionalProperties": false,
+            "properties": {
+              "descricao": { "type": "string" },
+              "nivel": {
+                "type": "string",
+                "enum": ["CRITICO", "RELEVANTE", "MODERADO", "BAIXO"]
+              },
+              "conclusion_ref": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "qualidade": {
+      "type": "object",
+      "required": ["confianca", "cobertura_fatica", "limitacoes"],
+      "additionalProperties": false,
+      "properties": {
+        "confianca": {
+          "type": "string",
+          "enum": ["ALTA", "MEDIA", "BAIXA"]
+        },
+        "cobertura_fatica": {
+          "type": "string",
+          "enum": ["COMPLETA", "PARCIAL", "INSUFICIENTE"]
+        },
+        "limitacoes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "recomendacao": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

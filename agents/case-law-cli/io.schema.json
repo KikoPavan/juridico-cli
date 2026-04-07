@@ -20,19 +20,21 @@
           }
         }
       },
-      "required": [
-        "firac_report_path",
-        "theses"
-      ]
+      "required": ["firac_report_path", "theses"]
     },
     "outputs": {
-      "description": "Define a saída estruturada (MD) para os precedentes",
+      "description": "Define a saída estruturada (MD/JSON) para os precedentes",
       "type": "object",
       "properties": {
         "jurisprudencia_out_path": {
           "type": "string",
           "description": "Caminho para o Markdown de saída com os precedentes.",
-          "default": "../../outputs/jurisprudencia.md"
+          "default": "../../outputs/jurisprudencia/jurisprudencia.md"
+        },
+        "jurisprudencia_json_out_path": {
+          "type": "string",
+          "description": "Caminho para o JSON auditável e reprodutível com os precedentes selecionados, metadados e trilha de consulta.",
+          "default": "../../outputs/jurisprudencia/jurisprudencia.json"
         },
         "precedentes": {
           "type": "array",
@@ -49,11 +51,7 @@
               },
               "adesao": {
                 "type": "string",
-                "enum": [
-                  "alta",
-                  "média",
-                  "baixa"
-                ]
+                "enum": ["alta", "média", "baixa"]
               },
               "distincao": {
                 "type": "string"
@@ -62,17 +60,11 @@
                 "type": "string"
               }
             },
-            "required": [
-              "tese_associada",
-              "citacao_padrao",
-              "adesao"
-            ]
+            "required": ["tese_associada", "citacao_padrao", "adesao"]
           }
         }
       },
-      "required": [
-        "jurisprudencia_out_path"
-      ]
+      "required": ["jurisprudencia_out_path", "jurisprudencia_json_out_path"]
     },
     "logs": {
       "type": "object",

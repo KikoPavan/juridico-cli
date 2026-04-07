@@ -7,7 +7,7 @@
 ## OWASP API Security Top 10
 
 | Vulnerability | Test Focus |
-| -------------- | ------------ |
+|---------------|------------|
 | **API1: BOLA** | Access other users' resources |
 | **API2: Broken Auth** | JWT, session, credentials |
 | **API3: Property Auth** | Mass assignment, data exposure |
@@ -26,7 +26,7 @@
 ### JWT Testing
 
 | Check | What to Test |
-| ------- | ------------ |
+|-------|--------------|
 | Algorithm | None, algorithm confusion |
 | Secret | Weak secrets, brute force |
 | Claims | Expiration, issuer, audience |
@@ -35,7 +35,7 @@
 ### Session Testing
 
 | Check | What to Test |
-| ------- | ------------ |
+|-------|--------------|
 | Generation | Predictability |
 | Storage | Client-side security |
 | Expiration | Timeout enforcement |
@@ -46,7 +46,7 @@
 ## Authorization Testing
 
 | Test Type | Approach |
-| ----------- | ---------- |
+|-----------|----------|
 | **Horizontal** | Access peer users' data |
 | **Vertical** | Access higher privilege functions |
 | **Context** | Access outside allowed scope |
@@ -63,7 +63,7 @@
 ## Input Validation Testing
 
 | Injection Type | Test Focus |
-| ---------------- | ------------ |
+|----------------|------------|
 | SQL | Query manipulation |
 | NoSQL | Document queries |
 | Command | System commands |
@@ -76,7 +76,7 @@
 ## Rate Limiting Testing
 
 | Aspect | Check |
-| -------- | ------- |
+|--------|-------|
 | Existence | Is there any limit? |
 | Bypass | Headers, IP rotation |
 | Scope | Per-user, per-IP, global |
@@ -88,7 +88,7 @@
 ## GraphQL Security
 
 | Test | Focus |
-| ------ | ------- |
+|------|-------|
 | Introspection | Schema disclosure |
 | Batching | Query DoS |
 | Nesting | Depth-based DoS |

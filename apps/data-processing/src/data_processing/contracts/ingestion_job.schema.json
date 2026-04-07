@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "$id": "ingestion_job.schema.json",
+  "title": "IngestionJob",
+  "description": "Contract passed to the collector stage: what to extract and from which document.",
+  "type": "object",
+  "required": ["job_id", "collector", "source_id", "content_md"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Unique identifier for this ingestion job."
+    },
+    "collector": {
+      "type": "string",
+      "enum": ["cad_obr", "proc"],
+      "description": "Which collector LLM agent to dispatch to."
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Identifier of the source document."
+    },
+    "content_md": {
+      "type": "string",
+      "description": "Cleaned and analyzed Markdown content ready for LLM extraction."
+    },
+    "rules_context": {
+      "type": "string",
+      "description": "Optional structural rules summary to pass as context to the collector."
+    }
+  }
+}

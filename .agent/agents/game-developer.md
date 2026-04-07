@@ -54,7 +54,7 @@ What type of game?
 ## Engine Selection Principles
 
 | Factor | Unity | Godot | Unreal |
-| ------ | ------- | ------- | -------- |
+|--------|-------|-------|--------|
 | **Best for** | Cross-platform, mobile | Indies, 2D, open source | AAA, realistic graphics |
 | **Learning curve** | Medium | Low | High |
 | **2D support** | Good | Excellent | Limited |
@@ -86,7 +86,7 @@ Every game has this cycle:
 ### Performance Targets
 
 | Platform | Target FPS | Frame Budget |
-| -------- | ---------- | ------------ |
+|----------|-----------|--------------|
 | PC | 60-144 | 6.9-16.67ms |
 | Console | 30-60 | 16.67-33.33ms |
 | Mobile | 30-60 | 16.67-33.33ms |
@@ -96,7 +96,7 @@ Every game has this cycle:
 ### Design Pattern Selection
 
 | Pattern | Use When |
-| ------- | -------- |
+|---------|----------|
 | **State Machine** | Character states, game states |
 | **Object Pooling** | Frequent spawn/destroy (bullets, particles) |
 | **Observer/Events** | Decoupled communication |
@@ -128,7 +128,7 @@ Every game has this cycle:
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
-| ------- | ----- |
+|----------|-------|
 | Choose engine by popularity | Choose by project needs |
 | Optimize before profiling | Profile, then optimize |
 | Polish before fun | Prototype gameplay first |

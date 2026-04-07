@@ -1,0 +1,91 @@
+# normalization_map.yaml
+# Mapeamento de normalizações aplicadas pelo clean_markdown.py
+# Todas as transformações são determinísticas e reversíveis (exceto collapse de espaços).
+# Versão: 1.0.0
+
+normalization_map:
+
+  trailing_whitespace:
+    description: Remove espaços e tabs ao final de cada linha
+    regex_pattern: "[ \\t]+$"
+    replacement: ""
+    scope: line
+    preserve_forced_break: true   # Linhas com "  " (2 espaços) no fim são preservadas
+    applies_inside_code_block: false
+
+  consecutive_blank_lines:
+    description: Colapsa N+ linhas em branco consecutivas para max_blank_lines
+    trigger: 3_or_more_consecutive_blank_lines
+    replacement: max_blank_lines_value   # configurável via --max-blank
+    default_max: 2
+    applies_inside_code_block: false
+
+  heading_space:
+    description: Normaliza exatamente 1 espaço entre # e o texto do heading
+    regex_pattern: "^(#{1,6})[ \\t]*(\\S)"
+    replacement: "\\1 \\2"
+    scope: line
+    applies_inside_code_block: false
+
+  bullet_asterisk:
+    description: Substitui "* " (bullet) por "- "
+    regex_pattern: "^([ \\t]*)\\* "
+    replacement: "\\1- "
+    scope: line
+    note: Aplica apenas quando * está no início da linha (com indentação opcional)
+    applies_inside_code_block: false
+
+  bullet_plus:
+    description: Substitui "+ " (bullet) por "- "
+    regex_pattern: "^([ \\t]*)\\+ "
+    replacement: "\\1- "
+    scope: line
+    applies_inside_code_block: false
+
+  horizontal_rule:
+    description: Unifica variantes de separador horizontal para "---"
+    patterns:
+      - regex: "^[ \\t]*(\\*[ \\t]*){3,}[ \\t]*$"    # *** ou * * *
+        replacement: "---"
+      - regex: "^[ \\t]*(_[ \\t]*){3,}[ \\t]*$"       # ___ ou _ _ _
+        replacement: "---"
+      - regex: "^[ \\t]*(=[ \\t]*){3,}[ \\t]*$"       # === ou = = =
+        replacement: "---"
+      - regex: "^[ \\t]*(-[ \\t]*){4,}[ \\t]*$"       # ---- (4+ para não confundir com ---)
+        replacement: "---"
+    scope: line
+    applies_inside_code_block: false
+
+  decorative_punctuation_lines:
+    description: Remove linhas compostas por 4+ repetições de mesmo char de pontuação decorativa
+    regex_pattern: "^([.,:;!?~`@#$%^&=|]{1})\\1{3,}$"
+    replacement: ""   # linha removida
+    scope: line
+    conservative: true   # na dúvida, não aplicar
+    applies_inside_code_block: false
+
+  trailing_newline:
+    description: Garante que o arquivo termine com exatamente uma quebra de linha
+    scope: file
+    action: strip_then_add_single_newline
+
+preserved_patterns:
+  - name: page_markers
+    description: Marcadores de página gerados por pdf-to-md
+    regex: "<!--\\s*page\\s+\\d+[^>]*-->"
+    action: preserve_verbatim
+
+  - name: code_blocks_backtick
+    description: Blocos de código com backticks triplos
+    regex: "```[\\s\\S]*?```"
+    action: isolate_before_processing_restore_after
+
+  - name: code_blocks_tilde
+    description: Blocos de código com tildes triplos
+    regex: "~~~[\\s\\S]*?~~~"
+    action: isolate_before_processing_restore_after
+
+  - name: forced_line_break
+    description: Duas linhas terminando com dois espaços (quebra forçada Markdown)
+    regex: "[ ]{2}$"
+    action: preserve_verbatim

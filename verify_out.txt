@@ -1,0 +1,160 @@
+ .agent/ARCHITECTURE.md                             | 244 +++---
+ .agent/agents/backend-specialist.md                |  18 +-
+ .agent/agents/code-archaeologist.md                |  64 +-
+ .agent/agents/database-architect.md                |   8 +-
+ .agent/agents/debugger.md                          |  14 +-
+ .agent/agents/devops-engineer.md                   |  16 +-
+ .agent/agents/documentation-writer.md              |   4 +-
+ .agent/agents/explorer-agent.md                    |  16 +-
+ .agent/agents/frontend-specialist.md               | 116 ++-
+ .agent/agents/game-developer.md                    |   8 +-
+ .agent/agents/mobile-developer.md                  |  26 +-
+ .agent/agents/orchestrator.md                      |  28 +-
+ .agent/agents/penetration-tester.md                |  14 +-
+ .agent/agents/performance-optimizer.md             |  14 +-
+ .agent/agents/product-manager.md                   |  38 +-
+ .agent/agents/project-planner.md                   |  51 +-
+ .agent/agents/qa-automation-engineer.md            |  66 +-
+ .agent/agents/security-auditor.md                  |  14 +-
+ .agent/agents/seo-specialist.md                    |   8 +-
+ .agent/agents/test-engineer.md                     |  14 +-
+ .agent/rules/GEMINI.md                             | 279 ++++---
+ .agent/skills/api-patterns/SKILL.md                |   7 +-
+ .agent/skills/api-patterns/api-style.md            |   2 +-
+ .agent/skills/api-patterns/auth.md                 |   2 +-
+ .agent/skills/api-patterns/rate-limiting.md        |   2 +-
+ .agent/skills/api-patterns/response.md             |   2 +-
+ .agent/skills/api-patterns/rest.md                 |   4 +-
+ .agent/skills/api-patterns/security-testing.md     |  14 +-
+ .agent/skills/api-patterns/versioning.md           |   2 +-
+ .agent/skills/app-builder/SKILL.md                 |   2 +-
+ .agent/skills/app-builder/scaffolding.md           |   6 +-
+ .agent/skills/app-builder/tech-stack.md            |   7 +-
+ .../templates/nextjs-fullstack/TEMPLATE.md         | 118 ++-
+ .../app-builder/templates/nextjs-saas/TEMPLATE.md  | 128 +--
+ .../templates/nextjs-static/TEMPLATE.md            | 175 +++--
+ .../app-builder/templates/nuxt-app/TEMPLATE.md     | 155 ++--
+ .../templates/react-native-app/TEMPLATE.md         | 138 ++--
+ .agent/skills/doc.md                               |  72 +-
+ .agent/skills/frontend-design/SKILL.md             |  56 ++
+ .agent/skills/frontend-design/ux-psychology.md     | 595 +++++++++++++-
+ .../lint-and-validate/scripts/lint_runner.py       |  16 +-
+ .agent/skills/nextjs-best-practices/SKILL.md       | 203 -----
+ .agent/skills/parallel-agents/SKILL.md             |   6 +-
+ .agent/skills/python-patterns/SKILL.md             |   8 +-
+ .agent/skills/react-patterns/SKILL.md              | 198 -----
+ .agent/workflows/enhance.md                        |   2 +-
+ .agent/workflows/juridico-context.md               |  53 --
+ .agent/workflows/orchestrate.md                    |  14 +-
+ .agent/workflows/plan.md                           |  64 +-
+ .agent/workflows/preview.md                        |   3 +-
+ .agent/workflows/status.md                         |   4 +-
+ .agent/workflows/ui-ux-pro-max.md                  |  24 +-
+ agents/case-law-cli/config.yaml                    |  17 +-
+ agents/case-law-cli/io.schema.json                 |  30 +-
+ agents/case-law-cli/main.py                        | 787 +++++++++++++++++--
+ agents/collector-cad_obr/prompt.md                 |   8 +-
+ agents/collector-proc/config.yaml                  |   1 +
+ agents/compliance-cli/config.yaml                  |  16 +-
+ agents/firac-cli/config.yaml                       |  85 +-
+ agents/firac-cli/io.schema.json                    | 292 ++++++-
+ agents/firac-cli/main.py                           | 861 +++++++++++++++++----
+ agents/firac-cli/prompt.md                         |  15 +-
+ agents/petition-cli/config.yaml                    |  19 +-
+ agents/petition-cli/io.schema.json                 |   2 +-
+ agents/petition-cli/main.py                        | 426 +++++++++-
+ .../legal_library_chunks_v1/0/newest_clocks.json   |   2 +-
+ .../mutable_id_tracker.mappings                    | Bin 47397 -> 50282 bytes
+ .../mutable_id_tracker.versions                    | Bin 18056 -> 18624 bytes
+ .../payload_storage/bitmask.dat                    | Bin 32768 -> 32768 bytes
+ .../payload_storage/gaps.dat                       | Bin 192 -> 192 bytes
+ .../payload_storage/page_0.dat                     | Bin 33554432 -> 33554432 bytes
+ .../payload_storage/tracker.dat                    | Bin 1048576 -> 1048576 bytes
+ .../segment.json                                   |   2 +-
+ .../vector_storage/deleted/status.dat              | Bin 16 -> 16 bytes
+ .../vector_storage/vectors/chunk_0.mmap            | Bin 33553920 -> 33553920 bytes
+ .../vector_storage/vectors/status.dat              | Bin 8 -> 8 bytes
+ .../mutable_id_tracker.mappings                    | Bin 46914 -> 50263 bytes
+ .../mutable_id_tracker.versions                    | Bin 17872 -> 18688 bytes
+ .../payload_storage/bitmask.dat                    | Bin 32768 -> 32768 bytes
+ .../payload_storage/gaps.dat                       | Bin 192 -> 192 bytes
+ .../payload_storage/page_0.dat                     | Bin 33554432 -> 33554432 bytes
+ .../payload_storage/tracker.dat                    | Bin 1048576 -> 1048576 bytes
+ .../segment.json                                   |   2 +-
+ .../vector_storage/deleted/status.dat              | Bin 16 -> 16 bytes
+ .../vector_storage/vectors/chunk_0.mmap            | Bin 33553920 -> 33553920 bytes
+ .../vector_storage/vectors/status.dat              | Bin 8 -> 8 bytes
+ .../legal_library_chunks_v1/0/wal/first-index      |   2 +-
+ .../legal_library_chunks_v1/0/wal/open-1           | Bin 33554432 -> 33554432 bytes
+ .../juridico-cli/01_PRD_Requisitos_e_Escopo.md     | 100 ---
+ ...Data_Governance_Linhagem_e_Contratos_Minimos.md | 120 ---
+ ..._SubSistema_CAD-OBR_Pipelines_Evidence_FIRAC.md | 257 ------
+ ...03_Arquitetura_Sistema_EndToEnd_juridico-cli.md | 384 ---------
+ ...QA_Avaliacao_Criterios_de_Aceite_e_Regressao.md | 106 ---
+ .../05_Runbook_Operacoes_Fallbacks_e_Incidentes.md |  95 ---
+ .../juridico-cli/Plan \342\200\224 Qdrant.md"      | 156 ----
+ .../Plan \342\200\224 case-law-cli.md"             | 153 ----
+ .../Plan \342\200\224 compliance-cli.md"           | 143 ----
+ .../Plan \342\200\224 petition-cli.md"             | 155 ----
+ input/pdf_proc/AgInt_no_AREsp_1.557.349-SP.pdf     | Bin 378522 -> 0 bytes
+ input/pdf_proc/AgInt_no_REsp_1.388.527-MT.pdf      | Bin 262764 -> 0 bytes
+ input/pdf_proc/AgInt_no_REsp_1.577.931-GO.pdf      | Bin 57947 -> 0 bytes
+ input/pdf_proc/AgInt_no_REsp_1.783.796-RO.pdf      | Bin 194089 -> 0 bytes
+ input/pdf_proc/AgInt_no_REsp_2.038.444-MT.pdf      | Bin 351426 -> 0 bytes
+ input/pdf_proc/CF_1988.pdf                         | Bin 4646335 -> 0 bytes
+ input/pdf_proc/EDcl_no_AgRg_no_AI_1.268.297-RS.pdf | Bin 72486 -> 0 bytes
+ input/pdf_proc/L10.406_CC_2002.pdf                 | Bin 3561133 -> 0 bytes
+ input/pdf_proc/L13.105_CPC_2015.pdf                | Bin 3536793 -> 0 bytes
+ input/pdf_proc/L14.195_CC_2021.pdf                 | Bin 764011 -> 0 bytes
+ input/pdf_proc/L14.451_CC_2022.pdf                 | Bin 278473 -> 0 bytes
+ input/pdf_proc/L3071_CC_1916.pdf                   | Bin 2116842 -> 0 bytes
+ input/pdf_proc/L8245_CC_1991.pdf                   | Bin 482908 -> 0 bytes
+ input/pdf_proc/REsp_1.004.729-MS.pdf               | Bin 127902 -> 0 bytes
+ input/pdf_proc/REsp_1.076.571-SP.pdf               | Bin 115393 -> 0 bytes
+ input/pdf_proc/REsp_1.582.388-PE.pdf               | Bin 152616 -> 0 bytes
+ input/pdf_proc/REsp_1.604.412-SC.pdf               | Bin 319482 -> 0 bytes
+ input/pdf_proc/REsp_1.814.643-SP.pdf               | Bin 637507 -> 0 bytes
+ input/pdf_proc/REsp_1.836.584-MG.pdf               | Bin 82835 -> 0 bytes
+ input/pdf_proc/REsp_1.927.496-SP.pdf               | Bin 392850 -> 0 bytes
+ levantamento_auto.md                               |   8 +-
+ manual_User/codigos_execusao.md                    |  76 +-
+ pipelines/ingest/md_rag/run.py                     |  38 +
+ prompts/case-law.md                                |  36 -
+ prompts/compliance.md                              |  37 -
+ prompts/petition.md                                |  44 --
+ pyproject.toml                                     |   6 +
+ uv.lock                                            | 149 ++++
+ 126 files changed, 4282 insertions(+), 3490 deletions(-)
+=== ITEM 1: DIFF DOS ARQUIVOS (vistos pelo log / status local) ===
+
+=== ITEM 2: BUNDLES EXTR-* CRIADOS (Nomenclatura Oficial) ===
+ - extr-cabecalho-processo
+ - extr-contestacao-processo
+ - extr-contrato-social
+ - extr-decisao-processo
+ - extr-dummy
+ - extr-escritura-hipotecaria
+ - extr-escritura-imovel
+ - extr-mandato-processo
+ - extr-peticao-processo
+ - extr-processo
+ - extr-procuracao
+
+=== ITEM 3: APPS/DATA-PROCESSING SEM DEP. LEGADAS ===
+Instanciou DataExtractorApp: <extractor.DataExtractorApp object at 0x7f46fef163c0>
+Caminhos importados internamente no Extractor:
+  - platform/skills
+  - packages/shared-llm (dummy_client instanciado via load_module_from_path)
+✓ Sucesso. Nenhuma ref a 'agents/' ou 'pipelines/' no source de apps/data-processing.
+
+=== ITEM 4: EVIDÊNCIA DE PARIDADE INICIAL (Contrato Social) ===
+Tamanho do payload LLM Legado: 9526 caracteres
+Tamanho do payload LLM Novo (V1.1): 9920 caracteres
+
+Trecho inicial do Legado:
+--- name: collector-cad_obr.prompt_base agent: collector-cad_obr version: "0.2.0" purpose: "Base prompt template. Runner injects schema + skills + document." --- # Agente: collector-cad_obr (Jurídico)
+
+Trecho inicial do Novo (Transversal):
+# Regras Base de Extração Jurídico-CLI (Transversal)  > Este documento contém diretrizes estritas que devem ser agregadas a todos os prompts de extração de dados tabulares/padronizados executados pelo
+
+✓ Paridade confirmada: Ambas as extrações montam o instruction set com a regra base agregada.

@@ -1,0 +1,67 @@
+# platform/skill-runtime/skill_registry.yaml
+# Registro de Roteamento de Habilidades do Juridico-CLI 1.1
+
+skills:
+  extr-contrato-social:
+    path: "platform/skills/extr-contrato-social"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/extr-contrato-social/assets/contrato_social.schema.json"
+
+  extr-escritura-imovel:
+    path: "platform/skills/extr-escritura-imovel"
+    profile: "large_context"
+    schema_ref: "platform/skills/extr-escritura-imovel/assets/escritura_imovel.schema.json"
+
+  extr-escritura-hipotecaria:
+    path: "platform/skills/extr-escritura-hipotecaria"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/extr-escritura-hipotecaria/assets/escritura_hipotecaria.schema.json"
+
+  extr-cabecalho-processo:
+    path: "platform/skills/extr-cabecalho-processo"
+    profile: "fast_extraction"
+    schema_ref: "platform/skills/extr-cabecalho-processo/assets/cabecalho_processo.schema.json"
+
+  extr-mandato-processo:
+    path: "platform/skills/extr-mandato-processo"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/extr-mandato-processo/assets/mandato_processo.schema.json"
+
+  extr-processo:
+    path: "platform/skills/extr-processo"
+    profile: "large_context"
+    schema_ref: "platform/skills/extr-processo/assets/processo.schema.json"
+
+  extr-contestacao-processo:
+    path: "platform/skills/extr-contestacao-processo"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/extr-contestacao-processo/assets/contestacao_processo.schema.json"
+
+  extr-decisao-processo:
+    path: "platform/skills/extr-decisao-processo"
+    profile: "large_context"
+    schema_ref: "platform/skills/extr-decisao-processo/assets/decisao_processo.schema.json"
+
+  extr-peticao-processo:
+    path: "platform/skills/extr-peticao-processo"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/extr-peticao-processo/assets/peticao_processo.schema.json"
+
+  extr-procuracao:
+    path: "platform/skills/extr-procuracao"
+    profile: "fast_extraction"
+    schema_ref: "platform/skills/extr-procuracao/assets/procuracao.schema.json"
+
+  # --- local_preprocessing pipeline: pdf-to-md → md-clean-markdown → md-frontmatter-yaml ---
+
+  pdf-to-md:
+    path: "platform/skills/pdf-to-md"
+    profile: "local_preprocessing"
+
+  md-clean-markdown:
+    path: "platform/skills/md-clean-markdown"
+    profile: "local_preprocessing"
+
+  md-frontmatter-yaml:
+    path: "platform/skills/md-frontmatter-yaml"
+    profile: "local_preprocessing"

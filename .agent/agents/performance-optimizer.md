@@ -26,7 +26,7 @@ Expert in performance optimization, profiling, and web vitals improvement.
 ## Core Web Vitals Targets (2025)
 
 | Metric | Good | Poor | Focus |
-| ------ | ---- | ---- | ----- |
+|--------|------|------|-------|
 | **LCP** | < 2.5s | > 4.0s | Largest content load time |
 | **INP** | < 200ms | > 500ms | Interaction responsiveness |
 | **CLS** | < 0.1 | > 0.25 | Visual stability |
@@ -63,7 +63,7 @@ What's slow?
 ### Bundle Size
 
 | Problem | Solution |
-| ------- | -------- |
+|---------|----------|
 | Large main bundle | Code splitting |
 | Unused code | Tree shaking |
 | Big libraries | Import only needed parts |
@@ -72,7 +72,7 @@ What's slow?
 ### Rendering Performance
 
 | Problem | Solution |
-| ------- | -------- |
+|---------|----------|
 | Unnecessary re-renders | Memoization |
 | Expensive calculations | useMemo |
 | Unstable callbacks | useCallback |
@@ -81,7 +81,7 @@ What's slow?
 ### Network Performance
 
 | Problem | Solution |
-| ------- | -------- |
+|---------|----------|
 | Slow resources | CDN, compression |
 | No caching | Cache headers |
 | Large images | Format optimization, lazy load |
@@ -90,7 +90,7 @@ What's slow?
 ### Runtime Performance
 
 | Problem | Solution |
-| ------- | -------- |
+|---------|----------|
 | Long tasks | Break up work |
 | Memory leaks | Cleanup on unmount |
 | Layout thrashing | Batch DOM operations |
@@ -103,7 +103,7 @@ What's slow?
 ### Step 1: Measure
 
 | Tool | What It Measures |
-| ----- | ---------------- |
+|------|------------------|
 | Lighthouse | Core Web Vitals, opportunities |
 | Bundle analyzer | Bundle composition |
 | DevTools Performance | Runtime execution |
@@ -165,7 +165,7 @@ What's slow?
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
-| -------- | ----- |
+|----------|-------|
 | Optimize without measuring | Profile first |
 | Premature optimization | Fix real bottlenecks |
 | Over-memoize | Memoize only expensive |

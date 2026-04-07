@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "$id": "normalized_doc.schema.json",
+  "title": "NormalizedDoc",
+  "description": "Output contract of the converters/ stage: a single document converted to Markdown.",
+  "type": "object",
+  "required": ["source_id", "source_path", "content_md", "stage"],
+  "additionalProperties": false,
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "description": "Unique identifier for the source document."
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Original file path (relative to var/input/)."
+    },
+    "content_md": {
+      "type": "string",
+      "description": "Full Markdown content of the converted document."
+    },
+    "stage": {
+      "type": "string",
+      "const": "converted",
+      "description": "Pipeline stage that produced this document."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Optional metadata from the conversion (page count, engine version, etc.)."
+    }
+  }
+}

@@ -15,7 +15,7 @@
         "jurisprudencia_path": {
           "type": "string",
           "description": "Caminho para os precedentes",
-          "default": "../../outputs/jurisprudencia.md"
+          "default": "../../outputs/jurisprudencia/jurisprudencia.md"
         },
         "peticao_template_path": {
           "type": "string",

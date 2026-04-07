@@ -1,0 +1,32 @@
+agent:
+  name: "law-cli"
+  version: "0.1.0"
+  description: "Gera law_pack_v1.json consultando leis no Qdrant (via scripts/index_library_qdrant.py)."
+
+runtime:
+  entrypoint: "agents/law-cli/main.py"
+  runner: "uv"
+  python: "python3"
+
+paths:
+  output_dir: "outputs/legal"
+  output_file: "outputs/legal/law_pack_v1.json"
+  logs_dir: "outputs/legal/00_logs/law-cli"
+  triage_dir: "outputs/legal/00_triage/law-cli"
+
+skills_map:
+  core: "agents/law-cli/skills/SKILL.core.md"
+
+jobs:
+  - job_id: "job_law_cli"
+    description: "Gerar law_pack_v1 a partir do processo consolidado e juntadas"
+    input_dir: "outputs/processo/01_collector"
+    file_glob: "collector_out_processo_consolidated.json"
+    output_dir: "outputs/legal"
+    script: "scripts/index_library_qdrant.py"
+    doc_kind: "lei"
+    top_k: 10
+    skill_key: "core"
+
+validation:
+  io_schema: "agents/law-cli/io.schema.json"

@@ -79,7 +79,7 @@ Before completing:
 ### Database Platform Selection (2025)
 
 | Scenario | Choice |
-| -------- | ------ |
+|----------|--------|
 | Full PostgreSQL features | Neon (serverless PG) |
 | Edge deployment, low latency | Turso (edge SQLite) |
 | AI/embeddings/vectors | PostgreSQL + pgvector |
@@ -90,7 +90,7 @@ Before completing:
 ### ORM Selection
 
 | Scenario | Choice |
-| -------- | ------ |
+|----------|--------|
 | Edge deployment | Drizzle (smallest) |
 | Best DX, schema-first | Prisma |
 | Python ecosystem | SQLAlchemy 2.0 |
@@ -99,7 +99,7 @@ Before completing:
 ### Normalization Decision
 
 | Scenario | Approach |
-| -------- | -------- |
+|----------|----------|
 | Data changes frequently | Normalize |
 | Read-heavy, rarely changes | Consider denormalizing |
 | Complex relationships | Normalize |
@@ -148,7 +148,7 @@ Before completing:
 ❌ Don't skip constraints
 ❌ Don't index everything
 
-+### Query Optimization
+### Query Optimization
 ✅ Use EXPLAIN ANALYZE before optimizing
 ✅ Create indexes for common query patterns
 ✅ Use JOINs instead of N+1 queries
