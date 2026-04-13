@@ -1,25 +1,88 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.pyd
+*.pyo
+*.so
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+pip-wheel-metadata/
 .mypy_cache/
 .ruff_cache/
-.coverage
-htmlcov/
 .pytest_cache/
-# Diretórios
-.venv
+.hypothesis/
+.tox/
+.nox/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environment / env
+.venv/
+venv/
+ENV/
+env/
 .env
+.env.*
+!.env.example
+
+# Diretórios locais
 logs/
 outputs/
 backup/
 backups/
 data/
+input/
 arq-md/
 arq-js/
 docs_iplt/
+.agent/
+.claude/
+.qwen/
+.gemini/
+.opencode/
+
 # dados locais (não versionar)
 base_juridica/
+
+# Runtime / dados processuais locais
+var/input/**
+var/output/**
+var/staging/**
+var/logs/**
+var/cache/**
+var/backups/**
+
+# manter apenas a estrutura vazia
+!var/input/.gitkeep
+!var/output/.gitkeep
+!var/staging/.gitkeep
+!var/logs/.gitkeep
+!var/cache/.gitkeep
+!var/backups/.gitkeep
+
+# artifacts: manter ignorado por segurança até inspeção
+var/artifacts/**
+!var/artifacts/.gitkeep
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs e temporários
+*.log
+*.tmp
+*.temp
+
+# Arquivos compactados locais
+*.zip
+*.7z
+*.tar
+*.gz
+*.bz2
+*.rar
