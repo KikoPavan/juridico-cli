@@ -42,11 +42,21 @@ def run(
     output: Path = typer.Option(
         Path("var/output"), "--output", "-o", help="Output directory"
     ),
+    use_nova_esteira_juridica: bool = typer.Option(
+        False,
+        "--use-nova-esteira-juridica",
+        help="Ativar a nova esteira jurídica (segmentador → curador → normalizador) no lugar do analyze heurístico",
+    ),
 ) -> None:
     """Execute the full data-processing pipeline."""
     from .orchestrator.pipeline_runner import PipelineRunner
 
-    runner = PipelineRunner(input_path=input, collector=collector, output_path=output)
+    runner = PipelineRunner(
+        input_path=input,
+        collector=collector,
+        output_path=output,
+        use_nova_esteira_juridica=use_nova_esteira_juridica,
+    )
     runner.run()
 
 

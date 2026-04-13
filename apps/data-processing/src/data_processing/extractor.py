@@ -14,25 +14,25 @@ def load_module_from_path(module_name, file_path):
 
 # Instanciar provedores agnósticos sem acoplamento a pipelines/ ou legacy
 client_mod = load_module_from_path('client_mod', os.path.join(os.getcwd(), 'packages', 'shared-llm', 'client.py'))
-DummyLLMClient = client_mod.DummyLLMClient
+LLMClientFactory = client_mod.LLMClientFactory
 
 class DataExtractorApp:
     """
     Novo orquestrador funcional V1.1 sob `apps/data-processing/`.
     Lida exclusivamente com a estrutura padronizada de `var/` para I/O.
     """
-    def __init__(self, platform_path="platform", var_dir="var"):
+    def __init__(self, platform_path="platform", var_dir="var", staging_path=None):
         self.platform_path = platform_path
         self.var_dir = var_dir
-        
+
         # Paths obrigatórios V1.1
         self.dirs = {
             "input_md": os.path.join(self.var_dir, "input", "md"),
-            "staging": os.path.join(self.var_dir, "staging"),
+            "staging": staging_path if staging_path else os.path.join(self.var_dir, "staging"),
             "output": os.path.join(self.var_dir, "output"),
             "logs": os.path.join(self.var_dir, "logs")
         }
-        
+
         for d in self.dirs.values():
             os.makedirs(d, exist_ok=True)
             
@@ -54,21 +54,28 @@ class DataExtractorApp:
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log(f"=== INICIANDO EXTRAÇÃO V1.1: {run_id} ===", run_id)
         
-        # Leitura
-        input_path = os.path.join(self.dirs["input_md"], input_filename)
-        if not os.path.exists(input_path):
-            self.log(f"[ERRO] Arquivo não encontrado: {input_path}", run_id)
+        # Leitura diretamente de staging (1:1), já limpo
+        staging_path = os.path.join(self.dirs["staging"], input_filename)
+        if not os.path.exists(staging_path):
+            self.log(f"[ERRO] Arquivo não encontrado em staging: {staging_path}", run_id)
             sys.exit(1)
             
-        with open(input_path, "r", encoding="utf-8") as f:
+        with open(staging_path, "r", encoding="utf-8") as f:
             raw_text = f.read()
 
-        # 1. Staging do arquivo pré-processado
-        staging_path = os.path.join(self.dirs["staging"], f"staged_{input_filename}")
-        with open(staging_path, "w", encoding="utf-8") as f:
-            f.write(raw_text) # Exemplo estático: aqui pode ocorrer limpeza futura
-            
-        self.log(f"Input salvo em staging: {staging_path}", run_id)
+        # Parse do Frontmatter
+        frontmatter = {}
+        if raw_text.startswith("---"):
+            parts = raw_text.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    import yaml
+                    frontmatter = yaml.safe_load(parts[1]) or {}
+                    raw_text = parts[2].strip()
+                except Exception as e:
+                    self.log(f"[AVISO] Falha ao fazer parser do frontmatter: {e}", run_id)
+                    
+        self.log(f"Lido de staging 1:1: {staging_path} | Metadados: {frontmatter}", run_id)
 
         # 2. Despachar via runtime canônico
         try:
@@ -88,7 +95,7 @@ class DataExtractorApp:
         self.log(f"Instrução carregada com sucesso (Tamanho: {len(system_prompt)} chars)", run_id)
         
         # 4. Processamento LLM Agnóstico
-        client = DummyLLMClient()
+        client = LLMClientFactory.create_client()
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": raw_text}

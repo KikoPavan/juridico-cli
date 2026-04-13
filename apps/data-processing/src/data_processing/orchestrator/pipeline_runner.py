@@ -19,6 +19,7 @@ from rich.console import Console
 
 from .contracts import PipelineResult
 from .stage_router import run_clean_stage, run_analyze_stage, run_collect_stage
+from .stage_router import run_nova_esteira_juridica_stage
 
 console = Console()
 
@@ -30,6 +31,42 @@ _COLLECTOR_CONFIGS = {
 }
 
 
+def _is_normalizador_output(md_path: Path) -> bool:
+    """
+    Verifica se um .md em staging foi gerado pelo yaml-normalizador-juridico.
+    Critérios: frontmatter contém created_by_skill == 'yaml-normalizador-juridico'.
+    """
+    try:
+        content = md_path.read_text(encoding="utf-8")
+        if not content.startswith("---"):
+            return False
+        parts = content.split("---", 2)
+        if len(parts) < 3:
+            return False
+        import yaml
+        fm = yaml.safe_load(parts[1]) or {}
+        return fm.get("created_by_skill") == "yaml-normalizador-juridico"
+    except Exception:
+        return False
+
+
+def _cleanup_staging_nova_esteira(staging: Path) -> int:
+    """
+    No ramo da nova esteira jurídica, remover do staging os .md que NÃO foram
+    gerados pelo yaml-normalizador-juridico, garantindo que o collect consuma
+    somente os artefatos normalizados.
+    Retorna número de arquivos removidos.
+    """
+    removed = 0
+    for md_file in staging.glob("*.md"):
+        if not _is_normalizador_output(md_file):
+            md_file.unlink()
+            console.print(f"  [dim]Removido do staging (não-normalizado)[/dim] {md_file.name}")
+            removed += 1
+    console.print(f"  [dim]Staging limpo: {removed} arquivo(s) não-normalizado(s) removido(s)[/dim]")
+    return removed
+
+
 class PipelineRunner:
     def __init__(
         self,
@@ -39,12 +76,14 @@ class PipelineRunner:
         *,
         skip_clean: bool = False,
         skip_analyze: bool = False,
+        use_nova_esteira_juridica: bool = False,
     ) -> None:
         self.input_path = input_path
         self.collector = collector
         self.output_path = output_path
         self.skip_clean = skip_clean
         self.skip_analyze = skip_analyze
+        self.use_nova_esteira_juridica = use_nova_esteira_juridica
 
     def run(self) -> PipelineResult:
         result = PipelineResult(
@@ -70,8 +109,31 @@ class PipelineRunner:
         else:
             staging = self.input_path
 
-        # Stage 3: analyze
-        if not self.skip_analyze:
+        # Stage 3: analyze ou nova esteira jurídica (mutualmente exclusivos)
+        if self.use_nova_esteira_juridica:
+            # Ramo da nova esteira: bypass do analyze heurístico
+            console.rule("[cyan]Stage: nova_esteira_juridica[/cyan]")
+            try:
+                gerados = run_nova_esteira_juridica_stage(
+                    input_md_path=staging,
+                    staging_path=staging,
+                )
+                if gerados == 0:
+                    console.print(
+                        "[yellow]Nenhum .md normalizado gerado pela nova esteira — "
+                        "coleta poderá não encontrar arquivos.[/yellow]"
+                    )
+                else:
+                    # Isolar staging: remover .md não-normalizados para que o
+                    # collect consuma SOMENTE os artefatos da nova esteira.
+                    _cleanup_staging_nova_esteira(staging)
+            except Exception as exc:
+                result.ok = False
+                result.errors.append(f"nova_esteira_juridica: {exc}")
+                console.print(f"[red]Nova esteira jurídica falhou: {exc}[/red]")
+                return result
+        elif not self.skip_analyze:
+            # Ramo baseline: analyze heurístico
             console.rule("[cyan]Stage: analyze[/cyan]")
             try:
                 run_analyze_stage(input_path=staging, output_path=staging)
@@ -90,7 +152,7 @@ class PipelineRunner:
             return result
 
         try:
-            run_collect_stage(collector=self.collector, config_path=config_path)
+            run_collect_stage(collector=self.collector, config_path=config_path, staging_dir=staging)
         except Exception as exc:
             result.ok = False
             result.errors.append(f"collect: {exc}")
