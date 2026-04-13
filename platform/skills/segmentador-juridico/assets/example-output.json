@@ -1,0 +1,159 @@
+{
+  "metadata": {
+    "processo_id": "0001234-12.2025.8.26.0000",
+    "total_pecas": 4,
+    "gerado_por": "segmentador-juridico",
+    "timestamp": "2026-04-08T10:30:00Z",
+    "source_file": "processo_0001234-12.2025.8.26.0000.pdf",
+    "total_pages": 42,
+    "ocr_quality": "medium",
+    "schema_version": "1.1.0"
+  },
+  "pecas": [
+    {
+      "piece_id": "peca_001",
+      "document_type": "peticao_inicial",
+      "document_type_confidence": "high",
+      "pages_start": 1,
+      "pages_end": 3,
+      "pages_total": 3,
+      "title": "Petição Inicial — Ação de Cobrança — João Silva vs. Empresa XYZ Ltda",
+      "summary": "Petição inicial de ação de cobrança movida por João Silva contra Empresa XYZ Ltda, pleiteando R$ 50.000,00 por serviços de consultoria jurídica prestados em 2024 e não pagos. Fundamenta-se nos arts. 389 e 395 do Código Civil.",
+      "impacto_sentenca_proposto": "Peça fundante da pretensão autoral. Define causa de pedir, valor da causa e pedidos. Alta relevância para aferição do mérito.",
+      "text_excerpt": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO DA 3ª VARA CÍVEL DA COMARCA DE SÃO PAULO - SP\n\nJOÃO SILVA, brasileiro, solteiro, advogado, OAB/SP 123.456...",
+      "text": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO DA 3ª VARA CÍVEL DA COMARCA DE SÃO PAULO - SP\n\nJOÃO SILVA, brasileiro, solteiro, advogado, OAB/SP 123.456, CPF 000.000.000-00, residente e domiciliado na Rua das Flores, nº 100, São Paulo/SP, CEP 01000-000, por intermédio de seus advogados que esta subscrevem (doc. 01), vem, respeitosamente, à presença de Vossa Excelência, propor a presente\n\nAÇÃO DE COBRANÇA\n\nem face de EMPRESA XYZ LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 00.000.000/0001-00, com sede na Av. Paulista, nº 1000, São Paulo/SP, CEP 01310-100, pelos fatos e fundamentos a seguir expostos.\n\nI — DOS FATOS\nO Autor celebrou contrato de prestação de serviços com a Ré em 01/03/2024, pelo valor de R$ 50.000,00.\nApesar da entrega integral dos serviços em 30/04/2024, a Ré deixou de efetuar o pagamento.\n\nII — DO DIREITO\nO inadimplemento configura infração contratual (arts. 389, 395, 396 do CC).\n\nIII — DOS PEDIDOS\nAnte o exposto, requer: a) citação da Ré; b) procedência para condenação ao pagamento de R$ 50.000,00 + correção + juros + honorários; c) custas.\nDá-se à causa o valor de R$ 50.000,00.\nSão Paulo, 15 de agosto de 2024.\nDr. Pedro Souza — OAB/SP 654.321",
+      "anchors": [
+        { "label": "cabecalho", "page": 1 },
+        { "label": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ", "page": 1 },
+        { "label": "AÇÃO DE COBRANÇA", "page": 1 },
+        { "label": "pede e espera deferimento", "page": 3 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_0001234-12.2025.8.26.0000.pdf",
+      "source_path": "/data/processos/2025/sp/processo_0001234-12.2025.8.26.0000.pdf",
+      "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
+      "process_group_id": "proc-2025-0001",
+      "origin_piece_index": 0,
+      "relevancia_estimada": 0.98,
+      "confianca_classificacao": 0.99,
+      "sinais_relevancia": ["objeto_processual", "pedido_expresso", "valor_causa", "fundamentacao_legal"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2024-08-15",
+      "autor": "Dr. Pedro Souza OAB/SP 654321"
+    },
+    {
+      "piece_id": "peca_002",
+      "document_type": "procuracao",
+      "document_type_confidence": "high",
+      "pages_start": 4,
+      "pages_end": 4,
+      "pages_total": 1,
+      "title": "Instrumento Particular de Procuração Ad Judicia — João Silva",
+      "summary": "Procuração ad judicia outorgada por João Silva ao advogado Dr. Pedro Souza (OAB/SP 654.321) para representação nos autos.",
+      "impacto_sentenca_proposto": "Documento de representação processual. Relevante para verificação da regularidade da capacidade postulatória.",
+      "text_excerpt": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO \"AD JUDICIA ET EXTRA\"\n\nOUTORGANTE: JOÃO SILVA, brasileiro, solteiro, inscrito no CPF sob nº 000.000.000-00.",
+      "text": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO \"AD JUDICIA ET EXTRA\"\n\nOUTORGANTE: JOÃO SILVA, brasileiro, solteiro, inscrito no CPF sob nº 000.000.000-00, residente e domiciliado na Rua das Flores, nº 100, São Paulo/SP.\n\nOUTORGADO: Dr. Pedro Souza, OAB/SP 654.321, com escritório na Av. Brigadeiro Faria Lima, nº 1000, São Paulo/SP.\n\nPODERES: Ad judicia et extra, com cláusula ad negotia, podendo o outorgado propor ações, contestar, recorrer e praticar todos os atos necessários ao fiel cumprimento deste mandato.\n\nSão Paulo, 10 de agosto de 2024.\nJoão Silva",
+      "anchors": [
+        { "label": "procuracao", "page": 4 },
+        { "label": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO", "page": 4 },
+        { "label": "AD JUDICIA ET EXTRA", "page": 4 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_0001234-12.2025.8.26.0000.pdf",
+      "source_path": "/data/processos/2025/sp/processo_0001234-12.2025.8.26.0000.pdf",
+      "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
+      "process_group_id": "proc-2025-0001",
+      "origin_piece_index": 1,
+      "relevancia_estimada": 0.72,
+      "confianca_classificacao": 0.95,
+      "sinais_relevancia": ["representacao_processual"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": true,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2024-08-10",
+      "autor": null
+    },
+    {
+      "piece_id": "peca_003",
+      "document_type": "despacho",
+      "document_type_confidence": "high",
+      "pages_start": 5,
+      "pages_end": 5,
+      "pages_total": 1,
+      "title": "Despacho — Recebimento da Inicial e Determinação de Citação",
+      "summary": "Despacho do juiz recebendo a petição inicial e determinando a citação da ré em 15 dias.",
+      "impacto_sentenca_proposto": "Ato decisório de impulso processual. Relevante para cômputo de prazos.",
+      "text_excerpt": "DESPACHO\n\nProcesso nº 0001234-12.2025.8.26.0000\n\nVistos. Recebo a petição inicial.",
+      "text": "DESPACHO\n\nProcesso nº 0001234-12.2025.8.26.0000\nVara: 3ª Vara Cível de São Paulo\n\nVistos.\n\nRecebo a petição inicial.\n\nCite-se a parte ré no prazo de 15 dias para apresentar contestação.\n\nIntime-se.\n\nSão Paulo, 20 de agosto de 2024.\nDr. Carlos Mendes — Juiz de Direito",
+      "anchors": [
+        { "label": "despacho", "page": 5 },
+        { "label": "DESPACHO", "page": 5 },
+        { "label": "Cite-se a parte ré", "page": 5 }
+      ],
+      "observacoes": "Página 6 em branco identificada e ignorada na delimitação desta peça.",
+      "source_file": "processo_0001234-12.2025.8.26.0000.pdf",
+      "source_path": "/data/processos/2025/sp/processo_0001234-12.2025.8.26.0000.pdf",
+      "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
+      "process_group_id": "proc-2025-0001",
+      "origin_piece_index": 2,
+      "relevancia_estimada": 0.25,
+      "confianca_classificacao": 0.92,
+      "sinais_relevancia": [],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": true
+      },
+      "data_documento": "2024-08-20",
+      "autor": "Dr. Carlos Mendes — Juiz de Direito"
+    },
+    {
+      "piece_id": "peca_004",
+      "document_type": "contestacao",
+      "document_type_confidence": "high",
+      "pages_start": 7,
+      "pages_end": 9,
+      "pages_total": 3,
+      "title": "Contestação — Empresa XYZ Ltda",
+      "summary": "Contestação da ré arguindo preliminar de inépcia e, no mérito, negando a prestação integral dos serviços.",
+      "impacto_sentenca_proposto": "Peça de resistência à pretensão autoral. A preliminar de inépcia, se acolhida, extingue o processo.",
+      "text_excerpt": "EMPRESA XYZ LTDA, já qualificada nos autos, por seus advogados que esta subscrevem (docs. 01), vem respeitosamente apresentar sua CONTESTAÇÃO",
+      "text": "EMPRESA XYZ LTDA, já qualificada nos autos, por seus advogados que esta subscrevem (docs. 01), vem respeitosamente perante este juízo apresentar sua\n\nCONTESTAÇÃO\n\nà Ação de Cobrança movida por JOÃO SILVA\n\nI — DA PRELIMINAR DE INÉPCIA\nA petição inicial não preenche os requisitos do art. 319 do CPC, carecendo de fundamentação adequada.\n\nII — DO MÉRITO\nNo mérito, a Ré alega que os serviços não foram prestados integralmente, não havendo que se falar em inadimplemento.\n\nIII — DOS PEDIDOS\nAnte o exposto, pede: a) acolhida da preliminar de inépcia; b) improcedência total; c) condenação do autor em custas e honorários.\n\nSão Paulo, 10 de setembro de 2024.\nDra. Maria Santos — OAB/SP 789.012",
+      "anchors": [
+        { "label": "contestacao", "page": 7 },
+        { "label": "CONTESTAÇÃO", "page": 7 },
+        { "label": "pede e espera deferimento", "page": 9 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_0001234-12.2025.8.26.0000.pdf",
+      "source_path": "/data/processos/2025/sp/processo_0001234-12.2025.8.26.0000.pdf",
+      "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
+      "process_group_id": "proc-2025-0001",
+      "origin_piece_index": 3,
+      "relevancia_estimada": 0.95,
+      "confianca_classificacao": 0.97,
+      "sinais_relevancia": ["contraditorio", "tese_defesa", "fundamentacao_legal", "pedido_expresso"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2024-09-10",
+      "autor": "Dra. Maria Santos OAB/SP 789012"
+    }
+  ]
+}
