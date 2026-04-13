@@ -65,3 +65,27 @@ skills:
   md-frontmatter-yaml:
     path: "platform/skills/md-frontmatter-yaml"
     profile: "local_preprocessing"
+
+  # --- segmentador-juridico: segmentação estrutural de documentos jurídicos ---
+
+  segmentador-juridico:
+    path: "platform/skills/segmentador-juridico"
+    profile: "large_context"
+    schema_ref: "platform/skills/segmentador-juridico/assets/output-schema.json"
+    validator: "platform/skills/segmentador-juridico/scripts/validate_output.py"
+
+  # --- curador-relevancia: curadoria de relevância de peças processuais ---
+
+  curador-relevancia:
+    path: "platform/skills/curador-relevancia"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/curador-relevancia/assets/schema_saida.json"
+    validator: "platform/skills/curador-relevancia/scripts/validar_saida.py"
+
+  # --- yaml-normalizador-juridico: normalização em Markdown com frontmatter YAML ---
+
+  yaml-normalizador-juridico:
+    path: "platform/skills/yaml-normalizador-juridico"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/yaml-normalizador-juridico/assets/io.schema.json"
+    validator: "platform/skills/yaml-normalizador-juridico/scripts/validate_yaml_normalizador_juridico.py"
