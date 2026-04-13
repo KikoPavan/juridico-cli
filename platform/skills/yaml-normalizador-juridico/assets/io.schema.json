@@ -1,0 +1,217 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "yaml-normalizador-juridico/io/v1.1.0",
+  "definitions": {
+    "audit_entry": {
+      "type": "object",
+      "required": ["stage", "timestamp", "action"],
+      "properties": {
+        "stage":     { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "action":    { "type": "string" },
+        "notes":     { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["label", "page"],
+      "properties": {
+        "label": { "type": "string" },
+        "page":  { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "type": "object",
+  "title": "Peça Curada Individual — Entrada do Normalizador",
+  "description": "Objeto flat extraído de pecas[i] do Envelope Curado.",
+  "required": [
+    "piece_id",
+    "document_type",
+    "acao_curatorial",
+    "modo_aplicado",
+    "justificativa_curta",
+    "impacto_processual",
+    "impacto_sentenca_confirmado",
+    "prioridade",
+    "compressao_sugerida",
+    "encaminhamento",
+    "audit_trail",
+    "text",
+    "anchors",
+    "pages_start",
+    "pages_end",
+    "source_file",
+    "source_path",
+    "source_sha256",
+    "process_group_id",
+    "origin_piece_index"
+  ],
+  "properties": {
+    "piece_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identificador único da peça"
+    },
+    "document_type": {
+      "type": "string",
+      "description": "Tipo documental atribuído pelo segmentador-juridico"
+    },
+    "acao_curatorial": {
+      "type": "string",
+      "enum": ["manter", "resumir", "remover", "revisar"],
+      "description": "Decisão curatorial do curador-relevancia"
+    },
+    "modo_aplicado": {
+      "type": "string",
+      "enum": ["padrao", "sintetico"],
+      "description": "Modo de curadoria aplicado"
+    },
+    "justificativa_curta": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Justificativa auditável da decisão curatorial"
+    },
+    "impacto_processual": {
+      "type": "string",
+      "enum": ["nuclear", "relevante", "acessorio", "irrelevante"],
+      "description": "Classificação de impacto processual"
+    },
+    "impacto_sentenca_confirmado": {
+      "type": "boolean",
+      "description": "Se true, preservação obrigatória"
+    },
+    "prioridade": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Prioridade: 1=mais alta, 5=mais baixa"
+    },
+    "compressao_sugerida": {
+      "type": ["string", "null"],
+      "enum": ["resumo_1p", "cabecalho_apenas", "metadado_apenas", null],
+      "description": "Tipo de compressão sugerida quando acao_curatorial=resumir"
+    },
+    "encaminhamento": {
+      "type": ["string", "null"],
+      "description": "skill_key destino ou null"
+    },
+    "audit_trail": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/audit_entry" },
+      "description": "Histórico de decisões — array de AuditEntry"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Texto completo da peça"
+    },
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/anchor" },
+      "description": "Âncoras de localização no documento original"
+    },
+    "pages_start": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Página inicial no PDF de origem"
+    },
+    "pages_end": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Página final no PDF de origem"
+    },
+    "source_file": {
+      "type": "string",
+      "description": "Nome do arquivo de origem"
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Caminho absoluto do arquivo de origem"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Hash SHA-256 do arquivo de origem"
+    },
+    "process_group_id": {
+      "type": "string",
+      "description": "ID do grupo processual"
+    },
+    "origin_piece_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Índice ordinal da peça no documento original"
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "Título identificador da peça"
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "description": "Resumo funcional da peça"
+    },
+    "document_date": {
+      "type": ["string", "null"],
+      "description": "Data do documento (ISO-8601 se identificável)"
+    },
+    "parties_raw": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "Partes identificadas em formato bruto"
+    },
+    "court": {
+      "type": ["string", "null"],
+      "description": "Tribunal ou vara"
+    },
+    "judge": {
+      "type": ["string", "null"],
+      "description": "Magistrado responsável"
+    }
+  },
+  "additionalProperties": true,
+
+  "$comment_output": "O output é um arquivo .md com frontmatter YAML. Os campos do frontmatter estão descritos abaixo.",
+  "output_frontmatter": {
+    "type": "object",
+    "required": [
+      "piece_id", "document_type", "skill_key", "source_file", "source_path",
+      "source_sha256", "pages_start", "pages_end", "process_group_id",
+      "origin_piece_index", "acao_curatorial", "priority", "impacto_processual",
+      "impacto_sentenca_confirmado", "review_status", "language", "created_by_skill", "status"
+    ],
+    "properties": {
+      "piece_id":             { "type": "string" },
+      "document_type":        { "type": "string" },
+      "skill_key":            { "type": "string" },
+      "source_file":          { "type": "string" },
+      "source_path":          { "type": "string" },
+      "source_sha256":        { "type": "string" },
+      "pages_start":          { "type": "integer" },
+      "pages_end":            { "type": "integer" },
+      "process_group_id":     { "type": "string" },
+      "origin_piece_index":   { "type": "integer" },
+      "acao_curatorial":      { "type": "string", "enum": ["manter", "resumir", "remover", "revisar"] },
+      "priority":             { "type": "integer", "minimum": 1, "maximum": 5 },
+      "impacto_processual":   { "type": "string", "enum": ["nuclear", "relevante", "acessorio", "irrelevante"] },
+      "impacto_sentenca_confirmado":     { "type": "boolean" },
+      "review_status":        { "type": "string", "enum": ["approved", "pending_review", "unroutable"] },
+      "language":             { "type": "string" },
+      "created_by_skill":     { "type": "string", "const": "yaml-normalizador-juridico" },
+      "status":               { "type": "string", "enum": ["ready", "needs_review", "skipped"] },
+      "title":                { "type": ["string", "null"] },
+      "document_date":        { "type": ["string", "null"] },
+      "parties_normalized":   { "type": "array", "items": { "type": "string" } },
+      "court":                { "type": ["string", "null"] },
+      "judge":                { "type": ["string", "null"] },
+      "tags":                 { "type": "array", "items": { "type": "string" } },
+      "notes":                { "type": ["string", "null"] },
+      "normalized_at":        { "type": "string", "format": "date-time" },
+      "audit_trail":          { "type": "array" }
+    }
+  }
+}

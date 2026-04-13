@@ -1,0 +1,80 @@
+{#
+  frontmatter_template.jinja2
+  ============================
+  REFERÊNCIA DOCUMENTADA — NÃO É O MOTOR DE RENDERIZAÇÃO.
+
+  A geração real do frontmatter YAML é feita via PyYAML (yaml.dump) em
+  scripts/apply_yaml_normalization.py → função render_frontmatter().
+  Isso garante escape automático e correto de strings com ':', '#',
+  caracteres acentuados e demais valores especiais do YAML 1.1/1.2.
+
+  Este arquivo documenta a estrutura lógica e a ordem dos campos para:
+    - referência humana de desenvolvedores;
+    - eventual uso em ferramentas que já façam escape próprio;
+    - geração de documentação automática do contrato de saída.
+
+  Para qualquer uso em produção: usar apply_yaml_normalization.py.
+#}
+---
+# ============================================================
+# FRONTMATTER GERADO POR: yaml-normalizador-juridico v1.0.0
+# Pipeline: juridico-cli | Etapa: normalização
+# ============================================================
+
+# --- Identificação da peça ---
+piece_id: <piece_id>
+document_type: <document_type>
+skill_key: <skill_key>                        # derivado de routing_map.yaml
+
+# --- Rastreabilidade de origem ---
+source_file: <source_file>
+source_path: <source_path>
+source_sha256: <source_sha256>
+pages_start: <integer>
+pages_end: <integer>
+process_group_id: <process_group_id>
+origin_piece_index: <integer>
+
+# --- Decisão curatorial ---
+acao_curatorial: <manter|resumir|remover|revisar>
+priority: <alta|media|baixa>
+impacto_processual: <alto|medio|baixo|nulo|indeterminado>
+impacto_sentenca_confirmado: <true|false>
+
+# --- Status de processamento ---
+review_status: <approved|pending_review|unroutable>
+status: <ready|needs_review>
+
+# --- Metadados linguísticos ---
+language: pt-BR
+
+# --- Rastreabilidade da skill ---
+created_by_skill: yaml-normalizador-juridico
+normalized_at: <ISO-8601 datetime com timezone>
+
+# --- Metadados jurídicos (opcionais) ---
+title: <string ou null>
+document_date: <YYYY-MM-DD ou null>
+parties_normalized:
+  - <NOME NORMALIZADO EM MAIÚSCULAS>
+  - ...                                       # lista vazia [] se não disponível
+court: <string ou null>
+judge: <string ou null>
+
+# --- Anotações e tags ---
+tags:
+  - <tag_automatica>                          # ver normalization_rules.md §9
+  - ...                                       # lista vazia [] se nenhuma tag
+notes: <justificativa_curta do curador ou null>
+
+# --- Trilha de auditoria (preservada + entrada desta skill) ---
+audit_trail:
+  - stage: <etapa-anterior>
+    timestamp: <ISO-8601>
+    action: <acao>
+    notes: <observacao opcional>
+  - stage: yaml-normalizador-juridico         # SEMPRE a última entrada
+    timestamp: <normalized_at>
+    action: frontmatter_gerado
+    notes: skill_key=<valor>; review_status=<valor>
+---

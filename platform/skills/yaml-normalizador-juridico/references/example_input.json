@@ -1,0 +1,48 @@
+{
+  "piece_id": "peca_001",
+  "document_type": "peticao_inicial",
+  "acao_curatorial": "manter",
+  "modo_aplicado": "padrao",
+  "justificativa_curta": "Peça fundamental — contém causa de pedir e pedidos constitutivos do processo.",
+  "impacto_processual": "nuclear",
+  "impacto_sentenca_confirmado": true,
+  "prioridade": 1,
+  "compressao_sugerida": null,
+  "encaminhamento": "extr-peticao-processo",
+  "audit_trail": [
+    {
+      "stage": "segmentador-juridico",
+      "timestamp": "2024-08-15T10:00:00Z",
+      "action": "segmento_classificado",
+      "notes": "Confiança: 0.99; tipo: peticao_inicial"
+    },
+    {
+      "stage": "curador-relevancia",
+      "timestamp": "2024-08-15T10:05:32Z",
+      "action": "decisao_curatorial_aplicada",
+      "notes": "acao=manter; impacto=nuclear; prioridade=1"
+    }
+  ],
+  "text": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO DA ___ VARA CÍVEL DA COMARCA DE SÃO PAULO\n\nJOÃO DA SILVA, brasileiro, casado, empresário, portador do CPF nº 000.000.000-00, residente e domiciliado na Rua das Flores, nº 100, Bairro Jardim América, São Paulo/SP, CEP 01000-000, por intermédio de seus advogados abaixo assinados, vem à presença de Vossa Excelência propor a presente\n\nAÇÃO DE COBRANÇA\n\nEM FACE DE\n\nEMPRESA XYZ LTDA., pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 00.000.000/0001-00, com sede na Av. Paulista, nº 1000, São Paulo/SP, CEP 01310-100, pelos fatos e fundamentos a seguir expostos.\n\nI — DOS FATOS\n\nO Autor celebrou contrato de prestação de serviços com a Ré em 01 de março de 2024, pelo valor total de R$ 50.000,00 (cinquenta mil reais), conforme instrumento anexo (doc. 01).\n\nApesar da entrega integral dos serviços contratados em 30 de abril de 2024, a Ré deixou de efetuar o pagamento na data avençada de 05 de maio de 2024.\n\nII — DO DIREITO\n\nO inadimplemento da Ré configura infração contratual, ensejando a cobrança judicial nos termos dos arts. 389, 395 e 396 do Código Civil.\n\nIII — DOS PEDIDOS\n\nAnte o exposto, requer:\na) a citação da Ré;\nb) a procedência do pedido para condenação ao pagamento de R$ 50.000,00, acrescidos de correção monetária, juros moratórios de 1% ao mês desde o vencimento e honorários advocatícios;\nc) a condenação nas custas processuais.\n\nDá-se à causa o valor de R$ 50.000,00.\n\nSão Paulo, 15 de agosto de 2024.\n\n[Assinatura]\nDr. Carlos Mendes\nOAB/SP 123.456",
+  "anchors": [
+    { "label": "cabecalho", "page": 3 },
+    { "label": "AÇÃO DE COBRANÇA", "page": 3 },
+    { "label": "pedidos", "page": 4 }
+  ],
+  "pages_start": 3,
+  "pages_end": 4,
+  "source_file": "processo_1234567-89_2024_SP.pdf",
+  "source_path": "/data/processos/2024/sp/processo_1234567-89_2024_SP.pdf",
+  "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
+  "process_group_id": "proc-2024-0042",
+  "origin_piece_index": 0,
+  "title": "Petição Inicial — Ação de Cobrança",
+  "summary": "Petição inicial de ação de cobrança pleiteando R$ 50.000,00 por serviços não pagos.",
+  "document_date": "2024-08-15",
+  "parties_raw": [
+    "João da Silva",
+    "Empresa XYZ Ltda."
+  ],
+  "court": "Vara Cível da Comarca de São Paulo",
+  "judge": null
+}

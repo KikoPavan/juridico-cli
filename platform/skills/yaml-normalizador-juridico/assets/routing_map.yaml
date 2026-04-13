@@ -1,0 +1,113 @@
+# routing_map.yaml
+# Mapa canônico entre document_type e skill_key para o pipeline juridico-cli
+# Versão: 1.0.0
+# Mantido por: yaml-normalizador-juridico
+#
+# Política de extensão:
+#   - Novos tipos documentais devem ser adicionados aqui ANTES de serem usados no pipeline.
+#   - Nunca remover tipos existentes — deprecar com flag `deprecated: true`.
+#   - Consultar field_dictionary.md para definições de cada document_type.
+
+routing:
+
+  # --- Peças postulatórias ---
+  peticao_inicial:
+    skill_key: extr-peticao-processo
+    description: "Petição inicial do processo judicial"
+    deprecated: false
+
+  contestacao:
+    skill_key: extr-contestacao-processo
+    description: "Contestação da parte ré"
+    deprecated: false
+
+  recurso:
+    skill_key: extr-recurso-processo
+    description: "Recurso de qualquer natureza (apelação, agravo, embargos)"
+    deprecated: false
+
+  # --- Decisões e provimentos ---
+  decisao_interlocutoria:
+    skill_key: extr-decisao-processo
+    description: "Decisão interlocutória do juízo"
+    deprecated: false
+
+  sentenca:
+    skill_key: extr-sentenca-processo
+    description: "Sentença de mérito ou terminativa"
+    deprecated: false
+
+  despacho:
+    skill_key: extr-decisao-processo
+    description: "Despacho judicial de mero expediente"
+    deprecated: false
+    notes: "Roteado para extr-decisao-processo por similaridade estrutural"
+
+  # --- Documentos de representação ---
+  mandato:
+    skill_key: extr-mandato-processo
+    description: "Mandato judicial ou instrumento de mandato"
+    deprecated: false
+
+  procuracao:
+    skill_key: extr-procuracao
+    description: "Procuração pública ou particular"
+    deprecated: false
+
+  # --- Metadados processuais ---
+  cabecalho_processo:
+    skill_key: extr-cabecalho-processo
+    description: "Cabeçalho ou capa do processo com dados de identificação"
+    deprecated: false
+
+  capa_processo:
+    skill_key: extr-cabecalho-processo
+    description: "Variante de nomenclatura para cabeçalho/capa"
+    deprecated: false
+    notes: "Alias de cabecalho_processo"
+
+  # --- Documentos técnicos ---
+  laudo_pericial:
+    skill_key: extr-laudo-pericial
+    description: "Laudo de perícia técnica ou médica"
+    deprecated: false
+
+  # --- Documentos financeiros ---
+  contrato:
+    skill_key: extr-contrato-processo
+    description: "Contratos juntados como prova documental"
+    deprecated: false
+
+  nota_fiscal:
+    skill_key: extr-documento-financeiro
+    description: "Nota fiscal ou documento fiscal"
+    deprecated: false
+
+  boleto:
+    skill_key: extr-documento-financeiro
+    description: "Boleto bancário ou comprovante de pagamento"
+    deprecated: false
+
+  # --- Atos de comunicação ---
+  citacao:
+    skill_key: extr-ato-comunicacao
+    description: "Mandado de citação"
+    deprecated: false
+
+  intimacao:
+    skill_key: extr-ato-comunicacao
+    description: "Mandado ou carta de intimação"
+    deprecated: false
+
+  # --- Fallback ---
+  nao_classificado:
+    skill_key: REVISAR_MANUAL
+    description: "Tipo não identificado — requer triagem manual"
+    deprecated: false
+    review_status: unroutable
+
+# Fallback global: qualquer document_type não listado acima
+fallback:
+  skill_key: REVISAR_MANUAL
+  review_status: unroutable
+  notes: "document_type não mapeado — adicionar entrada em routing_map.yaml"
