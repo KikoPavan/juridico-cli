@@ -61,8 +61,8 @@ Toda capacidade canônica do sistema deve ser modelada como skill.
 
 ### 2.2. Separação entre módulo funcional e skill
 
-`apps/` define o fluxo funcional por domínio.
-`platform/skills/` define capacidades reutilizáveis.
+`apps/` define o fluxo funcional por domínio.  
+`platform/skills/` define capacidades reutilizáveis.  
 `platform/skill-runtime/` executa e resolve essas capacidades.
 
 ### 2.3. Runtime centralizado
@@ -507,7 +507,23 @@ O projeto deve ser interpretado a partir de:
 - Docker e serviços locais como infraestrutura obrigatória;
 - legado explicitamente separado do caminho arquitetural vigente.
 
-```
+---
 
-O próximo ajuste certo é fazer o **estado real implantado** refletir essa arquitetura, sem contaminar este documento.
-```
+## 18. Componentes estruturais obrigatórios da arquitetura-alvo
+
+Mem0, TurboQuant, RLM e a execução local de LLMs compõem o desenho-alvo obrigatório do `juridico-cli`.
+
+Esses componentes não devem ser tratados como capacidades opcionais, extensões periféricas ou adições descartáveis do projeto.
+
+### Papel de cada componente na arquitetura-alvo
+
+- **Mem0**: camada de memória contextual e persistência de conhecimento operacional.
+- **TurboQuant**: camada de eficiência e viabilidade operacional para processamento contextual e uso de modelos locais.
+- **RLM**: camada de inferência recursiva, refinamento e coordenação de raciocínio.
+- **LLMs locais**: capacidade estrutural de execução local, necessária para compor a arquitetura híbrida do projeto ao lado do uso de provedores via API.
+
+### Regra arquitetural
+
+No documento mestre, esses componentes devem ser lidos exclusivamente como partes obrigatórias da arquitetura-alvo.
+
+Cronograma, ordem de implantação, fechamento de bloco, validação operacional, prioridades e estado real de implementação pertencem a documentos separados e não devem ser definidos aqui.
