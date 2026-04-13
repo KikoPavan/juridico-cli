@@ -64,6 +64,9 @@ var/backups/**
 !var/logs/.gitkeep
 !var/cache/.gitkeep
 !var/backups/.gitkeep
+!var/input/json/.gitkeep
+!var/input/md/.gitkeep
+!var/input/raw/.gitkeep
 
 # artifacts: manter ignorado por segurança até inspeção
 var/artifacts/**

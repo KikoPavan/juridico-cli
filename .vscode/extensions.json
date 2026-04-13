@@ -5,6 +5,8 @@
     "tamasfe.even-better-toml",
     "redhat.vscode-yaml",
     "mikestead.dotenv",
-    "tomoki1207.pdf"
+    "tomoki1207.pdf",
+    "sst-dev.opencode",
+    "google.colab"
   ]
 }
