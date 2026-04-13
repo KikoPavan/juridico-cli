@@ -1,0 +1,156 @@
+{
+  "metadata": {
+    "processo_id": "1001234-56.2023.8.26.0100",
+    "total_pecas": 4,
+    "gerado_por": "segmentador-juridico",
+    "timestamp": "2024-11-15T14:22:00Z",
+    "source_file": "processo_1001234.pdf",
+    "total_pages": 50,
+    "ocr_quality": "high",
+    "schema_version": "1.1.0"
+  },
+  "pecas": [
+    {
+      "piece_id": "peca_001",
+      "document_type": "peticao_inicial",
+      "document_type_confidence": "high",
+      "pages_start": 1,
+      "pages_end": 18,
+      "pages_total": 18,
+      "title": "Petição Inicial — Ação de Cobrança",
+      "summary": "Petição inicial de ação de cobrança...",
+      "impacto_sentenca_proposto": "Peça fundante da pretensão autoral.",
+      "text_excerpt": "EXMO. SR. DR. JUIZ DE DIREITO DA VARA CÍVEL...",
+      "text": "EXMO. SR. DR. JUIZ DE DIREITO DA VARA CÍVEL DA COMARCA DE SÃO PAULO. EMPRESA ALPHA LTDA, pessoa jurídica de direito privado...",
+      "anchors": [
+        { "label": "cabecalho", "page": 1 },
+        { "label": "PETIÇÃO INICIAL", "page": 1 },
+        { "label": "pede deferimento", "page": 18 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_1001234.pdf",
+      "source_path": "/data/processos/2023/sp/processo_1001234.pdf",
+      "source_sha256": "b4f6e3d2c1a0b9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4",
+      "process_group_id": "proc-2023-0010",
+      "origin_piece_index": 0,
+      "relevancia_estimada": 0.98,
+      "confianca_classificacao": 0.99,
+      "sinais_relevancia": ["objeto_processual", "pedido_expresso", "valor_causa", "fundamentacao_legal"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2023-03-10",
+      "autor": "Dr. João Silva OAB/SP 123456"
+    },
+    {
+      "piece_id": "peca_002",
+      "document_type": "procuracao",
+      "document_type_confidence": "high",
+      "pages_start": 19,
+      "pages_end": 20,
+      "pages_total": 2,
+      "title": "Procuração Ad Judicia",
+      "summary": "Procuração outorgada...",
+      "impacto_sentenca_proposto": "Documento de representação processual.",
+      "text_excerpt": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO...",
+      "text": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO. Outorgante: EMPRESA ALPHA LTDA...",
+      "anchors": [
+        { "label": "procuracao", "page": 19 },
+        { "label": "INSTRUMENTO PARTICULAR DE PROCURAÇÃO", "page": 19 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_1001234.pdf",
+      "source_path": "/data/processos/2023/sp/processo_1001234.pdf",
+      "source_sha256": "b4f6e3d2c1a0b9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4",
+      "process_group_id": "proc-2023-0010",
+      "origin_piece_index": 1,
+      "relevancia_estimada": 0.72,
+      "confianca_classificacao": 0.95,
+      "sinais_relevancia": ["representacao_processual"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": true,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2023-03-08",
+      "autor": null
+    },
+    {
+      "piece_id": "peca_003",
+      "document_type": "despacho",
+      "document_type_confidence": "high",
+      "pages_start": 36,
+      "pages_end": 36,
+      "pages_total": 1,
+      "title": "Despacho — Citação",
+      "summary": "Despacho determinando citação.",
+      "impacto_sentenca_proposto": "Ato de impulso processual.",
+      "text_excerpt": "Cite-se. Prazo de 15 dias. Int.",
+      "text": "Cite-se. Prazo de 15 dias para contestação. Intime-se. São Paulo, 02/04/2023. MM. Juiz Dr. Carlos Ferreira.",
+      "anchors": [
+        { "label": "despacho", "page": 36 },
+        { "label": "Cite-se", "page": 36 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_1001234.pdf",
+      "source_path": "/data/processos/2023/sp/processo_1001234.pdf",
+      "source_sha256": "b4f6e3d2c1a0b9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4",
+      "process_group_id": "proc-2023-0010",
+      "origin_piece_index": 2,
+      "relevancia_estimada": 0.25,
+      "confianca_classificacao": 0.92,
+      "sinais_relevancia": [],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": true
+      },
+      "data_documento": "2023-04-02",
+      "autor": "MM. Juiz Dr. Carlos Ferreira"
+    },
+    {
+      "piece_id": "peca_004",
+      "document_type": "contestacao",
+      "document_type_confidence": "high",
+      "pages_start": 37,
+      "pages_end": 62,
+      "pages_total": 26,
+      "title": "Contestação — Ré Empresa Beta",
+      "summary": "Contestação com preliminar de inépcia e mérito...",
+      "impacto_sentenca_proposto": "Peça nuclear do contraditório.",
+      "text_excerpt": "CONTESTAÇÃO. A ré EMPRESA BETA S.A...",
+      "text": "CONTESTAÇÃO. A ré EMPRESA BETA S.A., devidamente qualificada, vem contestar a presente ação...",
+      "anchors": [
+        { "label": "contestacao", "page": 37 },
+        { "label": "CONTESTAÇÃO", "page": 37 },
+        { "label": "pede deferimento", "page": 62 }
+      ],
+      "observacoes": null,
+      "source_file": "processo_1001234.pdf",
+      "source_path": "/data/processos/2023/sp/processo_1001234.pdf",
+      "source_sha256": "b4f6e3d2c1a0b9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4",
+      "process_group_id": "proc-2023-0010",
+      "origin_piece_index": 3,
+      "relevancia_estimada": 0.95,
+      "confianca_classificacao": 0.97,
+      "sinais_relevancia": ["contraditorio", "tese_defesa", "fundamentacao_legal", "pedido_expresso"],
+      "flags": {
+        "prova_documental": false,
+        "decisao_judicial": false,
+        "representacao_processual": false,
+        "duplicata_suspeita": false,
+        "prazo_expirado": false
+      },
+      "data_documento": "2023-05-20",
+      "autor": "Dra. Maria Souza OAB/SP 654321"
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "curador-relevancia/saida/v1.1.0",
+  "title": "Envelope Curado — Saída do Curador de Relevância",
+  "description": "Envelope de Processo enriquecido com curadoria — artefato canônico de rastreabilidade",
+  "type": "object",
+  "required": ["metadata", "pecas"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Metadata original do segmentador preservado integralmente + campos enriquecidos pelo curador.",
+      "properties": {
+        "processo_id": { "type": "string" },
+        "total_pecas": { "type": "integer" },
+        "gerado_por": { "type": "string", "description": "Preservado: 'segmentador-juridico'" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "source_file": { "type": "string" },
+        "total_pages": { "type": ["integer", "null"] },
+        "ocr_quality": { "type": "string", "enum": ["high", "medium", "low", "unknown"] },
+        "schema_version": { "type": "string" },
+        "modo_curadoria": { "type": "string", "enum": ["padrao", "sintetico"], "description": "Modo solicitado" },
+        "modo_aplicado": { "type": "string", "enum": ["padrao", "sintetico"], "description": "Adicionado pelo curador" },
+        "duracao_ms": { "type": ["integer", "null"], "description": "Adicionado pelo curador" },
+        "versao_schema": { "type": "string", "description": "Adicionado pelo curador" },
+        "gerado_por_curador": { "type": "string", "const": "curador-relevancia", "description": "Adicionado pelo curador" }
+      }
+    },
+    "pecas": {
+      "type": "array",
+      "description": "Lista de peças — cada uma com campos herdados do segmentador + campos curatoriais.",
+      "items": {
+        "type": "object",
+        "required": [
+          "piece_id",
+          "document_type",
+          "acao_curatorial",
+          "justificativa_curta",
+          "impacto_processual",
+          "impacto_sentenca_confirmado",
+          "prioridade",
+          "compressao_sugerida",
+          "encaminhamento",
+          "audit_trail"
+        ],
+        "properties": {
+          "piece_id": { "type": "string" },
+          "document_type": { "type": ["string", "null"] },
+          "document_type_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "pages_start": { "type": ["integer", "null"] },
+          "pages_end": { "type": ["integer", "null"] },
+          "pages_total": { "type": ["integer", "null"] },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "impacto_sentenca_proposto": { "type": ["string", "null"] },
+          "text_excerpt": { "type": "string" },
+          "text": { "type": "string" },
+          "anchors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "page": { "type": "integer", "minimum": 1 }
+              }
+            }
+          },
+          "observacoes": { "type": ["string", "null"] },
+          "source_file": { "type": "string" },
+          "source_path": { "type": "string" },
+          "source_sha256": { "type": "string" },
+          "process_group_id": { "type": "string" },
+          "origin_piece_index": { "type": "integer" },
+          "relevancia_estimada": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "confianca_classificacao": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "sinais_relevancia": { "type": "array", "items": { "type": "string" } },
+          "flags": { "type": "object" },
+          "data_documento": { "type": ["string", "null"] },
+          "autor": { "type": ["string", "null"] },
+          "acao_curatorial": {
+            "type": "string",
+            "enum": ["manter", "resumir", "remover", "revisar"],
+            "description": "Decisão curatorial"
+          },
+          "justificativa_curta": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Justificativa auditável (obrigatória)"
+          },
+          "impacto_processual": {
+            "type": "string",
+            "enum": ["nuclear", "relevante", "acessorio", "irrelevante"],
+            "description": "Classificação do curador"
+          },
+          "impacto_sentenca_confirmado": {
+            "type": "boolean",
+            "description": "Se true, preservação obrigatória"
+          },
+          "prioridade": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "1 = mais alta"
+          },
+          "compressao_sugerida": {
+            "type": ["string", "null"],
+            "enum": ["resumo_1p", "cabecalho_apenas", "metadado_apenas", null]
+          },
+          "encaminhamento": {
+            "type": ["string", "null"],
+            "description": "skill_key destino ou null"
+          },
+          "modo_aplicado": {
+            "type": "string",
+            "enum": ["padrao", "sintetico"]
+          },
+          "audit_trail": {
+            "type": "array",
+            "description": "Histórico de decisões — array de AuditEntry. Cada skill acrescenta entrada.",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["stage", "timestamp", "action"],
+              "additionalProperties": false,
+              "properties": {
+                "stage": {
+                  "type": "string",
+                  "description": "Nome da skill: 'segmentador-juridico' | 'curador-relevancia' | 'yaml-normalizador-juridico'"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "action": {
+                  "type": "string",
+                  "description": "Ação executada"
+                },
+                "notes": {
+                  "type": ["string", "null"],
+                  "description": "Detalhes opcionais"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

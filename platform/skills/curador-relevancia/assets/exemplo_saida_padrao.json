@@ -1,0 +1,224 @@
+{
+  "metadata": {
+    "processo_id": "1001234-56.2023.8.26.0100",
+    "modo_aplicado": "padrao",
+    "timestamp": "2026-04-09T12:02:06.120081Z",
+    "versao_schema": "1.0.0",
+    "gerado_por": "curador-relevancia",
+    "duracao_ms": 0
+  },
+  "curadoria": [
+    {
+      "piece_id": "peca_001",
+      "document_type": "peticao_inicial",
+      "acao_curatorial": "manter",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Impacto na sentença confirmado; tipo=peticao_inicial preservado obrigatoriamente.",
+      "impacto_processual": "nuclear",
+      "impacto_sentenca_confirmado": true,
+      "prioridade": 1,
+      "compressao_sugerida": null,
+      "encaminhamento": "extr-pedidos",
+      "audit_trail": {
+        "regra_aplicada": "R01_nuclear_sentenca_confirmado",
+        "gatilhos": [
+          "impacto_sentenca_confirmado=true"
+        ],
+        "relevancia_entrada": 0.98,
+        "confianca_entrada": 0.99,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.119970Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_002",
+      "document_type": "procuracao",
+      "acao_curatorial": "manter",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Representação processual protegida; documento essencial ao processo.",
+      "impacto_processual": "relevante",
+      "impacto_sentenca_confirmado": false,
+      "prioridade": 2,
+      "compressao_sugerida": null,
+      "encaminhamento": "extr-partes",
+      "audit_trail": {
+        "regra_aplicada": "R05_representacao_processual_protegida",
+        "gatilhos": [
+          "flag.representacao_processual=true"
+        ],
+        "relevancia_entrada": 0.72,
+        "confianca_entrada": 0.95,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.119994Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_003",
+      "document_type": "documento_prova",
+      "acao_curatorial": "manter",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Impacto na sentença confirmado; tipo=documento_prova preservado obrigatoriamente.",
+      "impacto_processual": "nuclear",
+      "impacto_sentenca_confirmado": true,
+      "prioridade": 1,
+      "compressao_sugerida": null,
+      "encaminhamento": "extr-prova",
+      "audit_trail": {
+        "regra_aplicada": "R01_nuclear_sentenca_confirmado",
+        "gatilhos": [
+          "impacto_sentenca_confirmado=true"
+        ],
+        "relevancia_entrada": 0.85,
+        "confianca_entrada": 0.88,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.120008Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_004",
+      "document_type": "despacho",
+      "acao_curatorial": "remover",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Despacho de expediente com prazo expirado; relevância 0.25 — descarte justificado.",
+      "impacto_processual": "irrelevante",
+      "impacto_sentenca_confirmado": false,
+      "prioridade": 5,
+      "compressao_sugerida": null,
+      "encaminhamento": null,
+      "audit_trail": {
+        "regra_aplicada": "R08_despacho_expediente_prazo_expirado",
+        "gatilhos": [
+          "document_type=despacho",
+          "relevancia<0.3",
+          "flag.prazo_expirado=true"
+        ],
+        "relevancia_entrada": 0.25,
+        "confianca_entrada": 0.92,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.120014Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_005",
+      "document_type": "contestacao",
+      "acao_curatorial": "manter",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Impacto na sentença confirmado; tipo=contestacao preservado obrigatoriamente.",
+      "impacto_processual": "nuclear",
+      "impacto_sentenca_confirmado": true,
+      "prioridade": 1,
+      "compressao_sugerida": null,
+      "encaminhamento": "extr-pedidos",
+      "audit_trail": {
+        "regra_aplicada": "R01_nuclear_sentenca_confirmado",
+        "gatilhos": [
+          "impacto_sentenca_confirmado=true"
+        ],
+        "relevancia_entrada": 0.95,
+        "confianca_entrada": 0.97,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.120038Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_006",
+      "document_type": "certidao",
+      "acao_curatorial": "remover",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Certidão de prazo expirado; relevância 0.18 abaixo do limiar — descarte justificado.",
+      "impacto_processual": "irrelevante",
+      "impacto_sentenca_confirmado": false,
+      "prioridade": 5,
+      "compressao_sugerida": null,
+      "encaminhamento": null,
+      "audit_trail": {
+        "regra_aplicada": "R09_certidao_prazo_irrelevante",
+        "gatilhos": [
+          "document_type=certidao",
+          "relevancia<0.3",
+          "flag.prazo_expirado=true"
+        ],
+        "relevancia_entrada": 0.18,
+        "confianca_entrada": 0.9,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.120044Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_007",
+      "document_type": "laudo_pericial",
+      "acao_curatorial": "manter",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Impacto na sentença confirmado; tipo=laudo_pericial preservado obrigatoriamente.",
+      "impacto_processual": "nuclear",
+      "impacto_sentenca_confirmado": true,
+      "prioridade": 1,
+      "compressao_sugerida": null,
+      "encaminhamento": "extr-decisao",
+      "audit_trail": {
+        "regra_aplicada": "R01_nuclear_sentenca_confirmado",
+        "gatilhos": [
+          "impacto_sentenca_confirmado=true"
+        ],
+        "relevancia_entrada": 0.91,
+        "confianca_entrada": 0.94,
+        "override_aplicado": false,
+        "override_motivo": null,
+        "timestamp": "2026-04-09T12:02:06.120054Z",
+        "erro": null
+      }
+    },
+    {
+      "piece_id": "peca_008",
+      "document_type": null,
+      "acao_curatorial": "revisar",
+      "modo_aplicado": "padrao",
+      "justificativa_curta": "Classificação incerta (confiança=0.38); escalado para revisão humana.",
+      "impacto_processual": "acessorio",
+      "impacto_sentenca_confirmado": false,
+      "prioridade": 3,
+      "compressao_sugerida": null,
+      "encaminhamento": null,
+      "audit_trail": {
+        "regra_aplicada": "R03_fallback_baixa_confianca",
+        "gatilhos": [
+          "document_type=null"
+        ],
+        "relevancia_entrada": 0.45,
+        "confianca_entrada": 0.38,
+        "override_aplicado": true,
+        "override_motivo": "Confiança abaixo do limiar de segurança — revisão humana obrigatória",
+        "timestamp": "2026-04-09T12:02:06.120059Z",
+        "erro": null
+      }
+    }
+  ],
+  "sumario": {
+    "total_entrada": 8,
+    "total_manter": 5,
+    "total_resumir": 0,
+    "total_remover": 2,
+    "total_revisar": 1,
+    "taxa_retencao": 0.625,
+    "pecas_nucleares": 4,
+    "alertas": [
+      {
+        "nivel": "aviso",
+        "mensagem": "Peça peca_008 marcada para revisão humana: Classificação incerta (confiança=0.38); escalado para revisão humana.",
+        "piece_id": "peca_008"
+      }
+    ]
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "curador-relevancia/entrada/v1.1.0",
+  "title": "Entrada do Curador de Relevância",
+  "description": "Envelope de Processo — saída do segmentador-jurídico, consumida pelo curador-relevancia",
+  "type": "object",
+  "required": ["metadata", "pecas"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Metadados do envelope de processo (preservados pelo curador).",
+      "required": ["processo_id", "total_pecas", "gerado_por", "timestamp", "source_file", "total_pages", "schema_version"],
+      "properties": {
+        "processo_id": {
+          "type": "string",
+          "description": "Identificador único do processo."
+        },
+        "total_pecas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gerado_por": {
+          "type": "string",
+          "description": "Skill que gerou o envelope (deve ser 'segmentador-juridico')."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source_file": {
+          "type": "string",
+          "description": "Nome do arquivo de origem."
+        },
+        "total_pages": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "ocr_quality": {
+          "type": "string",
+          "enum": ["high", "medium", "low", "unknown"]
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      }
+    },
+    "pecas": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Lista de peças segmentadas, com todos os campos produzidos pelo segmentador.",
+      "items": {
+        "type": "object",
+        "required": ["piece_id", "document_type", "relevancia_estimada"],
+        "properties": {
+          "piece_id": {
+            "type": "string",
+            "pattern": "^peca_\\d{3}([a-z])?$"
+          },
+          "document_type": {
+            "type": ["string", "null"],
+            "examples": [
+              "peticao_inicial", "contestacao", "sentenca", "acordao",
+              "despacho", "laudo_pericial", "procuracao", "certidao",
+              "recurso", "contrato", "decisao_interlocutoria", "nao_classificado"
+            ]
+          },
+          "document_type_confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "pages_start": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Página de início da peça."
+          },
+          "pages_end": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Página de fim da peça."
+          },
+          "pages_total": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Total de páginas da peça."
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "impacto_sentenca_proposto": {
+            "type": ["string", "null"]
+          },
+          "text_excerpt": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Texto completo da peça."
+          },
+          "anchors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "page"],
+              "properties": {
+                "label": { "type": "string" },
+                "page": { "type": "integer", "minimum": 1 }
+              }
+            }
+          },
+          "observacoes": {
+            "type": ["string", "null"]
+          },
+          "relevancia_estimada": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Score de relevância estimado pelo segmentador (0.0–1.0)."
+          },
+          "confianca_classificacao": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "impacto_processual": {
+            "type": ["string", "null"],
+            "enum": ["nuclear", "relevante", "acessorio", "irrelevante", null]
+          },
+          "impacto_sentenca_confirmado": {
+            "type": "boolean",
+            "default": false
+          },
+          "sinais_relevancia": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "flags": {
+            "type": "object",
+            "properties": {
+              "prova_documental": { "type": "boolean", "default": false },
+              "decisao_judicial": { "type": "boolean", "default": false },
+              "representacao_processual": { "type": "boolean", "default": false },
+              "duplicata_suspeita": { "type": "boolean", "default": false },
+              "prazo_expirado": { "type": "boolean", "default": false }
+            }
+          },
+          "source_file": { "type": "string" },
+          "source_path": { "type": "string" },
+          "source_sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "process_group_id": { "type": "string" },
+          "origin_piece_index": { "type": "integer", "minimum": 0 },
+          "texto_preview": {
+            "type": ["string", "null"],
+            "maxLength": 500,
+            "description": "Alias de text_excerpt para compatibilidade."
+          },
+          "data_documento": {
+            "type": ["string", "null"],
+            "format": "date"
+          },
+          "autor": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  }
+}
