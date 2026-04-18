@@ -1,16 +1,12 @@
 # infra/docker/docker-compose.yml
 # Stack local canônica — juridico-cli
 # Ambiente: Docker Desktop (Windows + WSL2)
-# Serviços: Qdrant (vector store) + llama.cpp (LLM local)
+# Serviços: Qdrant
 #
-# Gemini é consumido via API remota — não há serviço Docker para ele.
-# Configure GEMINI_API_KEY em infra/env/.env (não commitar).
+# LLM local: LM Studio no host (fora do Docker)
+# A escolha do modelo ficará fora do compose.
 #
-# Perfis Docker Compose:
-#   (padrão)      — sobe apenas Qdrant
-#   --profile local-llm — sobe Qdrant + llama.cpp (requer LLAMA_MODELS_PATH e .gguf)
-#
-# Referência: docs/architecture/juridico_cli_arquitetura_consolidada_corrigida_v2.md
+# Gemini continua remoto via API.
 
 services:
   qdrant:
@@ -24,28 +20,10 @@ services:
       - ../qdrant/config.yaml:/qdrant/config/production.yaml:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/6333"]
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/localhost/6333" ]
       interval: 30s
       timeout: 5s
       retries: 3
-
-  llama-cpp:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    container_name: juridico-llama-cpp
-    profiles:
-      - local-llm
-    ports:
-      - "8080:8080"
-    volumes:
-      - ${LLAMA_MODELS_PATH:-/tmp/models-placeholder}:/models:ro
-    command: >
-      --model /models/${LLAMA_MODEL_FILE:-llama-3.2-3b-instruct.gguf}
-      --host 0.0.0.0
-      --port 8080
-      --ctx-size 4096
-      --n-predict 2048
-      --log-disable
-    restart: unless-stopped
 
 volumes:
   qdrant_storage:

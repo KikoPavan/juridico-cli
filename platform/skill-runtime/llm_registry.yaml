@@ -10,22 +10,18 @@ execution_classes:
     deployment: external_api
     description: "Gemini via API remota — backend oficial para tarefas jurídicas"
     models:
-      - id: "gemini-2.5-flash"
+      - id: "gemini-3-flash-preview"
         context_window: 1000000
         supports_native_json: true
-        use_for: [fast_extraction, large_context]
-      - id: "gemini-2.5-pro"
-        context_window: 1000000
-        supports_native_json: true
-        use_for: [high_reasoning, complex_analysis]
+        use_for: [fast_extraction, large_context, high_reasoning, complex_analysis]
 
-  llama_cpp_local:
-    provider: llama_cpp
+  lm_studio_local:
+    provider: lm_studio
     mode: local
-    deployment: docker
-    description: "llama.cpp dentro do Docker — execução local sem custo de API"
+    deployment: host
+    description: "LM Studio no host — execução local sem custo de API"
     models:
-      - id: "llama-3.2-3b-instruct"
+      - id: "qwen2.5-1.5b-instruct"
         context_window: 128000
         supports_native_json: false
         use_for: [pre_processing, chunking, metadata, routing]
@@ -34,22 +30,22 @@ profiles:
   high_reasoning:
     description: "Tarefas jurídicas complexas (contratos sociais, contestações, FIRAC)"
     execution_class: gemini_api
-    model: "gemini-2.5-pro"
+    model: "gemini-3-flash-preview"
 
   fast_extraction:
     description: "Extrações padronizadas e curtas (cabeçalhos, metadados)"
     execution_class: gemini_api
-    model: "gemini-2.5-flash"
+    model: "gemini-3-flash-preview"
 
   large_context:
     description: "Análise de documentos integrais (petições, lotes de autos)"
     execution_class: gemini_api
-    model: "gemini-2.5-flash"
+    model: "gemini-3-flash-preview"
 
   local_preprocessing:
     description: "Pré-processamento, chunking e roteamento sem custo de API"
-    execution_class: llama_cpp_local
-    model: "llama-3.2-3b-instruct"
+    execution_class: lm_studio_local
+    model: "qwen2.5-1.5b-instruct"
 
-fallback_model: "gemini-2.5-flash"
+fallback_model: "gemini-3-flash-preview"
 fallback_execution_class: gemini_api
