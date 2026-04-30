@@ -45,6 +45,9 @@ docs_iplt/
 .qwen/
 .gemini/
 .opencode/
+_bmad/
+.reversa/
+_reversa_sdd/
 
 # dados locais (não versionar)
 base_juridica/
@@ -89,3 +92,4 @@ Desktop.ini
 *.gz
 *.bz2
 *.rar
+_bmad-output/
