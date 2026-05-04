@@ -1,4 +1,0 @@
-total 12
-drwxr-xr-x 2 kiko kiko 4096 Jan 18 09:44 .
-drwxr-xr-x 5 kiko kiko 4096 Jan 23 16:10 ..
--rw-r--r-- 1 kiko kiko 2672 Dec  9 14:37 collector_out_processo_consolidado_v1.json

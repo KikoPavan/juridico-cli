@@ -1,7 +1,0 @@
-agents/case-law-cli/config.yaml
-agents/collector-cad_obr/config.yaml
-agents/collector-proc/config.yaml
-agents/compliance-cli/config.yaml
-agents/evidence-agent/config.yaml
-agents/firac-cli/config.yaml
-agents/petition-cli/config.yaml

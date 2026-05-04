@@ -1,5 +1,0 @@
-storage:
-  storage_path: /home/kiko/devops/juridico-cli/artifacts/qdrant/storage
-service:
-  host: 127.0.0.1
-  http_port: 6333

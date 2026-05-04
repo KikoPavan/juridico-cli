@@ -1,9 +1,0 @@
-total 52
-drwxr-xr-x  5 kiko kiko  4096 Jan 23 16:10 .
-drwxr-xr-x 31 kiko kiko  4096 Jan 30 19:44 ..
--rw-r--r--  1 kiko kiko     0 Nov  2 10:05 .gitkeep
-drwxr-xr-x  7 kiko kiko  4096 Jan 26 11:38 cad_obr
--rw-r--r--  1 kiko kiko   609 Dec 11 16:12 cadeia_obrigacoes.json
-drwxr-xr-x  2 kiko kiko  4096 Dec 11 14:09 juntada
-drwxr-xr-x  2 kiko kiko  4096 Jan 18 09:44 processo
--rw-r--r--  1 kiko kiko 24974 Dec 11 16:17 reconciler_relatorio.md

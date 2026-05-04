@@ -1,2 +1,0 @@
--rw-r--r-- 1 kiko kiko 6930 Nov 26 10:04 data/context.json
--rw-r--r-- 1 kiko kiko 4547 Nov 29 15:56 data/contexto_relacoes.json
