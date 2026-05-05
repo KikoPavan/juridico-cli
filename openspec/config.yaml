@@ -1,20 +1,124 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Projeto: juridico-cli.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Finalidade:
+  Monorepo Python para processamento documental e jurídico com arquitetura skill-centric.
+
+  Arquitetura canônica:
+  - apps/ define módulos funcionais.
+  - platform/skills/ define skills canônicas do runtime do juridico-cli.
+  - platform/skill-runtime/ define o runtime canônico de execução das skills.
+  - packages/ contém componentes compartilhados.
+  - infra/ contém infraestrutura local.
+  - var/ contém dados operacionais de runtime.
+
+  Regra central:
+  - Módulo funcional não é skill.
+  - Skill é capacidade reutilizável.
+  - Módulo funcional é fluxo implantável que usa skills.
+  - As pastas locais de agentes não fazem parte da arquitetura canônica do sistema.
+
+  Módulo operacional atual:
+  - apps/data-processing/ é o baseline operacional transitório.
+
+  Módulos funcionais previstos:
+  - apps/document-processing/
+  - apps/process-processing/
+  - apps/legal-knowledge/
+
+  Runtime canônico:
+  - platform/skill-runtime/skill_dispatcher.py
+  - platform/skill-runtime/bundle_loader.py
+  - platform/skill-runtime/skill_registry.yaml
+  - platform/skill-runtime/llm_registry.yaml
+
+  Skills canônicas do sistema:
+  - platform/skills/
+
+  OpenSpec:
+  - openspec/ controla mudanças, propostas, specs e tarefas.
+  - openspec/changes/ contém mudanças em andamento.
+  - openspec/specs/ contém especificações consolidadas.
+  - openspec/config.yaml contém apenas contexto e regras globais.
+  - OpenSpec não substitui a documentação do projeto.
+
+  Documentos oficiais do projeto:
+  - docs/architecture/juridico_cli_documento_mestre.md
+  - docs/runbooks/runbook_operacional_minimo.md
+  - docs/reference/project_version_matrix.md
+
+  Função dos documentos:
+  - Documento Mestre: arquitetura-alvo canônica.
+  - Runbook Operacional Mínimo: estado operacional atual e instruções mínimas.
+  - Matriz de Versões: versões de ferramentas, CLIs, extensões, runtimes e modelos.
+
+  Regras sobre documentação:
+  - Documentos completos do projeto ficam em docs/.
+  - Specs formais do OpenSpec ficam em openspec/specs/.
+  - Changes em andamento ficam em openspec/changes/.
+  - Não colocar documentação histórica, BMAD, agentes antigos ou arquivos de implantação legados dentro de docs/ sem decisão explícita.
+
+  Stack operacional atual:
+  - Gemini via API.
+  - LM Studio como runtime local provisório para LLMs.
+  - Endpoint local compatível com OpenAI apenas como protocolo de API.
+  - Qdrant local.
+  - Docker Desktop para serviços locais e infraestrutura de apoio.
+  - llama.cpp local/Docker como alternativa técnica futura, ainda não estabilizada.
+
+  Regras de LLM local:
+  - LM Studio é runtime local, não modelo.
+  - OpenAI-compatible significa compatibilidade de API, não uso obrigatório de modelos OpenAI.
+  - Não usar OPENAI_BASE_URL como variável canônica do projeto.
+  - Preferir variáveis neutras LOCAL_LLM_*.
+  - Não tratar llama.cpp Docker como validado sem validação operacional real.
+
+  Regras de versões:
+  - Antes de recomendar instalação, extensão, CLI, runtime, modelo ou integração, consultar docs/reference/project_version_matrix.md.
+  - Não assumir documentação antiga como atual.
+  - Não inventar versões.
+  - Quando a versão ainda não estiver definida, usar "A definir".
+
+rules:
+  proposal:
+    - Manter a proposta objetiva e vinculada a uma única mudança.
+    - Sempre declarar objetivo, escopo e fora de escopo.
+    - Informar quais documentos oficiais devem ser consultados.
+    - Não transformar proposta em documento arquitetural completo.
+    - Não incluir histórico, logs ou decisões antigas sem necessidade.
+
+  design:
+    - Usar design.md apenas quando a mudança exigir decisão técnica ou arquitetural.
+    - Manter o desenho simples e executável.
+    - Não criar microserviços, módulos físicos ou runtimes novos sem escopo explícito.
+    - Separar arquitetura-alvo de estado operacional atual.
+    - Antes de definir ferramenta, extensão, CLI ou runtime, consultar docs/reference/project_version_matrix.md.
+
+  specs:
+    - Escrever requisitos verificáveis.
+    - Usar cenários objetivos.
+    - Separar comportamento atual de comportamento proposto.
+    - Não usar specs para registrar histórico ou backlog.
+    - Garantir coerência com docs/architecture/juridico_cli_documento_mestre.md.
+
+  tasks:
+    - Quebrar tarefas em etapas pequenas, ordenadas e verificáveis.
+    - Cada tarefa deve ter critério de conclusão claro.
+    - Não misturar documentação, código e infraestrutura na mesma tarefa sem necessidade.
+    - Toda tarefa que instalar, atualizar ou trocar ferramenta deve citar a versão-alvo ou marcar "A definir".
+    - Não alterar código quando a change for exclusivamente documental.
+    - Não alterar pastas locais de agentes como .agent, .claude, .gemini, .codex ou .opencode, salvo se a change pedir explicitamente.
+
+  apply:
+    - Executar somente o que estiver descrito em tasks.md.
+    - Validar arquivos alterados antes de concluir.
+    - Não expandir escopo durante a execução.
+    - Não reintroduzir agentes antigos, BMAD ou documentação legada.
+    - Manter revisão humana antes de sync ou archive.
+
+  archive:
+    - Arquivar somente após revisão humana.
+    - Confirmar que specs foram sincronizadas quando aplicável.
+    - Confirmar que não há alterações fora do escopo.
