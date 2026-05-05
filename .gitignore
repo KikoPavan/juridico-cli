@@ -31,15 +31,6 @@ env/
 !.env.example
 
 # Diretórios locais
-logs/
-outputs/
-backup/
-backups/
-data/
-input/
-arq-md/
-arq-js/
-docs_iplt/
 .agent/
 .claude/
 .qwen/
@@ -91,3 +82,34 @@ Desktop.ini
 *.bz2
 *.rar
 _quarantine_ai_cli_*/
+
+# Local project documentation used by agents/OpenSpec context
+docs/**
+!docs/
+!docs/.gitkeep
+
+# Runtime data
+var/artifacts/**
+var/backups/**
+var/cache/**
+var/input/**
+var/logs/**
+var/output/**
+var/staging/**
+
+# Preserve runtime directory structure
+!var/
+!var/artifacts/
+!var/backups/
+!var/cache/
+!var/input/
+!var/logs/
+!var/output/
+!var/staging/
+!var/artifacts/.gitkeep
+!var/backups/.gitkeep
+!var/cache/.gitkeep
+!var/input/.gitkeep
+!var/logs/.gitkeep
+!var/output/.gitkeep
+!var/staging/.gitkeep
