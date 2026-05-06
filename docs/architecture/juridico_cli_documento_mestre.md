@@ -262,6 +262,28 @@ A comunicação entre módulos deve ocorrer por:
 
 Cada módulo deve possuir CLI própria e poder ser executado isoladamente.
 
+### 5.5. Geração estruturada por schemas
+
+O projeto deve adotar uma camada de geração estruturada baseada em schemas para garantir que saídas produzidas por LLMs respeitem contratos explícitos, JSONs versionados e formatos verificáveis.
+
+O Outlines compõe a arquitetura-alvo como ferramenta de apoio à geração estruturada, restrição de saída e conformidade com schemas.
+
+A função arquitetural do Outlines é:
+
+- apoiar geração de JSONs compatíveis com schemas definidos;
+- reduzir saídas livres ou malformadas de LLMs;
+- reforçar contratos entre módulos funcionais;
+- apoiar validação de outputs produzidos por skills;
+- servir como camada auxiliar para extrações estruturadas.
+
+A versão, modo de instalação, integração operacional e validação prática do Outlines pertencem à matriz de versões, ao runbook ou a uma change OpenSpec específica.
+
+### Regra arquitetural
+
+Schemas continuam sendo os contratos canônicos do projeto.
+
+Outlines não substitui os schemas, o runtime de skills nem os validadores do sistema. Ele atua como ferramenta de geração estruturada orientada por schemas.
+
 ---
 
 ## 6. Runtime canônico
