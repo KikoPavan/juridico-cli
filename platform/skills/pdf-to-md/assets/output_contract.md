@@ -18,7 +18,7 @@ Escopo: agnóstico de domínio
 
 | Parâmetro      | Tipo   | CLI flag       | Padrão   | Descrição                                             |
 |----------------|--------|----------------|----------|-------------------------------------------------------|
-| `page_markers` | `bool` | `--no-markers` | `true`   | Inserir `<!-- page N -->` antes de cada página        |
+| `page_markers` | `bool` | `--no-markers` | `true`   | Inserir `[[Pág. N]]` antes de cada página             |
 | `verbose`      | `bool` | `--verbose`    | `false`  | Exibir log de extração página a página                |
 | `report`       | `bool` | `--report`     | `false`  | Gerar `conversion_report.md` junto ao output          |
 | `engine`       | `str`  | `--engine`     | `"auto"` | Motor de extração: `auto`, `pdfminer`, `pymupdf`      |
@@ -39,7 +39,8 @@ Escopo: agnóstico de domínio
 Arquivo Markdown com a estrutura abaixo:
 
 ```markdown
-<!-- page 1 -->
+[[Pág. 1]]
+
 # Título principal detectado
 
 Parágrafo preservado literalmente conforme extraído do PDF.
@@ -47,19 +48,20 @@ Parágrafo preservado literalmente conforme extraído do PDF.
 - item de lista detectado
 - outro item
 
-<!-- page 2 -->
+[[Pág. 2]]
+
 ## Subtítulo detectado
 
 Conteúdo da segunda página...
 
-<!-- page 3: extraction_failed -->
+[[Pág. 3]]
 ```
 
 **Garantias mínimas do arquivo gerado:**
 
 | Garantia                                         | Status    |
 |--------------------------------------------------|-----------|
-| Um marcador `<!-- page N -->` por página         | Obrigação |
+| Um anchor `[[Pág. N]]` por página                | Obrigação |
 | Headings `#`/`##`/`###` para títulos detectados | Melhor esforço |
 | Texto preservado literalmente                    | Obrigação |
 | Sem YAML frontmatter                             | Obrigação |
@@ -88,7 +90,7 @@ Gerado no mesmo diretório de `output_md`:
 ## Critérios mínimos de qualidade da conversão
 
 1. O arquivo `.md` deve ser criado e não estar vazio
-2. Deve conter pelo menos 1 marcador `<!-- page N -->`
+2. Deve conter pelo menos 1 anchor `[[Pág. N]]`
 3. Não deve começar com `---` (YAML proibido)
 4. Deve estar em UTF-8
 5. Nenhuma página deve ser silenciosamente omitida

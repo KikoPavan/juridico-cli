@@ -2,10 +2,8 @@
 """
 pdf-to-md · convert_pdf_to_md.py
 =================================
-Converte um arquivo PDF em Markdown bruto.
-Agnóstico de domínio — funciona para qualquer tipo de PDF textual.
-
-Não realiza limpeza semântica, classificação nem extração de dados.
+Converte um arquivo PDF em Markdown bruto com anchors [[Pág. N]] por página.
+Híbrido: texto nativo via PyMuPDF; OCR via PaddleOCR para páginas escaneadas.
 
 Uso:
     python convert_pdf_to_md.py --input DOC.pdf --output DOC.md [opções]
@@ -14,7 +12,7 @@ Opções:
     --input PATH      Caminho do PDF de entrada (obrigatório)
     --output PATH     Caminho do .md de saída (obrigatório)
     --engine ENGINE   Motor: auto|pdfminer|pymupdf (padrão: auto)
-    --no-markers      Não inserir marcadores <!-- page N -->
+    --no-markers      Não inserir anchors [[Pág. N]]
     --verbose         Log detalhado por página no stderr
     --report          Gerar conversion_report.md junto ao output
 
@@ -28,28 +26,95 @@ from pathlib import Path
 
 EXIT_OK, EXIT_INPUT_ERROR, EXIT_EXTRACT_ERROR, EXIT_WRITE_ERROR = 0, 1, 2, 3
 
-PAGE_MARKER_TPL     = "<!-- page {n} -->"
-EMPTY_PAGE_MARKER   = "<!-- page {n}: empty -->"
-FAILED_PAGE_MARKER  = "<!-- page {n}: extraction_failed -->"
-SCANNED_PAGE_MARKER = "<!-- page {n}: scanned_no_ocr -->"
-OUTPUT_ENCODING     = "utf-8"
+# Anchor format per spec (tasks.md §2)
+PAGE_ANCHOR_TPL = "[[Pág. {n}]]"
+
+# Density thresholds for OCR fallback decision (tasks.md §3)
+MIN_CHARS_FOR_TEXT = 50    # minimum useful characters per page
+MIN_PRINTABLE_RATIO = 0.6  # minimum ratio of printable chars
+
+OUTPUT_ENCODING = "utf-8"
+OCR_RENDER_SCALE = 3.0  # scale factor for page-to-image (~216 DPI)
 
 
 # ---------------------------------------------------------------------------
-# Detecção automática de motor
+# PaddleOCR — lazy init; version pending validation in project_version_matrix.md
 # ---------------------------------------------------------------------------
-def _auto_detect_engine() -> str | None:
-    for name, pkg in [("pdfminer", "pdfminer"), ("pymupdf", "fitz")]:
-        try:
-            __import__(pkg)
-            return name
-        except ImportError:
-            continue
-    return None
+_paddle_ocr_instance = None
+
+
+def _get_paddle_ocr():
+    """Lazy-initialize PaddleOCR. Returns None if not installed."""
+    global _paddle_ocr_instance
+    if _paddle_ocr_instance is not None:
+        return _paddle_ocr_instance
+    try:
+        from paddleocr import PaddleOCR
+        _paddle_ocr_instance = PaddleOCR(use_angle_cls=True, lang="pt", show_log=False)
+        return _paddle_ocr_instance
+    except ImportError:
+        return None
 
 
 # ---------------------------------------------------------------------------
-# Extração pdfminer.six
+# Text density evaluation (tasks.md §3)
+# ---------------------------------------------------------------------------
+def _printable_ratio(text: str) -> float:
+    if not text:
+        return 0.0
+    return sum(1 for c in text if c.isprintable()) / len(text)
+
+
+def _needs_ocr(text: str) -> bool:
+    """Returns True when native text is too sparse to be trusted."""
+    if len(text) < MIN_CHARS_FOR_TEXT:
+        return True
+    if _printable_ratio(text) < MIN_PRINTABLE_RATIO:
+        return True
+    return False
+
+
+def _assess(text: str) -> str:
+    if not text:
+        return "empty"
+    if _needs_ocr(text):
+        return "scanned_no_ocr"
+    return "ok"
+
+
+# ---------------------------------------------------------------------------
+# Page rendering for OCR (tasks.md §4)
+# ---------------------------------------------------------------------------
+def _render_page_image(doc, page_idx: int) -> bytes:
+    """Render a single PDF page to PNG bytes."""
+    import fitz
+    mat = fitz.Matrix(OCR_RENDER_SCALE, OCR_RENDER_SCALE)
+    pix = doc[page_idx].get_pixmap(matrix=mat, alpha=False)
+    return pix.tobytes("png")
+
+
+def _run_paddle_ocr(img_bytes: bytes, ocr_engine) -> str:
+    """Extract text from image bytes using PaddleOCR."""
+    import io
+    import numpy as np
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    img_array = np.array(img)
+    result = ocr_engine.ocr(img_array, cls=True)
+    if not result or result[0] is None:
+        return ""
+    lines = []
+    for block in result:
+        if block:
+            for line in block:
+                if line and len(line) >= 2:
+                    lines.append(line[1][0])
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Extraction — pdfminer.six (no OCR support)
 # ---------------------------------------------------------------------------
 def _extract_pdfminer(pdf_path: Path, verbose: bool) -> list[dict]:
     from pdfminer.high_level import extract_pages
@@ -67,30 +132,62 @@ def _extract_pdfminer(pdf_path: Path, verbose: bool) -> list[dict]:
 
         if verbose:
             print(f"  [pdfminer] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
-        pages.append({"page": num, "text": raw, "status": status})
+        pages.append({"page": num, "text": raw, "status": status, "ocr": False})
 
     return pages
 
 
 # ---------------------------------------------------------------------------
-# Extração PyMuPDF
+# Extraction — PyMuPDF with PaddleOCR fallback (tasks.md §2–§4)
 # ---------------------------------------------------------------------------
 def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
     import fitz
+
+    ocr_engine = _get_paddle_ocr()
+    if verbose:
+        if ocr_engine is not None:
+            print("[pdf-to-md] PaddleOCR disponível — OCR ativo para páginas escaneadas.", file=sys.stderr)
+        else:
+            print("[pdf-to-md] PaddleOCR não instalado — páginas escaneadas marcadas como scanned_no_ocr.", file=sys.stderr)
 
     pages = []
     doc = fitz.open(str(pdf_path))
     try:
         for num in range(1, len(doc) + 1):
+            page_idx = num - 1
+            used_ocr = False
+
             try:
-                raw = doc[num - 1].get_text("text").strip()
-                status = _assess(raw)
+                raw = doc[page_idx].get_text("text").strip()
+                extraction_ok = True
             except Exception:
-                raw, status = "", "failed"
+                raw = ""
+                extraction_ok = False
+
+            if not extraction_ok:
+                status = "failed"
+            elif _needs_ocr(raw):
+                if ocr_engine is not None:
+                    try:
+                        img_bytes = _render_page_image(doc, page_idx)
+                        ocr_text = _run_paddle_ocr(img_bytes, ocr_engine)
+                        raw = ocr_text.strip()
+                        status = "ok" if raw else "scanned_ocr_empty"
+                        used_ocr = True
+                    except Exception as exc:
+                        if verbose:
+                            print(f"  [ocr] p.{num}: falhou — {exc}", file=sys.stderr)
+                        status = "scanned_no_ocr"
+                else:
+                    status = "scanned_no_ocr"
+            else:
+                status = "ok"
 
             if verbose:
-                print(f"  [pymupdf] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
-            pages.append({"page": num, "text": raw, "status": status})
+                source = "ocr" if used_ocr else "pymupdf"
+                print(f"  [{source}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
+
+            pages.append({"page": num, "text": raw, "status": status, "ocr": used_ocr})
     finally:
         doc.close()
 
@@ -98,20 +195,22 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Qualidade do texto extraído
+# Auto-detect engine
 # ---------------------------------------------------------------------------
-def _assess(text: str) -> str:
-    if not text:
-        return "empty"
-    ratio = sum(1 for c in text if c.isprintable()) / len(text)
-    return "scanned_no_ocr" if ratio < 0.1 else "ok"
+def _auto_detect_engine() -> str | None:
+    for name, pkg in [("pymupdf", "fitz"), ("pdfminer", "pdfminer")]:
+        try:
+            __import__(pkg)
+            return name
+        except ImportError:
+            continue
+    return None
 
 
 # ---------------------------------------------------------------------------
 # Heurísticas genéricas de estrutura
 # ---------------------------------------------------------------------------
 def _heading_level(line: str) -> str | None:
-    """Detecta nível de heading sem assumir domínio do documento."""
     s = line.strip()
     if not s or len(s) > 120:
         return None
@@ -119,11 +218,9 @@ def _heading_level(line: str) -> str | None:
     words = s.split()
     upper_ratio = sum(1 for c in s if c.isupper()) / max(len(s), 1)
 
-    # H1: linha toda maiúscula, curta, sem ponto final
     if upper_ratio > 0.8 and len(words) <= 10 and not s.endswith("."):
         return "#"
 
-    # H2/H3: começa com número de seção (ex.: "1.", "2.3", "4.1.2")
     first = words[0].rstrip(".")
     parts = first.split(".")
     if all(p.isdigit() for p in parts if p) and len(parts) >= 1 and len(words) <= 12:
@@ -134,16 +231,13 @@ def _heading_level(line: str) -> str | None:
 
 
 def _list_prefix(line: str) -> str | None:
-    """Detecta prefixo de item de lista. Retorna marcador Markdown ou None."""
     s = line.strip()
     if not s:
         return None
 
-    # Marcadores simbólicos
     if s[0] in ("•", "·", "–", "—", "▪", "▸"):
         return "bullet"
 
-    # Lista numerada: "1.", "12."
     tok = s.split(".", 1)
     if len(tok) == 2 and tok[0].strip().isdigit():
         return f"numbered:{tok[0].strip()}"
@@ -151,11 +245,7 @@ def _list_prefix(line: str) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Formatação de página
-# ---------------------------------------------------------------------------
 def _format_page(text: str) -> str:
-    """Mapeia headings e listas; preserva literalidade do restante."""
     result = []
     for line in text.split("\n"):
         h = _heading_level(line)
@@ -180,7 +270,7 @@ def _format_page(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Montagem do Markdown
+# Markdown assembly (tasks.md §2 — [[Pág. N]] anchors)
 # ---------------------------------------------------------------------------
 def build_markdown(pages: list[dict], page_markers: bool) -> str:
     blocks = []
@@ -188,33 +278,29 @@ def build_markdown(pages: list[dict], page_markers: bool) -> str:
         n, status, text = entry["page"], entry["status"], entry.get("text", "")
 
         if page_markers:
-            marker = {
-                "empty":   EMPTY_PAGE_MARKER,
-                "failed":  FAILED_PAGE_MARKER,
-                "scanned_no_ocr": SCANNED_PAGE_MARKER,
-            }.get(status, PAGE_MARKER_TPL)
-            blocks.append(marker.format(n=n))
+            blocks.append(PAGE_ANCHOR_TPL.format(n=n))
 
         if status == "ok" and text:
             blocks.append(_format_page(text))
 
-    return "\n".join(blocks) + "\n"
+    return "\n\n".join(blocks) + "\n"
 
 
 # ---------------------------------------------------------------------------
-# Relatório de conversão
+# Conversion report
 # ---------------------------------------------------------------------------
 def build_report(
     pdf_path: Path, pages: list[dict],
     engine: str, warnings: list[str], exit_code: int,
 ) -> str:
     total = len(pages)
-    ok      = sum(1 for p in pages if p["status"] == "ok")
-    failed  = [p["page"] for p in pages if p["status"] == "failed"]
-    empty   = [p["page"] for p in pages if p["status"] == "empty"]
-    scanned = [p["page"] for p in pages if p["status"] == "scanned_no_ocr"]
-    status  = "success" if not (failed or scanned) else ("partial" if ok else "failed")
-    now     = datetime.datetime.now().isoformat(timespec="seconds")
+    ok = sum(1 for p in pages if p["status"] == "ok")
+    ocr_pages = [p["page"] for p in pages if p.get("ocr")]
+    failed = [p["page"] for p in pages if p["status"] == "failed"]
+    empty = [p["page"] for p in pages if p["status"] == "empty"]
+    scanned = [p["page"] for p in pages if p["status"] in ("scanned_no_ocr", "scanned_ocr_empty")]
+    status = "success" if not (failed or scanned) else ("partial" if ok else "failed")
+    now = datetime.datetime.now().isoformat(timespec="seconds")
 
     fl = lambda lst: f" (páginas: {lst})" if lst else ""
     lines = [
@@ -222,6 +308,7 @@ def build_report(
         f"- **Arquivo:** `{pdf_path.name}`",
         f"- **Total de páginas:** {total}",
         f"- **Extraídas com sucesso:** {ok}",
+        f"- **Via OCR (PaddleOCR):** {len(ocr_pages)}{fl(ocr_pages)}",
         f"- **Com falha:** {len(failed)}{fl(failed)}",
         f"- **Em branco:** {len(empty)}{fl(empty)}",
         f"- **Escaneadas sem OCR:** {len(scanned)}{fl(scanned)}",
@@ -241,7 +328,7 @@ def build_report(
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="pdf-to-md: converte PDF em Markdown bruto (agnóstico de domínio)."
+        description="pdf-to-md: converte PDF em Markdown bruto com anchors [[Pág. N]]."
     )
     parser.add_argument("--input",      required=True)
     parser.add_argument("--output",     required=True)
@@ -267,12 +354,12 @@ def main():
         if engine is None:
             print(
                 "[ERRO] Nenhum motor disponível.\n"
-                "       pip install pdfminer.six   ou   pip install pymupdf",
+                "       pip install pymupdf   ou   pip install pdfminer.six",
                 file=sys.stderr,
             )
             sys.exit(EXIT_EXTRACT_ERROR)
         if args.verbose:
-            print(f"[auto] Motor: {engine}", file=sys.stderr)
+            print(f"[auto] Motor selecionado: {engine}", file=sys.stderr)
 
     if args.verbose:
         print(f"[pdf-to-md] {pdf_path}", file=sys.stderr)
@@ -290,8 +377,8 @@ def main():
     for p in pages:
         if p["status"] == "failed":
             warnings.append(f"Página {p['page']}: falha na extração")
-        elif p["status"] == "scanned_no_ocr":
-            warnings.append(f"Página {p['page']}: imagem sem OCR")
+        elif p["status"] in ("scanned_no_ocr", "scanned_ocr_empty"):
+            warnings.append(f"Página {p['page']}: escaneada sem texto recuperável")
 
     md = build_markdown(pages, page_markers)
 

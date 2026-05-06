@@ -41,20 +41,18 @@ def _no_yaml(content, lines):
     return True, ""
 
 
-@check("Presença de marcadores de página")
+@check("Presença de anchors de página")
 def _has_markers(content, lines):
-    found = re.findall(r"<!--\s*page\s+\d+", content)
+    found = re.findall(r"\[\[Pág\.\s+\d+\]\]", content)
     if not found:
-        return False, "Nenhum marcador <!-- page N --> encontrado."
-    return True, f"{len(found)} marcador(es) encontrado(s)."
+        return False, "Nenhum anchor [[Pág. N]] encontrado."
+    return True, f"{len(found)} anchor(s) encontrado(s)."
 
 
-@check("Marcadores de página bem formados")
+@check("Anchors de página bem formados")
 def _marker_format(content, lines):
-    raw = re.findall(r"<!--[^>]*page[^>]*-->", content, re.IGNORECASE)
-    valid = re.compile(
-        r"<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
-    )
+    raw = re.findall(r"\[\[Pág\.[^\]]*\]\]", content)
+    valid = re.compile(r"\[\[Pág\.\s+\d+\]\]")
     bad = [m for m in raw if not valid.match(m.strip())]
     if bad:
         return False, f"Malformados: {bad[:3]}"
@@ -71,15 +69,6 @@ def _line_lengths(content, lines):
     long_lines = [i + 1 for i, l in enumerate(lines) if len(l) > 2000]
     if long_lines:
         return True, f"WARNING: {len(long_lines)} linha(s) >2000 chars: {long_lines[:5]}"
-    return True, ""
-
-
-@check("Sem tags HTML inesperadas fora dos marcadores")
-def _no_stray_html(content, lines):
-    stripped = re.sub(r"<!--\s*page\s+\d+[^>]*-->", "", content)
-    tags = re.findall(r"<[a-zA-Z][^>]*>", stripped)
-    if tags:
-        return True, f"WARNING: {len(tags)} tag(s) HTML: {tags[:3]}"
     return True, ""
 
 

@@ -32,7 +32,8 @@ ou qualquer outro tipo de PDF textual.
 - Preserva a ordem do conteúdo página a página
 - Mapeia títulos e subtítulos detectados para headings Markdown
 - Preserva listas quando detectáveis
-- Insere marcadores `<!-- page N -->` entre páginas (configurável)
+- Insere anchors `[[Pág. N]]` entre páginas (configurável)
+- Usa PaddleOCR como fallback para páginas escaneadas ou de baixa densidade textual
 - Emite opcionalmente um `conversion_report.md` com diagnóstico da conversão
 
 ## O que esta skill NÃO faz
@@ -53,7 +54,7 @@ ou qualquer outro tipo de PDF textual.
 |----------------|--------|-----------------|---------|------------------------------------------------|
 | `input_pdf`    | `str`  | `--input`       | ✅      | Caminho absoluto ou relativo do PDF            |
 | `output_md`    | `str`  | `--output`      | ✅      | Caminho do arquivo `.md` de saída              |
-| `page_markers` | `bool` | `--no-markers`  | ❌      | Inserir `<!-- page N -->` (padrão: ativo)      |
+| `page_markers` | `bool` | `--no-markers`  | ❌      | Inserir `[[Pág. N]]` (padrão: ativo)           |
 | `verbose`      | `bool` | `--verbose`     | ❌      | Log detalhado por página (padrão: desligado)   |
 | `report`       | `bool` | `--report`      | ❌      | Gerar `conversion_report.md` (padrão: não)    |
 | `engine`       | `str`  | `--engine`      | ❌      | Motor: `auto` \| `pdfminer` \| `pymupdf`       |
@@ -85,10 +86,13 @@ PDF de entrada
      │
      ▼
 [convert_pdf_to_md.py]
-     │  motor: pdfminer.six → pymupdf (fallback automático)
+     │  motor: pymupdf → pdfminer (fallback automático)
      │
-     ├─ extrai texto por página
-     ├─ insere <!-- page N --> (se habilitado)
+     ├─ extrai texto por página (PyMuPDF)
+     ├─ avalia densidade textual (MIN_CHARS=50, PRINTABLE_RATIO=0.6)
+     │    ├─ texto suficiente → usa texto nativo
+     │    └─ texto insuficiente → renderiza página como imagem → PaddleOCR
+     ├─ insere [[Pág. N]] (se habilitado)
      ├─ detecta e mapeia headings → #, ##, ###
      ├─ preserva listas quando detectáveis
      └─ escreve <output_md>
@@ -147,7 +151,8 @@ pertencem às skills subsequentes.
 
 ## Limitações conhecidas
 
-- PDFs escaneados sem OCR resultam em páginas marcadas como `scanned_no_ocr`
+- PDFs escaneados sem PaddleOCR instalado resultam em páginas marcadas como `scanned_no_ocr`
+- PaddleOCR versão pendente de validação em `docs/reference/project_version_matrix.md`
 - PDFs protegidos por senha não são suportados
 - A detecção de títulos é heurística; documentos sem convenção tipográfica
   clara terão menos headings detectados
