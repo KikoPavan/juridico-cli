@@ -8,9 +8,9 @@
 
 ## 2. Validation planning
 
-- [ ] Identify one schema-bound skill suitable for initial validation
-- [ ] Define a minimal JSON Schema for the validation test
-- [ ] Define expected valid and invalid outputs
+- [x] Identify one schema-bound skill suitable for initial validation
+- [x] Define a minimal JSON Schema for the validation test
+- [x] Define expected valid and invalid outputs
 
 ## 3. Technical validation
 
