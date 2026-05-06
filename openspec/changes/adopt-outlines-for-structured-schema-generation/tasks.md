@@ -16,8 +16,8 @@
 
 - [x] Check the current installable version of Outlines
 - [x] Register the validated version in `docs/reference/project_version_matrix.md`
-- [ ] Create a minimal local test using one schema and one LLM profile
-- [ ] Confirm that malformed outputs are rejected or constrained
+- [x] Create a minimal local test using one schema and one LLM profile
+- [x] Confirm that malformed outputs are rejected or constrained
 
 ## 4. Runtime integration
 
