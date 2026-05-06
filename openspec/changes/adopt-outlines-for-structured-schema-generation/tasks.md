@@ -2,9 +2,9 @@
 
 ## 1. Documentation
 
-- [ ] Add Outlines to `docs/reference/project_version_matrix.md`
-- [ ] Add the architectural role of structured schema generation to the Documento Mestre
-- [ ] Confirm that Outlines is described as auxiliary, not as a replacement for schemas or validators
+- [x] Add Outlines to `docs/reference/project_version_matrix.md`
+- [x] Add the architectural role of structured schema generation to the Documento Mestre
+- [x] Confirm that Outlines is described as auxiliary, not as a replacement for schemas or validators
 
 ## 2. Validation planning
 
