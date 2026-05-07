@@ -14,75 +14,23 @@ console = Console()
 CollectorName = Literal["cad_obr", "proc"]
 
 
-_SCANNED_THRESHOLD = 150  # chars below which a page is treated as scanned
+def _convert_via_skill(pdf_path: Path, out_md: Path) -> None:
+    import subprocess
+    import sys
 
+    _project_root = Path(__file__).parents[5]
+    skill_script = _project_root / "platform" / "skills" / "pdf-to-md" / "scripts" / "convert_pdf_to_md.py"
 
-def _convert_one_hybrid(pdf_path: Path, out_md: Path) -> None:
-    """
-    Hybrid PDF → Markdown converter.
-
-    Strategy per page:
-    - Extract text with PyMuPDF (fast, zero cost).
-    - If extracted text < _SCANNED_THRESHOLD chars, the page is likely scanned:
-      render it to a JPEG and transcribe with Gemini OCR.
-    - Produces page-anchored Markdown: [[Pág. N]] per page.
-    - Gemini client is initialised lazily only when a scanned page is detected.
-    - Requires GEMINI_API_KEY env var for OCR fallback; if absent, scanned pages
-      are skipped with a warning instead of raising.
-    """
-    import tempfile
-
-    import fitz
-    from pdf2image import convert_from_path
-
-    doc = fitz.open(pdf_path)
-    parts: list[str] = []
-    gemini_available: bool | None = None  # None = not yet checked
-
-    with tempfile.TemporaryDirectory() as tmp:
-        for pno in range(doc.page_count):
-            page_num = pno + 1
-            text = (doc.load_page(pno).get_text("text") or "").strip()
-
-            if len(text) >= _SCANNED_THRESHOLD:
-                parts.append(f"[[Pág. {page_num}]]\n{text}")
-                continue
-
-            # Scanned page — try Gemini OCR
-            if gemini_available is None:
-                import os
-                gemini_available = bool(os.getenv("GEMINI_API_KEY"))
-                if not gemini_available:
-                    console.print(
-                        "[yellow]GEMINI_API_KEY não definida — "
-                        "páginas escaneadas serão omitidas.[/yellow]"
-                    )
-
-            if not gemini_available:
-                console.print(
-                    f"  [yellow]SKIP (escaneada)[/yellow] Pág. {page_num} de {pdf_path.name}"
-                )
-                continue
-
-            from pathlib import Path as _Path
-            from data_processing.converters.gemini_ocr.page_ocr import ocr_page
-
-            images = convert_from_path(
-                str(pdf_path), dpi=200, first_page=page_num, last_page=page_num
-            )
-            img_path = _Path(tmp) / f"page_{page_num}.jpg"
-            images[0].save(str(img_path), "JPEG", quality=95)
-
-            console.print(
-                f"  [cyan]OCR[/cyan] Pág. {page_num} de {pdf_path.name} → Gemini"
-            )
-            ocr_text = ocr_page(img_path)
-            if ocr_text:
-                parts.append(f"[[Pág. {page_num}]]\n{ocr_text}")
-
-    doc.close()
-    out_md.parent.mkdir(parents=True, exist_ok=True)
-    out_md.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, str(skill_script), "--input", str(pdf_path), "--output", str(out_md)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"pdf-to-md skill failed (exit {result.returncode}) for {pdf_path.name}: "
+            f"{result.stderr.strip()}"
+        )
 
 
 def run_convert_stage(input_path: Path, output_path: Path) -> None:
@@ -96,7 +44,7 @@ def run_convert_stage(input_path: Path, output_path: Path) -> None:
     console.print(f"  Input : {input_path}")
     console.print(f"  Output: {output_path}")
 
-    moves = engine.run_batch(_convert_one_hybrid)
+    moves = engine.run_batch(_convert_via_skill)
     for mv in moves:
         if mv.ok:
             console.print(f"  [green]OK[/green] {mv.stem}.md ({mv.out_md})")
