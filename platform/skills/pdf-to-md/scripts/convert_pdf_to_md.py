@@ -21,6 +21,7 @@ Exit codes: 0=ok  1=input_error  2=extract_error  3=write_error
 
 import argparse
 import datetime
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +36,38 @@ MIN_PRINTABLE_RATIO = 0.6  # minimum ratio of printable chars
 
 OUTPUT_ENCODING = "utf-8"
 OCR_RENDER_SCALE = 3.0  # scale factor for page-to-image (~216 DPI)
+
+# ---------------------------------------------------------------------------
+# Boilerplate patterns for Brazilian legal documents
+# Lines matching any of these are discounted before the OCR decision.
+# ---------------------------------------------------------------------------
+BOILERPLATE_PATTERNS: list[re.Pattern] = [
+    # Page numbering: "Fls. 42", "fl. 5", "Fl.42", "fls.5"
+    re.compile(r"^\s*[Ff]l[s]?\.?\s*\d+\s*$"),
+    # Standalone page numbers: "42", " 5 " (1–4 digits only)
+    re.compile(r"^\s*\d{1,4}\s*$"),
+    # Court identifiers
+    re.compile(r"^\s*TRIBUNAL\s+DE\s+JUSTI[CÇ]A", re.IGNORECASE),
+    re.compile(r"^\s*PODER\s+JUDICI[AÁ]RIO", re.IGNORECASE),
+    re.compile(r"^\s*JUSTI[CÇ]A\s+(DO\s+)?ESTADO", re.IGNORECASE),
+    # Foro / Vara / Comarca headers
+    re.compile(r"^\s*FORO\s+", re.IGNORECASE),
+    re.compile(r"^\s*VARA\s+", re.IGNORECASE),
+    re.compile(r"^\s*COMARCA\s+DE\s+", re.IGNORECASE),
+    # Institutional addresses
+    re.compile(r"^\s*(Avenida|Av\.|Rua|Pra[cç]a|Alameda)\s+", re.IGNORECASE),
+    # Internal page anchor [[Pág. N]]
+    re.compile(r"^\s*\[\[P[áa]g\.\s*\d+\]\]\s*$"),
+    # "Página N de M" / "Pág. N / M"
+    re.compile(r"^\s*[Pp][áa]g(?:ina|\.)\s*\d+\s*(?:de|/)\s*\d+\s*$"),
+    # Electronic signature footers common in e-process PDFs
+    re.compile(r"^\s*Assinado\s+eletronicamente\s+por", re.IGNORECASE),
+    re.compile(r"^\s*Este\s+documento\s+[eé]\s+c[oó]pia", re.IGNORECASE),
+    # ESAJ verification footer: "Para conferir o original, acesse o site..."
+    re.compile(r"^\s*Para\s+conferir\s+o\s+original", re.IGNORECASE),
+    # Horizontal rule lines (5+ dashes, underscores or equals)
+    re.compile(r"^\s*[-_=]{5,}\s*$"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -65,11 +98,23 @@ def _printable_ratio(text: str) -> float:
     return sum(1 for c in text if c.isprintable()) / len(text)
 
 
+def _strip_boilerplate(text: str) -> str:
+    """Remove boilerplate lines from native extracted text; return residual."""
+    if not text:
+        return text
+    kept = [
+        line for line in text.splitlines()
+        if not any(p.search(line) for p in BOILERPLATE_PATTERNS)
+    ]
+    return "\n".join(kept)
+
+
 def _needs_ocr(text: str) -> bool:
-    """Returns True when native text is too sparse to be trusted."""
-    if len(text) < MIN_CHARS_FOR_TEXT:
+    """Returns True when native text is too sparse to be trusted after stripping boilerplate."""
+    effective = _strip_boilerplate(text)
+    if len(effective) < MIN_CHARS_FOR_TEXT:
         return True
-    if _printable_ratio(text) < MIN_PRINTABLE_RATIO:
+    if _printable_ratio(effective) < MIN_PRINTABLE_RATIO:
         return True
     return False
 
