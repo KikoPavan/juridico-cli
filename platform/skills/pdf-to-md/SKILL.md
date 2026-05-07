@@ -152,7 +152,6 @@ pertencem às skills subsequentes.
 ## Limitações conhecidas
 
 - PDFs escaneados sem PaddleOCR instalado resultam em páginas marcadas como `scanned_no_ocr`
-- PaddleOCR versão pendente de validação em `docs/reference/project_version_matrix.md`
 - PDFs protegidos por senha não são suportados
 - A detecção de títulos é heurística; documentos sem convenção tipográfica
   clara terão menos headings detectados

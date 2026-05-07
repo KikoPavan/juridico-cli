@@ -42,3 +42,7 @@ dev = [
     "ruff>=0.14.10",
     "types-pyyaml>=6.0.12.20250915",
 ]
+ocr = [
+    "paddleocr>=2.7",
+    "paddlepaddle",
+]

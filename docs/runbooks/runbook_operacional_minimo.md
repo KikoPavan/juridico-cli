@@ -134,5 +134,5 @@ Documentos antigos devem ficar em:
 - [ ] Os módulos `document-processing`, `process-processing` e `legal-knowledge` não estão sendo tratados como implantados.
 - [ ] O LM Studio está sendo tratado como runtime local provisório para LLM.
 - [ ] llama.cpp Docker não está sendo tratado como validado.
-- [ ] A skill `pdf-to-md` preserva PaddleOCR como OCR canônico.
+- [x] A skill `pdf-to-md` preserva PaddleOCR como OCR canônico.
 - [ ] Skill nova só roda após registro no runtime.
