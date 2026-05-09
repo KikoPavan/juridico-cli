@@ -17,7 +17,7 @@ Versão: 1.0.0
 
 | Parâmetro         | Tipo   | CLI flag        | Padrão  | Descrição                                              |
 |-------------------|--------|-----------------|---------|--------------------------------------------------------|
-| `page_markers`    | `bool` | `--no-markers`  | `true`  | Preservar marcadores `<!-- page N -->` e variantes     |
+| `page_markers`    | `bool` | `--no-markers`  | `true`  | Preservar `[[Pág. N]]` (primário) e `<!-- page N -->` (legado) |
 | `verbose`         | `bool` | `--verbose`     | `false` | Exibir log de cada operação no stderr                  |
 | `report`          | `bool` | `--report`      | `false` | Gerar `cleaning_report.md` no diretório de saída       |
 | `max_blank_lines` | `int`  | `--max-blank N` | `2`     | Máximo de linhas em branco consecutivas permitidas     |
@@ -43,7 +43,7 @@ Arquivo Markdown limpo com as seguintes garantias:
 - Bullets padronizados em `-`
 - Separadores normalizados em `---`
 - Blocos de código preservados integralmente
-- Marcadores `<!-- page N -->` preservados (quando `page_markers=true`)
+- Marcadores `[[Pág. N]]` e `<!-- page N -->` preservados (quando `page_markers=true`)
 - Arquivo termina com exatamente `\n`
 - Encoding: UTF-8
 
@@ -80,7 +80,7 @@ Gerado no mesmo diretório de `output_md`.
 | Sem trailing whitespace em nenhuma linha             | ✅          |
 | Máximo de `max_blank_lines` linhas em branco seguidas| ✅          |
 | Blocos de código preservados sem alteração interna   | ✅          |
-| Marcadores `<!-- page N -->` preservados             | ✅ (se ativo)|
+| Marcadores `[[Pág. N]]` e `<!-- page N -->` preservados | ✅ (se ativo)|
 | Encoding UTF-8                                       | ✅          |
 | Exit code 0 para limpeza bem-sucedida                | ✅          |
 

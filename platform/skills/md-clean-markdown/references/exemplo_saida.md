@@ -1,109 +1,82 @@
 # Exemplo de Saída — md-clean-markdown
 
-Markdown limpo esperado após processamento de `manual_procedimentos_bruto.md`
+Markdown limpo esperado após processamento de `registro_imovel_bruto.md`
 (ver `exemplo_entrada.md`).
 
-Serve como referência de conformidade para `validate_output.py`
-e para avaliação visual da qualidade da limpeza.
+---
+
+## Metadados do exemplo
+
+| Campo         | Valor                                                   |
+|---------------|---------------------------------------------------------|
+| Nome fictício | `registro_imovel_limpo.md`                              |
+| Tipo          | Saída de md-clean-markdown sobre certidão imobiliária   |
+| Garantias     | Marcadores [[Pág. N]] e <!-- page N --> preservados     |
 
 ---
 
-## Arquivo gerado: `manual_procedimentos_limpo.md`
+## Conteúdo limpo
 
-```markdown
-<!-- page 1 -->
-# MANUAL DE PROCEDIMENTOS OPERACIONAIS
+```
+[[Pág. 1]]
 
-Versão 3.2 — Revisado em Março de 2024
-Departamento de Operações
+# CERTIDÃO DE REGISTRO IMOBILIÁRIO
 
----
-
-## 1. OBJETIVO
-
-Este manual define os procedimentos padrão para execução das atividades
-operacionais da unidade. Destina-se a todos os colaboradores envolvidos
-nos processos de produção, controle e entrega.
+Número: 9.405 — Comarca de Cerqueira César, Estado de São Paulo
+Data de emissão: 14 de fevereiro de 2024
 
 ---
+
+## 2. DESCRIÇÃO DO IMÓVEL
+
+IMÓVEL : Um imóvel residencial e comercial, situado nesta cidade,
+à Rua J.J. Esteves, n. 117, construído de tijolos e coberto de telhas,
+com seis cômodos.
+
+- Frente: 12,00 metros para a referida rua
+- Profundidade: 30,00 metros da frente aos fundos
+- Área total: 360,00 m²
 
 <!-- page 2 -->
-## 2. ESCOPO
 
-O presente documento aplica-se a:
+## 3. PROPRIETÁRIO
 
-- Equipe de produção
-- Equipe de controle de qualidade
-- Equipe de logística
-- Supervisores e coordenadores
-
-## 3. DEFINIÇÕES
-
-Abaixo estão os principais termos utilizados neste manual:
-
-- **Ordem de Serviço (OS):** documento que autoriza a execução de uma atividade.
-- **Não Conformidade (NC):** desvio identificado em relação ao padrão estabelecido.
-- **Registro:** evidência documentada de uma atividade realizada.
-
-<!-- page 3 -->
-### 4. PROCEDIMENTO GERAL
-
-4.1 Recebimento de Materiais
-
-Ao receber materiais, o colaborador deve:
-
-1. Conferir a nota fiscal com o pedido de compra
-2. Verificar integridade das embalagens
-3. Registrar entrada no sistema de controle
-4. Encaminhar para o setor responsável
+JURACI PIRES PAVAN, viúva, do lar, portadora da cédula de identidade
+RG n.4.294.873-SSP/SP, inscrita no CPF/MF sob n. 793.933.908-78.
 
 ---
 
-4.2 Execução da Atividade
+[[Pág. 3]]
 
-Durante a execução, observe:
+## 4. HISTÓRICO DE AVERBAÇÕES
 
-- Utilizar os EPIs indicados para cada função
-- Preencher o formulário de OS ao início e ao fim
-- Comunicar ao supervisor qualquer NC identificada
-
-<!-- page 4 -->
-## 5. RESPONSABILIDADES
-
-| Função          | Responsabilidade                        |
-|-----------------|------------------------------------------|
-| Operador        | Executar conforme procedimento           |
-| Supervisor      | Validar e registrar as OSs               |
-| Coordenador     | Garantir conformidade geral do processo  |
-
----
-
-## 6. REGISTROS E EVIDÊNCIAS
-
-Todos os registros devem ser:
-
-- Preenchidos de forma legível e completa
-- Assinados pelo responsável pela execução
-- Arquivados pelo prazo mínimo de 5 anos
-
-<!-- page 5: empty -->
+Av.1 — Hipoteca Cedular (14/06/1999)
+Av.2 — Cancelamento de Hipoteca (26/07/2002)
+Av.3 — Incorporação Imobiliária (18/01/2002)
+Av.4 — Bloqueio Judicial de Bens (29/03/2018)
 ```
 
 ---
 
-## Checklist de transformações aplicadas
+## Transformações aplicadas
 
-| Transformação                          | Antes                          | Depois               |
-|----------------------------------------|--------------------------------|----------------------|
-| Trailing whitespace removido           | `"Operações   "`               | `"Operações"`        |
-| Heading sem espaço corrigido           | `"#MANUAL"`                    | `"# MANUAL"`         |
-| Heading sem espaço corrigido           | `"##2. ESCOPO"`                | `"## 2. ESCOPO"`     |
-| Bullets `*` → `-`                      | `"* Equipe de produção"`       | `"- Equipe de produção"` |
-| Bullets `+` → `-`                      | `"+ Equipe de logística"`      | `"- Equipe de logística"` |
-| Separador `===...` → `---`             | `"==========================="`| `"---"`              |
-| Separador `* * *` → `---`              | `"* * *"`                      | `"---"`              |
-| Separador `_ _ _` → `---`             | `"_ _ _"`                      | `"---"`              |
-| Linha pontilhada removida              | `"................."`           | *(linha removida)*   |
-| Linhas em branco excessivas colapsadas | 4+ linhas em branco seguidas   | máx. 2 linhas        |
-| Marcador de página preservado          | `"<!-- page 1 -->"`            | `"<!-- page 1 -->"` (intocado) |
-| Marcador vazio preservado              | `"<!-- page 5: empty -->"`     | `"<!-- page 5: empty -->"` (intocado) |
+| Problema na entrada                       | Resultado na saída                        |
+|-------------------------------------------|-------------------------------------------|
+| `[[Pág. 1]]` e `[[Pág. 3]]`             | Preservados **intactos** (marcador primário) |
+| `<!-- page 2 -->`                         | Preservado **intacto** (marcador legado)  |
+| `#CERTIDÃO` (sem espaço)                 | `# CERTIDÃO` (espaço normalizado)         |
+| `##2.` e `##3.` e `##4.` (sem espaço)   | `## 2.` / `## 3.` / `## 4.`             |
+| `* Item` e `+ Item`                       | `- Item` (bullets normalizados)           |
+| `===========================`             | `---` (separador normalizado)             |
+| Trailing whitespace nas linhas            | Removido                                  |
+| 3+ linhas em branco consecutivas          | Colapsado para máximo de 2                |
+
+---
+
+## Invariante de marcadores
+
+Todos os marcadores de página presentes na entrada aparecem inalterados na saída:
+
+- `[[Pág. 1]]` ✓ preservado na linha 1
+- `<!-- page 2 -->` ✓ preservado
+- `[[Pág. 3]]` ✓ preservado

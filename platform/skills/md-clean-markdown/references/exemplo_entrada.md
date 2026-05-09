@@ -2,116 +2,85 @@
 
 Markdown bruto típico após conversão de PDF por `pdf-to-md`.
 Contém ruído visual e inconsistências de formatação comuns.
-Documento genérico: manual de procedimentos operacionais.
+
+Baseado no arquivo real `var/output/pdf-to-md/arquivo_escaneado.md`.
 
 ---
 
 ## Metadados do exemplo
 
-| Campo         | Valor                                              |
-|---------------|----------------------------------------------------|
-| Nome fictício | `manual_procedimentos_bruto.md`                    |
-| Tipo          | Manual de procedimentos operacionais (genérico)    |
-| Origem        | Saída simulada de pdf-to-md para fins de teste     |
+| Campo         | Valor                                                   |
+|---------------|---------------------------------------------------------|
+| Nome fictício | `registro_imovel_bruto.md`                              |
+| Tipo          | Certidão de registro imobiliário (genérico)             |
+| Origem        | Saída real de pdf-to-md com marcadores [[Pág. N]]       |
 
 ---
 
 ## Conteúdo bruto simulado
 
 O texto abaixo representa o conteúdo como saído de `pdf-to-md` —
-com espaços finais, linhas excessivas em branco, bullets inconsistentes
-e separadores variados.
+com marcadores `[[Pág. N]]`, espaços finais, linhas excessivas em branco,
+bullets inconsistentes e separadores variados.
+
+O exemplo também inclui um marcador legado `<!-- page N -->` para demonstrar
+compatibilidade retroativa.
 
 ```
-<!-- page 1 -->
-#MANUAL DE PROCEDIMENTOS OPERACIONAIS   
+[[Pág. 1]]
 
-Versão 3.2 — Revisado em Março de 2024   
-Departamento de Operações   
+#CERTIDÃO DE REGISTRO IMOBILIÁRIO   
 
-
-   
-
-## 1. OBJETIVO   
-
-Este manual define os procedimentos padrão para execução das atividades   
-operacionais da unidade. Destina-se a todos os colaboradores envolvidos   
-nos processos de produção, controle e entrega.   
+Número: 9.405 — Comarca de Cerqueira César, Estado de São Paulo   
+Data de emissão: 14 de fevereiro de 2024   
 
 
-   
 
 ===========================
 
+##2. DESCRIÇÃO DO IMÓVEL
+
+IMÓVEL : Um imóvel residencial e comercial, situado nesta cidade,   
+à Rua J.J. Esteves, n. 117, construído de tijolos e coberto de telhas,   
+com seis cômodos.   
+
+
+* Frente: 12,00 metros para a referida rua   
++ Profundidade: 30,00 metros da frente aos fundos   
+* Área total: 360,00 m²   
+
+
 <!-- page 2 -->
-##2. ESCOPO
 
-O presente documento aplica-se a:   
+##3. PROPRIETÁRIO
 
-* Equipe de produção
-* Equipe de controle de qualidade   
-+ Equipe de logística   
-* Supervisores e coordenadores   
-
-
-## 3. DEFINIÇÕES   
-
-Abaixo estão os principais termos utilizados neste manual:   
-
-* **Ordem de Serviço (OS):** documento que autoriza a execução de uma atividade.   
-+ **Não Conformidade (NC):** desvio identificado em relação ao padrão estabelecido.   
-* **Registro:** evidência documentada de uma atividade realizada.   
+JURACI PIRES PAVAN, viúva, do lar, portadora da cédula de identidade   
+RG n.4.294.873-SSP/SP, inscrita no CPF/MF sob n. 793.933.908-78.   
 
 
 
-<!-- page 3 -->
-###4. PROCEDIMENTO GERAL
+===========================
+
+[[Pág. 3]]
+
+##4. HISTÓRICO DE AVERBAÇÕES
+
+Av.1 — Hipoteca Cedular (14/06/1999)   
+Av.2 — Cancelamento de Hipoteca (26/07/2002)   
+Av.3 — Incorporação Imobiliária (18/01/2002)   
+Av.4 — Bloqueio Judicial de Bens (29/03/2018)   
 
 
-4.1 Recebimento de Materiais   
-
-Ao receber materiais, o colaborador deve:   
-
-1. Conferir a nota fiscal com o pedido de compra   
-2. Verificar integridade das embalagens   
-3. Registrar entrada no sistema de controle   
-4. Encaminhar para o setor responsável   
-
-* * *
-
-4.2 Execução da Atividade   
-
-Durante a execução, observe:   
-
-+ Utilizar os EPIs indicados para cada função   
-+ Preencher o formulário de OS ao início e ao fim   
-+ Comunicar ao supervisor qualquer NC identificada   
-
-
-<!-- page 4 -->
-##5. RESPONSABILIDADES
-
-
-
-| Função          | Responsabilidade                        |   
-|-----------------|------------------------------------------|   
-| Operador        | Executar conforme procedimento           |   
-| Supervisor      | Validar e registrar as OSs               |   
-| Coordenador     | Garantir conformidade geral do processo  |   
-
-_ _ _
-
-##6. REGISTROS E EVIDÊNCIAS   
-
-Todos os registros devem ser:   
-
-* Preenchidos de forma legível e completa   
-* Assinados pelo responsável pela execução   
-* Arquivados pelo prazo mínimo de 5 anos   
-
-
-
-.................
-
-<!-- page 5: empty -->
 ```
+
+---
+
+## Problemas de formatação presentes
+
+1. `[[Pág. 1]]` e `[[Pág. 3]]` — marcadores primários (devem ser preservados intactos)
+2. `<!-- page 2 -->` — marcador legado (deve ser preservado intacto)
+3. `#CERTIDÃO` e `##2.` — headings sem espaço após `#`
+4. `* Item` e `+ Item` — bullets não normalizados
+5. `===========================` — separador não-padrão (deve virar `---`)
+6. Trailing whitespace em múltiplas linhas
+7. Três ou mais linhas em branco consecutivas

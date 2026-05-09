@@ -21,6 +21,14 @@ import re
 import sys
 from pathlib import Path
 
+# Deve permanecer em sincronia com PAGE_MARKER_RE em clean_markdown.py
+# Formato primário: [[Pág. N]] — output real de pdf-to-md
+# Formato legado:   <!-- page N --> e variantes
+PAGE_MARKER_RE = re.compile(
+    r"\[\[Pág\.\s*\d+\]\]"
+    r"|<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
+)
+
 CHECKS: list[tuple[str, callable]] = []
 
 
@@ -116,11 +124,11 @@ def check_trailing_newline(content: str, lines: list[str]) -> tuple[bool, str]:
     return True, ""
 
 
-@check("Marcadores de página preservados (se presentes na entrada)")
+@check("Marcadores de página no output (formato reconhecido)")
 def check_page_markers(content: str, lines: list[str]) -> tuple[bool, str]:
-    markers = re.findall(r"<!--\s*page\s+\d+[^>]*-->", content)
-    if markers:
-        return True, f"{len(markers)} marcador(es) de página presente(s)"
+    count = sum(1 for _ in PAGE_MARKER_RE.finditer(content))
+    if count:
+        return True, f"{count} marcador(es) de página presente(s)"
     return True, ""  # Ausência não é erro — o MD de entrada pode não ter tido marcadores
 
 
@@ -132,7 +140,20 @@ def check_encoding(content: str, lines: list[str]) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
-def run_validation(md_path: Path, strict: bool) -> int:
+def _check_marker_integrity(source_content: str, output_content: str) -> tuple[bool, str]:
+    """Verifica que cada marcador presente na fonte existe na saída."""
+    source_markers = [m.group(0) for m in PAGE_MARKER_RE.finditer(source_content)]
+    if not source_markers:
+        return True, "nenhum marcador de página na fonte"
+
+    missing = [m for m in source_markers if m not in output_content]
+    if missing:
+        sample = missing[:3]
+        return False, f"{len(missing)} marcador(es) ausente(s) na saída: {sample}"
+    return True, f"{len(source_markers)} marcador(es) verificado(s) ✓"
+
+
+def run_validation(md_path: Path, strict: bool, source_path: Path | None = None) -> int:
     try:
         content = md_path.read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
@@ -163,6 +184,21 @@ def run_validation(md_path: Path, strict: bool) -> int:
             detail = f" ({msg})" if msg else ""
             print(f"  ✓  {name}{detail}")
 
+    if source_path is not None:
+        check_name = "Integridade de marcadores de página (fonte → saída)"
+        try:
+            source_content = source_path.read_text(encoding="utf-8", errors="replace")
+            ok, msg = _check_marker_integrity(source_content, content)
+            if not ok:
+                errors.append(check_name)
+                print(f"  ✗  {check_name}")
+                print(f"       → {msg}")
+            else:
+                print(f"  ✓  {check_name} ({msg})")
+        except FileNotFoundError:
+            print(f"  ⚠  {check_name}")
+            print(f"       → Arquivo fonte não encontrado: {source_path}", file=sys.stderr)
+
     print()
     if errors:
         print(f"[RESULTADO] ✗ {len(errors)} erro(s). Validação falhou.")
@@ -182,13 +218,17 @@ def main() -> None:
         description="validate_output: valida .md gerado por md-clean-markdown."
     )
     parser.add_argument("--input", required=True, metavar="MD",
-                        help="Arquivo .md a validar")
+                        help="Arquivo .md limpo a validar (saída de clean_markdown.py)")
+    parser.add_argument("--source", metavar="MD",
+                        help="Arquivo .md bruto original (entrada de clean_markdown.py) — "
+                             "habilita verificação de integridade de marcadores de página")
     parser.add_argument("--strict", action="store_true",
                         help="Tratar warnings como erros")
     args = parser.parse_args()
 
     md_path = Path(args.input).expanduser().resolve()
-    sys.exit(run_validation(md_path, args.strict))
+    source_path = Path(args.source).expanduser().resolve() if args.source else None
+    sys.exit(run_validation(md_path, args.strict, source_path=source_path))
 
 
 if __name__ == "__main__":

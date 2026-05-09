@@ -118,13 +118,23 @@ sem outro conteúdo.
 
 ## Regra 7 — Preservação de marcadores de página
 
-Comentários HTML no formato `<!-- page N -->` e variantes (como
-`<!-- page N: empty -->`, `<!-- page N: extraction_failed -->`) devem
-ser preservados integralmente.
+Dois formatos de marcador de página são reconhecidos e devem ser preservados
+integralmente:
+
+| Formato | Papel | Exemplo |
+|---------|-------|---------|
+| `[[Pág. N]]` | **Primário** — output real de `pdf-to-md` | `[[Pág. 1]]` |
+| `<!-- page N -->` | **Legado** — compatibilidade retroativa | `<!-- page 1 -->` |
+
+Variantes legadas suportadas: `<!-- page N: empty -->`,
+`<!-- page N: extraction_failed -->`, `<!-- page N: scanned_no_ocr -->`.
 
 Esses marcadores são a ponte entre a etapa `pdf-to-md` e esta skill.
 Nenhuma regra de limpeza pode remover, modificar ou reformatar esses
-comentários.
+marcadores.
+
+**Proibição absoluta:** nunca converter `[[Pág. N]]` em `<!-- page N -->`
+nem o inverso. Os formatos devem ser preservados exatamente como recebidos.
 
 ---
 
@@ -163,5 +173,6 @@ Arquivo com múltiplos \n → colapsar para um único \n
 | Classificar ou rotular o tipo do documento      | Fora do escopo desta skill                   |
 | Reescrever frases ou parágrafos                 | Viola o princípio de preservação             |
 | Aplicar regras de domínio (jurídico, médico...) | A skill é agnóstica de domínio               |
-| Remover marcadores `<!-- page N -->`            | Violaria a rastreabilidade de páginas        |
+| Remover marcadores `[[Pág. N]]` ou `<!-- page N -->` | Violaria a rastreabilidade de páginas   |
+| Converter `[[Pág. N]]` ↔ `<!-- page N -->`     | Viola o contrato de preservação de formato   |
 | Tocar no conteúdo interno de blocos de código   | Protegido pela Regra 1                       |

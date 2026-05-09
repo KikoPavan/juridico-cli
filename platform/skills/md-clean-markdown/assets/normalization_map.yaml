@@ -70,9 +70,14 @@ normalization_map:
     action: strip_then_add_single_newline
 
 preserved_patterns:
-  - name: page_markers
-    description: Marcadores de página gerados por pdf-to-md
-    regex: "<!--\\s*page\\s+\\d+[^>]*-->"
+  - name: page_markers_primary
+    description: Marcadores de página primários gerados por pdf-to-md (formato atual)
+    regex: "\\[\\[Pág\\.\\s*\\d+\\]\\]"
+    action: preserve_verbatim
+
+  - name: page_markers_legacy
+    description: Marcadores de página legados — compatibilidade retroativa
+    regex: "<!--\\s*page\\s+\\d+(\\s*:\\s*(empty|extraction_failed|scanned_no_ocr))?\\s*-->"
     action: preserve_verbatim
 
   - name: code_blocks_backtick

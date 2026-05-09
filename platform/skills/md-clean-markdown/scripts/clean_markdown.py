@@ -16,7 +16,7 @@ Opções:
     --input PATH        Arquivo .md de entrada (obrigatório)
     --output PATH       Arquivo .md limpo de saída (obrigatório)
     --max-blank N       Máximo de linhas em branco consecutivas (padrão: 2)
-    --no-markers        Não preservar marcadores <!-- page N -->
+    --no-markers        Não preservar marcadores [[Pág. N]] e <!-- page N -->
     --verbose           Exibir log de operações no stderr
     --report            Gerar cleaning_report.md junto ao output
 """
@@ -39,8 +39,11 @@ EXIT_WRITE_ERROR = 3
 OUTPUT_ENCODING = "utf-8"
 
 # Regex para marcadores de página (gerados por pdf-to-md)
+# Formato primário: [[Pág. N]] — output real de pdf-to-md
+# Formato legado:   <!-- page N --> e variantes — compatibilidade retroativa
 PAGE_MARKER_RE = re.compile(
-    r"<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
+    r"\[\[Pág\.\s*\d+\]\]"
+    r"|<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
 )
 
 
@@ -329,7 +332,7 @@ def main() -> None:
     parser.add_argument("--max-blank", type=int, default=2, metavar="N",
                         help="Máximo de linhas em branco consecutivas (padrão: 2)")
     parser.add_argument("--no-markers", action="store_true",
-                        help="Não preservar marcadores <!-- page N -->")
+                        help="Não preservar marcadores [[Pág. N]] e <!-- page N -->")
     parser.add_argument("--verbose", action="store_true",
                         help="Log de operações no stderr")
     parser.add_argument("--report", action="store_true",

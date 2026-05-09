@@ -4,12 +4,13 @@ description: >
   Recebe um arquivo Markdown bruto oriundo de qualquer domínio e produz
   Markdown limpo, normalizado e pronto para processamento posterior.
   Remove ruído visual e textual, normaliza espaçamento e quebras de linha,
-  preserva títulos, listas e marcadores de página. Use esta skill sempre
-  que o usuário quiser limpar ou normalizar um arquivo Markdown, preparar
-  um .md para etapas subsequentes (extração, YAML, análise), ou mencionar
-  palavras como "limpar markdown", "normalizar markdown", "md limpo",
-  "segunda etapa do pipeline", "preparar md para processamento" — mesmo
-  que não mencione "md-clean-markdown" explicitamente.
+  preserva títulos, listas e marcadores de página [[Pág. N]] (primário) e
+  <!-- page N --> (legado). Use esta skill sempre que o usuário quiser
+  limpar ou normalizar um arquivo Markdown, preparar um .md para etapas
+  subsequentes (extração, YAML, análise), ou mencionar palavras como
+  "limpar markdown", "normalizar markdown", "md limpo", "segunda etapa do
+  pipeline", "preparar md para processamento" — mesmo que não mencione
+  "md-clean-markdown" explicitamente.
 profile: local_preprocessing
 version: 1.0.0
 ---
@@ -35,7 +36,7 @@ Ela não interpreta nem classifica o conteúdo.
 - Colapsa sequências de 3+ linhas em branco para no máximo 2
 - Normaliza separadores horizontais (`---`, `***`, `___`, `===`) para `---`
 - Remove espaços inconsistentes entre `#` e o texto do heading
-- Preserva marcadores de página `<!-- page N -->` e variantes
+- Preserva marcadores de página `[[Pág. N]]` (primário) e `<!-- page N -->` (legado)
 - Preserva a estrutura de listas (ordenadas e não ordenadas)
 - Preserva blocos de código (não toca no conteúdo interno)
 - Normaliza bullets: `*` e `+` soltos → `-`
@@ -70,7 +71,7 @@ Ela não interpreta nem classifica o conteúdo.
 |------------------|------------------|--------|---------|------------------------------------------------|
 | `input_md`       | `--input`        | ✅     | —       | Caminho do `.md` bruto de entrada              |
 | `output_md`      | `--output`       | ✅     | —       | Caminho do `.md` limpo de saída                |
-| `page_markers`   | `--no-markers`   | ❌     | `true`  | Preservar `<!-- page N -->` e variantes        |
+| `page_markers`   | `--no-markers`   | ❌     | `true`  | Preservar `[[Pág. N]]` (primário) e `<!-- page N -->` (legado) |
 | `verbose`        | `--verbose`      | ❌     | `false` | Exibir log de operações no stderr              |
 | `report`         | `--report`       | ❌     | `false` | Gerar `cleaning_report.md` junto ao output     |
 | `max_blank_lines`| `--max-blank`    | ❌     | `2`     | Máximo de linhas em branco consecutivas        |
@@ -95,7 +96,7 @@ Ela não interpreta nem classifica o conteúdo.
 5. **Bullets** — normalizar `*` e `+` como marcadores de lista para `-`
 6. **Separadores** — unificar variantes de `<hr>` para `---`
 7. **Blocos de código** — preservar integralmente, sem tocar no conteúdo interno
-8. **Marcadores de página** — preservar `<!-- page N -->` e variantes
+8. **Marcadores de página** — preservar `[[Pág. N]]` (primário) e `<!-- page N -->` (legado); nunca converter entre formatos
 9. **Linha final** — garantir exatamente `\n` ao final do arquivo
 
 → Regras detalhadas em [`assets/cleaning_rules.md`](assets/cleaning_rules.md)
