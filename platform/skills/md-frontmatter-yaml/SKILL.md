@@ -36,6 +36,7 @@ Não interpreta profundamente o conteúdo nem classifica domínios.
 - Gera frontmatter YAML válido com campos documentais básicos
 - Insere o bloco YAML no topo do arquivo (`---` ... `---`)
 - Preserva integralmente o corpo do Markdown original
+- Preserva marcadores de página `[[Pág. N]]` (primário, produzido por `md-clean-markdown`) e `<!-- page N -->` (legado) integralmente no corpo de saída
 - Popula campos inferíveis de forma conservadora; campos desconhecidos
   ficam como `null` ou são omitidos
 - Aceita sobrescrita de campos via parâmetros de linha de comando

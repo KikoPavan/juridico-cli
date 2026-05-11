@@ -22,7 +22,7 @@ status: raw
 created_by_skill: md-frontmatter-yaml
 ---
 
-<!-- page 1 -->
+[[Pág. 1]]
 # MANUAL DE PROCEDIMENTOS OPERACIONAIS
 
 Versão 3.2 — Revisado em Março de 2024
@@ -36,7 +36,7 @@ Este manual define os procedimentos padrão para execução das atividades
 operacionais da unidade. Destina-se a todos os colaboradores envolvidos
 nos processos de produção, controle e entrega.
 
-<!-- page 2 -->
+[[Pág. 2]]
 ## 2. ESCOPO
 
 O presente documento aplica-se a:
@@ -48,7 +48,7 @@ O presente documento aplica-se a:
 
 [... corpo completo preservado ...]
 
-<!-- page 5: empty -->
+[[Pág. 5]]
 ```
 
 ---
@@ -65,5 +65,5 @@ O presente documento aplica-se a:
 - [x] `created_by_skill: md-frontmatter-yaml` presente
 - [x] YAML válido (parseável por pyyaml)
 - [x] Corpo do documento preservado integralmente
-- [x] Marcadores de página presentes no corpo
+- [x] Marcadores `[[Pág. N]]` presentes no corpo sem alteração
 - [x] Sem campos jurídicos especializados

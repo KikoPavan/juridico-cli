@@ -48,7 +48,7 @@ fi
 if [ ! -f "$INPUT_MD" ]; then
   echo "[run_example] Gerando Markdown de entrada de exemplo..."
   cat > "$INPUT_MD" << 'MD_CONTENT'
-<!-- page 1 -->
+[[Pág. 1]]
 # MANUAL DE PROCEDIMENTOS OPERACIONAIS
 
 Versão 3.2 — Revisado em Março de 2024
@@ -62,7 +62,7 @@ Este manual define os procedimentos padrão para execução das atividades
 operacionais da unidade. Destina-se a todos os colaboradores envolvidos
 nos processos de produção, controle e entrega.
 
-<!-- page 2 -->
+[[Pág. 2]]
 ## 2. ESCOPO
 
 O presente documento aplica-se a:
@@ -78,7 +78,7 @@ O presente documento aplica-se a:
 - **Não Conformidade (NC):** desvio identificado em relação ao padrão estabelecido.
 - **Registro:** evidência documentada de uma atividade realizada.
 
-<!-- page 3 -->
+[[Pág. 3]]
 ### 4. PROCEDIMENTO GERAL
 
 4.1 Recebimento de Materiais
@@ -99,7 +99,7 @@ Durante a execução, observe:
 - Preencher o formulário de OS ao início e ao fim
 - Comunicar ao supervisor qualquer NC identificada
 
-<!-- page 4 -->
+[[Pág. 4]]
 ## 5. REGISTROS E EVIDÊNCIAS
 
 Todos os registros devem ser:
@@ -108,7 +108,7 @@ Todos os registros devem ser:
 - Assinados pelo responsável pela execução
 - Arquivados pelo prazo mínimo de 5 anos
 
-<!-- page 5: empty -->
+[[Pág. 5]]
 MD_CONTENT
   echo "[run_example] Criado: $INPUT_MD"
 else
@@ -138,7 +138,7 @@ echo ""
 python3 "$SCRIPT_DIR/validate_output.py" \
   --input    "$OUTPUT_MD" \
   --original "$INPUT_MD" \
-  $STRICT_FLAG
+  --strict
 
 # ---------------------------------------------------------------------------
 # Preview do frontmatter gerado

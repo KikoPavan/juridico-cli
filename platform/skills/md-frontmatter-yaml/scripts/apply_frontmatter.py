@@ -67,6 +67,7 @@ def _detect_title(body: str) -> tuple[str | None, str]:
     for line in body.splitlines():
         # Remover marcadores de página antes de checar headings
         clean = re.sub(r"<!--[^>]*-->", "", line).strip()
+        clean = re.sub(r"\[\[Pág\.\s*\d+\]\]", "", clean).strip()
         m = re.match(r"^#\s+(.+)", clean)
         if m:
             return m.group(1).strip(), "h1"
