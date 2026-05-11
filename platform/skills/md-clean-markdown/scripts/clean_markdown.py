@@ -125,13 +125,15 @@ def _restore_code_blocks(lines: list[str], blocks: dict[str, str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _fix_trailing_whitespace(line: str, stats: CleanStats) -> str:
-    """Regra 2: remove trailing whitespace, exceto quebra forçada (2 espaços finais)."""
-    if line.endswith("  \n") or line.endswith("  "):
-        return line  # quebra forçada Markdown — preservar
-    stripped = line.rstrip(" \t")
-    # Preservar a quebra de linha original
+    """Regra 2: remove trailing whitespace, exceto quebra forçada (exatamente 2 espaços finais)."""
     newline = "\n" if line.endswith("\n") else ""
-    result = stripped.rstrip("\n") + newline
+    body = line[:-1] if newline else line
+    # Exactly 2 trailing spaces = Markdown forced line break — preserve.
+    # 3+ trailing spaces are accidental and must be stripped.
+    if body.endswith("  ") and not body.endswith("   "):
+        return line
+    stripped = body.rstrip(" \t")
+    result = stripped + newline
     if result != line:
         stats.trailing_ws_fixed += 1
     return result
