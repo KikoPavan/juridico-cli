@@ -6,6 +6,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from clean_markdown import CleanStats, _fix_trailing_whitespace, clean_lines
 
+FIXTURE_DIR = Path(__file__).parent / "tests" / "fixtures"
+
 
 # ---------------------------------------------------------------------------
 # _fix_trailing_whitespace unit tests
@@ -100,6 +102,44 @@ def test_page_marker_not_preserved_when_disabled():
     result = clean_lines(lines, max_blank=2, preserve_markers=False, stats=stats, verbose=False)
     # Marker treated as normal text — trailing whitespace fix still applies
     assert result[0] == "[[Pág. 1]]\n", repr(result[0])
+
+
+# ---------------------------------------------------------------------------
+# Real fixture integration tests
+# ---------------------------------------------------------------------------
+
+def test_realfixture_markers_preserved():
+    md_path = FIXTURE_DIR / "pdf_to_md_sample.md"
+    raw_text = md_path.read_text(encoding="utf-8", errors="replace")
+    lines = raw_text.splitlines(keepends=True)
+    stats = CleanStats()
+    result = clean_lines(lines, max_blank=2, preserve_markers=True, stats=stats, verbose=False)
+    result_text = "".join(result)
+    assert "[[Pág. 1]]" in result_text, "[[Pág. 1]] ausente na saída"
+    assert "[[Pág. 2]]" in result_text, "[[Pág. 2]] ausente na saída"
+    # Verify order is preserved
+    idx1 = result_text.index("[[Pág. 1]]")
+    idx2 = result_text.index("[[Pág. 2]]")
+    assert idx1 < idx2, "Ordem dos marcadores foi alterada"
+
+
+def test_realfixture_content_integrity():
+    md_path = FIXTURE_DIR / "pdf_to_md_sample.md"
+    raw_text = md_path.read_text(encoding="utf-8", errors="replace")
+    lines = raw_text.splitlines(keepends=True)
+    stats = CleanStats()
+    result = clean_lines(lines, max_blank=2, preserve_markers=True, stats=stats, verbose=False)
+    result_text = "".join(result)
+    # Legal text: proprietário qualification should survive intact
+    assert "JURACI PIRES PAVAN" in result_text, "Texto jurídico do proprietário foi removido"
+    assert "portadora da cédula de" in result_text, \
+        "Qualificação foi truncada (parte 1)"
+    assert "identidade RG. n.4.294.873-SSP/SP" in result_text, \
+        "Qualificação foi truncada (parte 2)"
+    assert "793.933.908-78" in result_text, "CPF foi removido"
+    # OCR artifact text should also be preserved (cleaner preserves content)
+    assert "MARIAALVES DA SILVACONTRUCCI" in result_text, \
+        "Cabeçalho OCR com artifact não foi preservado"
 
 
 # ---------------------------------------------------------------------------
