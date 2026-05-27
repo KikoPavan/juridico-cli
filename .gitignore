@@ -42,27 +42,10 @@ env/
 base_juridica/
 
 # Runtime / dados processuais locais
-var/input/**
-var/output/**
-var/staging/**
-var/logs/**
-var/cache/**
-var/backups/**
-
-# manter apenas a estrutura vazia
-!var/input/.gitkeep
-!var/output/.gitkeep
-!var/staging/.gitkeep
-!var/logs/.gitkeep
-!var/cache/.gitkeep
-!var/backups/.gitkeep
-!var/input/json/.gitkeep
-!var/input/md/.gitkeep
-!var/input/raw/.gitkeep
-
-# artifacts: manter ignorado por segurança até inspeção
-var/artifacts/**
-!var/artifacts/.gitkeep
+var/*
+!var/
+!var/**/
+!var/**/.gitkeep
 
 # Sistema operacional
 .DS_Store
@@ -83,34 +66,81 @@ Desktop.ini
 *.rar
 _quarantine_ai_cli_*/
 
-# Local project documentation used by agents/OpenSpec context
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyd
+*.pyo
+*.so
+build/
+dist/
+wheels/
+*.egg-info/
+pip-wheel-metadata/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.tox/
+.nox/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environment / env
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+!.env.example
+
+# Diretórios locais
+.agent/
+.claude/
+.qwen/
+.gemini/
+.opencode/
+.codex/
+
+# dados locais (não versionar)
+base_juridica/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs e temporários
+*.log
+*.tmp
+*.temp
+
+# Arquivos compactados locais
+*.zip
+*.7z
+*.tar
+*.gz
+*.bz2
+*.rar
+_quarantine_ai_cli_*/
+
+# Runtime / dados processuais locais
+var/**
+!var/
+!var/**/
+!var/**/.gitkeep
+
+# App-local runtime dirs are not allowed
+apps/data-processing/var/
+
+# Local project documentation - não versionar no GitHub
 docs/**
 !docs/
 !docs/.gitkeep
 
-# Runtime data
-var/artifacts/**
-var/backups/**
-var/cache/**
-var/input/**
-var/logs/**
-var/output/**
-var/staging/**
-
-# Preserve runtime directory structure
-!var/
-!var/artifacts/
-!var/backups/
-!var/cache/
-!var/input/
-!var/logs/
-!var/output/
-!var/staging/
-!var/artifacts/.gitkeep
-!var/backups/.gitkeep
-!var/cache/.gitkeep
-!var/input/.gitkeep
-!var/logs/.gitkeep
-!var/output/.gitkeep
-!var/staging/.gitkeep
+# GitNexus local index
 .gitnexus/
