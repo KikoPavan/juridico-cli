@@ -17,10 +17,11 @@ from convert_pdf_to_md import _strip_boilerplate, _needs_ocr, MIN_CHARS_FOR_TEXT
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _run(name: str, cond: bool) -> bool:
+def _run(name: str, cond: bool) -> None:
     status = "PASS" if cond else "FAIL"
     print(f"[{status}] {name}")
-    return cond
+    if not cond:
+        raise AssertionError(name)
 
 
 # ---------------------------------------------------------------------------
@@ -29,46 +30,46 @@ def _run(name: str, cond: bool) -> bool:
 
 def test_strip_fls_numeration():
     result = _strip_boilerplate("Fls. 42")
-    return _run("strip: 'Fls. 42' → empty", result.strip() == "")
+    _run("strip: 'Fls. 42' → empty", result.strip() == "")
 
 
 def test_strip_fl_lowercase():
     result = _strip_boilerplate("fl. 5")
-    return _run("strip: 'fl. 5' → empty", result.strip() == "")
+    _run("strip: 'fl. 5' → empty", result.strip() == "")
 
 
 def test_strip_standalone_page_number():
     result = _strip_boilerplate("  42  ")
-    return _run("strip: '  42  ' → empty", result.strip() == "")
+    _run("strip: '  42  ' → empty", result.strip() == "")
 
 
 def test_strip_tribunal_header():
     text = "TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO"
     result = _strip_boilerplate(text)
-    return _run("strip: tribunal header → empty", result.strip() == "")
+    _run("strip: tribunal header → empty", result.strip() == "")
 
 
 def test_strip_poder_judiciario():
     text = "Poder Judiciário"
     result = _strip_boilerplate(text)
-    return _run("strip: 'Poder Judiciário' → empty", result.strip() == "")
+    _run("strip: 'Poder Judiciário' → empty", result.strip() == "")
 
 
 def test_strip_foro_regional():
     text = "Foro Regional VII - Itaquera"
     result = _strip_boilerplate(text)
-    return _run("strip: foro regional header → empty", result.strip() == "")
+    _run("strip: foro regional header → empty", result.strip() == "")
 
 
 def test_strip_assinado_eletronicamente():
     text = "Assinado eletronicamente por João Silva em 01/01/2024"
     result = _strip_boilerplate(text)
-    return _run("strip: e-signature footer → empty", result.strip() == "")
+    _run("strip: e-signature footer → empty", result.strip() == "")
 
 
 def test_strip_horizontal_rule():
     result = _strip_boilerplate("----------")
-    return _run("strip: horizontal rule → empty", result.strip() == "")
+    _run("strip: horizontal rule → empty", result.strip() == "")
 
 
 def test_body_text_preserved():
@@ -78,13 +79,13 @@ def test_body_text_preserved():
         "expor e requerer o seguinte."
     )
     result = _strip_boilerplate(text)
-    return _run("preserve: petition body text unchanged", result == text)
+    _run("preserve: petition body text unchanged", result == text)
 
 
 def test_body_text_with_numbers_preserved():
     text = "O réu foi citado em 15/03/2024 conforme certidão de fl. 10, tendo apresentado contestação."
     result = _strip_boilerplate(text)
-    return _run("preserve: body with inline 'fl. 10' reference preserved", result == text)
+    _run("preserve: body with inline 'fl. 10' reference preserved", result == text)
 
 
 # ---------------------------------------------------------------------------
@@ -98,16 +99,18 @@ def test_needs_ocr_boilerplate_only():
         "Fls. 42\n"
         "----------"
     )
-    result = _needs_ocr(text)
-    return _run("needs_ocr: boilerplate-only page → True", result is True)
+    needs, _ = _needs_ocr(text)
+    _run("needs_ocr: boilerplate-only page → True", needs is True)
 
 
 def test_needs_ocr_empty():
-    return _run("needs_ocr: empty string → True", _needs_ocr("") is True)
+    needs, _ = _needs_ocr("")
+    _run("needs_ocr: empty string → True", needs is True)
 
 
 def test_needs_ocr_short_real_text():
-    return _run("needs_ocr: 10-char real text → True", _needs_ocr("Olá mundo.") is True)
+    needs, _ = _needs_ocr("Olá mundo.")
+    _run("needs_ocr: 10-char real text → True", needs is True)
 
 
 # ---------------------------------------------------------------------------
@@ -122,14 +125,14 @@ def test_needs_ocr_mixed_page_sufficient_body():
     )
     assert len(body) >= MIN_CHARS_FOR_TEXT, f"body too short for this test: {len(body)}"
     text = f"TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO\nFls. 10\n{body}"
-    result = _needs_ocr(text)
-    return _run("needs_ocr: mixed (boilerplate + rich body) → False", result is False)
+    needs, _ = _needs_ocr(text)
+    _run("needs_ocr: mixed (boilerplate + rich body) → False", needs is False)
 
 
 def test_needs_ocr_mixed_page_thin_body():
     text = "TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO\nFls. 10\nOlá."
-    result = _needs_ocr(text)
-    return _run("needs_ocr: mixed (boilerplate + thin body) → True", result is True)
+    needs, _ = _needs_ocr(text)
+    _run("needs_ocr: mixed (boilerplate + thin body) → True", needs is True)
 
 
 def test_needs_ocr_rich_text_no_boilerplate():
@@ -138,8 +141,8 @@ def test_needs_ocr_rich_text_no_boilerplate():
         "do CPC, requerer a concessão de tutela de urgência, demonstrando a "
         "probabilidade do direito e o perigo de dano irreparável."
     )
-    result = _needs_ocr(text)
-    return _run("needs_ocr: rich body without boilerplate → False", result is False)
+    needs, _ = _needs_ocr(text)
+    _run("needs_ocr: rich body without boilerplate → False", needs is False)
 
 
 # ---------------------------------------------------------------------------
@@ -166,11 +169,17 @@ def main() -> int:
         test_needs_ocr_rich_text_no_boilerplate,
     ]
 
-    results = [t() for t in tests]
-    passed = sum(results)
-    total = len(results)
+    passed = 0
+    failed = 0
+    for t in tests:
+        try:
+            t()
+            passed += 1
+        except AssertionError:
+            failed += 1
+    total = passed + failed
     print(f"\n{passed}/{total} tests passed.")
-    return 0 if passed == total else 1
+    return 0 if failed == 0 else 1
 
 
 if __name__ == "__main__":

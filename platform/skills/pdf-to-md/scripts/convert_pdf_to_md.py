@@ -33,6 +33,7 @@ PAGE_ANCHOR_TPL = "[[Pág. {n}]]"
 # Density thresholds for OCR fallback decision (tasks.md §3)
 MIN_CHARS_FOR_TEXT = 50    # minimum useful characters per page
 MIN_PRINTABLE_RATIO = 0.6  # minimum ratio of printable chars
+MIN_TEXT_QUALITY = 0.45    # minimum heuristic quality score (space density + long-token ratio)
 
 OUTPUT_ENCODING = "utf-8"
 OCR_RENDER_SCALE = 3.0  # scale factor for page-to-image (~216 DPI)
@@ -98,6 +99,27 @@ def _printable_ratio(text: str) -> float:
     return sum(1 for c in text if c.isprintable()) / len(text)
 
 
+def _text_quality_score(text: str) -> float:
+    """Heuristic quality score in [0.0, 1.0]; low values indicate corrupted/glued text.
+
+    Penalises high space density (chars per space) and high long-token ratio (tokens > 20 chars).
+    Normal Portuguese prose: 5–10 chars/space, few long tokens → score near 1.0.
+    Glued/corrupted text: many chars without spaces, very long tokens → score near 0.0.
+    """
+    if not text:
+        return 0.0
+    spaces = text.count(" ")
+    chars_per_space = len(text) / (spaces + 1)
+    tokens = text.split()
+    if not tokens:
+        return 0.0
+    long_word_ratio = sum(1 for t in tokens if len(t) > 20) / len(tokens)
+    # Penalty starts at >10 chars/space; saturates at 30 chars/space.
+    space_density_penalty = min(1.0, max(0.0, (chars_per_space - 10.0) / 20.0))
+    penalty = long_word_ratio * 0.6 + space_density_penalty * 0.4
+    return max(0.0, 1.0 - penalty)
+
+
 def _strip_boilerplate(text: str) -> str:
     """Remove boilerplate lines from native extracted text; return residual."""
     if not text:
@@ -109,22 +131,28 @@ def _strip_boilerplate(text: str) -> str:
     return "\n".join(kept)
 
 
-def _needs_ocr(text: str) -> bool:
-    """Returns True when native text is too sparse to be trusted after stripping boilerplate."""
+def _needs_ocr(text: str) -> tuple[bool, str]:
+    """Returns (needs_ocr, reason) after stripping boilerplate.
+
+    Reasons: 'low_chars', 'low_printable', 'low_quality', 'ok'.
+    """
     effective = _strip_boilerplate(text)
     if len(effective) < MIN_CHARS_FOR_TEXT:
-        return True
+        return (True, "low_chars")
     if _printable_ratio(effective) < MIN_PRINTABLE_RATIO:
-        return True
-    return False
+        return (True, "low_printable")
+    if _text_quality_score(effective) < MIN_TEXT_QUALITY:
+        return (True, "low_quality")
+    return (False, "ok")
 
 
-def _assess(text: str) -> str:
+def _assess(text: str) -> tuple[str, str]:
     if not text:
-        return "empty"
-    if _needs_ocr(text):
-        return "scanned_no_ocr"
-    return "ok"
+        return ("empty", "empty")
+    needs, reason = _needs_ocr(text)
+    if needs:
+        return ("scanned_no_ocr", reason)
+    return ("ok", "ok")
 
 
 # ---------------------------------------------------------------------------
@@ -171,13 +199,13 @@ def _extract_pdfminer(pdf_path: Path, verbose: bool) -> list[dict]:
             raw = "".join(
                 el.get_text() for el in layout if isinstance(el, LTTextContainer)
             ).strip()
-            status = _assess(raw)
+            status, reason = _assess(raw)
         except Exception:
-            raw, status = "", "failed"
+            raw, status, reason = "", "failed", "failed"
 
         if verbose:
             print(f"  [pdfminer] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
-        pages.append({"page": num, "text": raw, "status": status, "ocr": False})
+        pages.append({"page": num, "text": raw, "status": status, "ocr": False, "reason": reason})
 
     return pages
 
@@ -201,6 +229,7 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
         for num in range(1, len(doc) + 1):
             page_idx = num - 1
             used_ocr = False
+            reason = "ok"
 
             try:
                 raw = doc[page_idx].get_text("text").strip()
@@ -211,28 +240,38 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
 
             if not extraction_ok:
                 status = "failed"
-            elif _needs_ocr(raw):
-                if ocr_engine is not None:
-                    try:
-                        img_bytes = _render_page_image(doc, page_idx)
-                        ocr_text = _run_paddle_ocr(img_bytes, ocr_engine)
-                        raw = ocr_text.strip()
-                        status = "ok" if raw else "scanned_ocr_empty"
-                        used_ocr = True
-                    except Exception as exc:
-                        if verbose:
-                            print(f"  [ocr] p.{num}: falhou — {exc}", file=sys.stderr)
+                reason = "failed"
+            else:
+                needs, reason = _needs_ocr(raw)
+                if needs:
+                    if ocr_engine is not None:
+                        try:
+                            img_bytes = _render_page_image(doc, page_idx)
+                            ocr_text = _run_paddle_ocr(img_bytes, ocr_engine)
+                            raw = ocr_text.strip()
+                            status = "ok" if raw else "scanned_ocr_empty"
+                            used_ocr = True
+                        except Exception as exc:
+                            if verbose:
+                                print(f"  [ocr] p.{num}: falhou — {exc}", file=sys.stderr)
+                            status = "scanned_no_ocr"
+                    else:
                         status = "scanned_no_ocr"
                 else:
-                    status = "scanned_no_ocr"
-            else:
-                status = "ok"
+                    status = "ok"
 
             if verbose:
-                source = "ocr" if used_ocr else "pymupdf"
-                print(f"  [{source}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
+                if used_ocr:
+                    label = f"ocr/{reason}"
+                elif status in ("scanned_no_ocr", "scanned_ocr_empty"):
+                    label = f"no_ocr/{reason}"
+                elif status == "failed":
+                    label = "failed"
+                else:
+                    label = f"pymupdf/{reason}"
+                print(f"  [{label}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
 
-            pages.append({"page": num, "text": raw, "status": status, "ocr": used_ocr})
+            pages.append({"page": num, "text": raw, "status": status, "ocr": used_ocr, "reason": reason})
     finally:
         doc.close()
 
@@ -364,6 +403,14 @@ def build_report(
     ]
     if warnings:
         lines += ["", "## Warnings"] + [f"- {w}" for w in warnings]
+
+    lines += ["", "## Detalhe por Página", "",
+              "| Página | Status | OCR | Motivo |",
+              "|--------|--------|-----|--------|"]
+    for p in pages:
+        origem = "sim" if p.get("ocr") else "não"
+        reason = p.get("reason", "ok")
+        lines.append(f"| {p['page']} | {p['status']} | {origem} | {reason} |")
 
     return "\n".join(lines) + "\n"
 

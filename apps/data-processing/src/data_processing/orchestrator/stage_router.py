@@ -22,10 +22,13 @@ def _convert_via_skill(pdf_path: Path, out_md: Path) -> None:
     skill_script = _project_root / "platform" / "skills" / "pdf-to-md" / "scripts" / "convert_pdf_to_md.py"
 
     result = subprocess.run(
-        [sys.executable, str(skill_script), "--input", str(pdf_path), "--output", str(out_md)],
-        capture_output=True,
+        [sys.executable, str(skill_script), "--input", str(pdf_path), "--output", str(out_md),
+         "--verbose"],
+        stderr=subprocess.PIPE,
         text=True,
     )
+    if result.stderr:
+        sys.stderr.write(result.stderr)
     if result.returncode != 0:
         raise RuntimeError(
             f"pdf-to-md skill failed (exit {result.returncode}) for {pdf_path.name}: "
