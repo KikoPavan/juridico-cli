@@ -21,6 +21,7 @@ Exit codes: 0=ok  1=input_error  2=extract_error  3=write_error
 
 import argparse
 import datetime
+import os
 import re
 import sys
 from pathlib import Path
@@ -34,9 +35,17 @@ PAGE_ANCHOR_TPL = "[[Pág. {n}]]"
 MIN_CHARS_FOR_TEXT = 50    # minimum useful characters per page
 MIN_PRINTABLE_RATIO = 0.6  # minimum ratio of printable chars
 MIN_TEXT_QUALITY = 0.45    # minimum heuristic quality score (space density + long-token ratio)
+MIN_OCR_POST_QUALITY = MIN_TEXT_QUALITY  # minimum post-OCR quality score (design decision 5)
+# Ratio of lines with ≤ 2 non-whitespace chars that signals garbled/fragmented OCR text.
+# Normal Portuguese prose: < 5%. Scanned docs with per-char OCR extraction: > 15%.
+SHORT_LINE_RATIO_THRESHOLD = 0.15
+# Case-chaos thresholds for post-OCR quality detection.
+# Good OCR output: ~0% chaotic words. Corrupted OCR: 4–10%+.
+OCR_CHAOS_NOISE_FLOOR = 0.02   # chaos below this is within normal OCR noise
+OCR_CHAOS_SATURATION  = 0.06   # chaos at or above this → maximum penalty (score → 0)
 
 OUTPUT_ENCODING = "utf-8"
-OCR_RENDER_SCALE = 3.0  # scale factor for page-to-image (~216 DPI)
+OCR_RENDER_SCALE = 300 / 72.0  # scale factor for page-to-image (300 DPI)
 
 # ---------------------------------------------------------------------------
 # Boilerplate patterns for Brazilian legal documents
@@ -120,6 +129,49 @@ def _text_quality_score(text: str) -> float:
     return max(0.0, 1.0 - penalty)
 
 
+def _is_case_chaotic(word: str) -> bool:
+    """True if a word mixes case in a non-standard pattern — a corrupted OCR artifact.
+
+    Accepts: ALL_CAPS, all_lower, Title_case (first upper then all lower).
+    Flags: sAO, tS1aDO, EStADO, PAUi, pAuLO.
+    """
+    letters = [c for c in word if c.isalpha()]
+    if len(letters) < 3:
+        return False
+    if all(c.isupper() for c in letters):
+        return False
+    if all(c.islower() for c in letters):
+        return False
+    if letters[0].isupper() and all(c.islower() for c in letters[1:]):
+        return False  # title case
+    return True
+
+
+def _case_chaos_ratio(text: str) -> float:
+    """Fraction of whitespace-separated tokens that are case-chaotic."""
+    words = text.split()
+    if not words:
+        return 0.0
+    return sum(1 for w in words if _is_case_chaotic(w)) / len(words)
+
+
+def _ocr_post_quality_score(text: str) -> float:
+    """Post-OCR quality score; stricter than _text_quality_score.
+
+    Adds a case-chaos penalty for character substitution artifacts
+    (e.g. tS1aDO, pAuLO, EStADO) that the space-density metric misses.
+    Penalty starts at OCR_CHAOS_NOISE_FLOOR and drives score to 0 at OCR_CHAOS_SATURATION.
+    For well-recognized OCR (~0% chaos) the base score is preserved unchanged.
+    """
+    base = _text_quality_score(text)
+    chaos = _case_chaos_ratio(text)
+    chaos_penalty = max(
+        0.0,
+        min(1.0, (chaos - OCR_CHAOS_NOISE_FLOOR) / (OCR_CHAOS_SATURATION - OCR_CHAOS_NOISE_FLOOR)),
+    )
+    return max(0.0, base - chaos_penalty)
+
+
 def _strip_boilerplate(text: str) -> str:
     """Remove boilerplate lines from native extracted text; return residual."""
     if not text:
@@ -134,7 +186,7 @@ def _strip_boilerplate(text: str) -> str:
 def _needs_ocr(text: str) -> tuple[bool, str]:
     """Returns (needs_ocr, reason) after stripping boilerplate.
 
-    Reasons: 'low_chars', 'low_printable', 'low_quality', 'ok'.
+    Reasons: 'low_chars', 'low_printable', 'low_quality', 'garbled_text', 'ok'.
     """
     effective = _strip_boilerplate(text)
     if len(effective) < MIN_CHARS_FOR_TEXT:
@@ -143,6 +195,13 @@ def _needs_ocr(text: str) -> tuple[bool, str]:
         return (True, "low_printable")
     if _text_quality_score(effective) < MIN_TEXT_QUALITY:
         return (True, "low_quality")
+    # Detect garbled/fragmented OCR text: many lines with ≤ 2 chars (e.g. per-char extraction).
+    # This pattern yields a high quality score (abundant spaces) but unusable content.
+    lines = [ln.strip() for ln in effective.splitlines() if ln.strip()]
+    if lines:
+        short_ratio = sum(1 for ln in lines if len(ln) <= 2) / len(lines)
+        if short_ratio > SHORT_LINE_RATIO_THRESHOLD:
+            return (True, "garbled_text")
     return (False, "ok")
 
 
@@ -159,8 +218,10 @@ def _assess(text: str) -> tuple[str, str]:
 # Page rendering for OCR (tasks.md §4)
 # ---------------------------------------------------------------------------
 def _render_page_image(doc, page_idx: int) -> bytes:
-    """Render a single PDF page to PNG bytes."""
+    """Render a single PDF page to PNG bytes at OCR_RENDER_SCALE (~300 DPI)."""
     import fitz
+    dpi = round(OCR_RENDER_SCALE * 72)
+    print(f"[render] p.{page_idx + 1}: scale={OCR_RENDER_SCALE:.4f} ({dpi} DPI)", file=sys.stderr)
     mat = fitz.Matrix(OCR_RENDER_SCALE, OCR_RENDER_SCALE)
     pix = doc[page_idx].get_pixmap(matrix=mat, alpha=False)
     return pix.tobytes("png")
@@ -184,6 +245,31 @@ def _run_paddle_ocr(img_bytes: bytes, ocr_engine) -> str:
                 if line and len(line) >= 2:
                     lines.append(line[1][0])
     return "\n".join(lines)
+
+
+def _preprocess_image(img_bytes: bytes) -> bytes:
+    """Preprocess a rendered page image for OCR using Pillow only.
+
+    Pipeline: grayscale → auto-contrast → contrast boost → sharpen →
+    median denoise → binary threshold (L mode, not 1-bit).
+    On any error, logs to stderr and returns the original bytes unchanged.
+    """
+    try:
+        import io
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+        img = Image.open(io.BytesIO(img_bytes)).convert("L")
+        img = ImageOps.autocontrast(img)
+        img = ImageEnhance.Contrast(img).enhance(1.5)
+        img = img.filter(ImageFilter.SHARPEN)
+        img = img.filter(ImageFilter.MedianFilter(size=3))
+        img = img.point(lambda x: 255 if x > 128 else 0)
+        out = io.BytesIO()
+        img.save(out, format="PNG")
+        return out.getvalue()
+    except Exception as exc:
+        print(f"[preprocess] image preprocessing failed: {exc}", file=sys.stderr)
+        return img_bytes
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +299,7 @@ def _extract_pdfminer(pdf_path: Path, verbose: bool) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Extraction — PyMuPDF with PaddleOCR fallback (tasks.md §2–§4)
 # ---------------------------------------------------------------------------
-def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
+def _extract_pymupdf(pdf_path: Path, verbose: bool, compare_ocr: bool = False) -> list[dict]:
     import fitz
 
     ocr_engine = _get_paddle_ocr()
@@ -230,6 +316,7 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
             page_idx = num - 1
             used_ocr = False
             reason = "ok"
+            ocr_mode = ""
 
             try:
                 raw = doc[page_idx].get_text("text").strip()
@@ -247,9 +334,30 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
                     if ocr_engine is not None:
                         try:
                             img_bytes = _render_page_image(doc, page_idx)
-                            ocr_text = _run_paddle_ocr(img_bytes, ocr_engine)
-                            raw = ocr_text.strip()
-                            status = "ok" if raw else "scanned_ocr_empty"
+
+                            preprocessed_bytes = _preprocess_image(img_bytes)
+                            preprocessed_ok = preprocessed_bytes is not img_bytes
+
+                            if compare_ocr:
+                                raw_ocr_text = _run_paddle_ocr(img_bytes, ocr_engine)
+                                if verbose:
+                                    print(
+                                        f"  [ocr_raw] p.{num}: compare ({len(raw_ocr_text)} chars)",
+                                        file=sys.stderr,
+                                    )
+
+                            ocr_text = _run_paddle_ocr(preprocessed_bytes, ocr_engine).strip()
+                            ocr_quality = _ocr_post_quality_score(ocr_text)
+
+                            if ocr_quality < MIN_OCR_POST_QUALITY:
+                                raw = "[low_ocr_quality]"
+                                status = "low_ocr_quality"
+                                ocr_mode = "low_ocr_quality"
+                            else:
+                                raw = ocr_text
+                                status = "ok" if raw else "scanned_ocr_empty"
+                                ocr_mode = "ocr_preprocessed" if preprocessed_ok else "ocr_raw"
+
                             used_ocr = True
                         except Exception as exc:
                             if verbose:
@@ -261,15 +369,14 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
                     status = "ok"
 
             if verbose:
-                if used_ocr:
-                    label = f"ocr/{reason}"
+                if used_ocr and ocr_mode:
+                    print(f"  [{ocr_mode}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
                 elif status in ("scanned_no_ocr", "scanned_ocr_empty"):
-                    label = f"no_ocr/{reason}"
+                    print(f"  [no_ocr/{reason}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
                 elif status == "failed":
-                    label = "failed"
+                    print(f"  [failed] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
                 else:
-                    label = f"pymupdf/{reason}"
-                print(f"  [{label}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
+                    print(f"  [pymupdf/{reason}] p.{num}: {status} ({len(raw)} chars)", file=sys.stderr)
 
             pages.append({"page": num, "text": raw, "status": status, "ocr": used_ocr, "reason": reason})
     finally:
@@ -366,6 +473,8 @@ def build_markdown(pages: list[dict], page_markers: bool) -> str:
 
         if status == "ok" and text:
             blocks.append(_format_page(text))
+        elif status == "low_ocr_quality":
+            blocks.append("[low_ocr_quality]")
 
     return "\n\n".join(blocks) + "\n"
 
@@ -383,7 +492,8 @@ def build_report(
     failed = [p["page"] for p in pages if p["status"] == "failed"]
     empty = [p["page"] for p in pages if p["status"] == "empty"]
     scanned = [p["page"] for p in pages if p["status"] in ("scanned_no_ocr", "scanned_ocr_empty")]
-    status = "success" if not (failed or scanned) else ("partial" if ok else "failed")
+    low_ocr = [p["page"] for p in pages if p["status"] == "low_ocr_quality"]
+    status = "success" if not (failed or scanned or low_ocr) else ("partial" if ok else "failed")
     now = datetime.datetime.now().isoformat(timespec="seconds")
 
     fl = lambda lst: f" (páginas: {lst})" if lst else ""
@@ -396,6 +506,7 @@ def build_report(
         f"- **Com falha:** {len(failed)}{fl(failed)}",
         f"- **Em branco:** {len(empty)}{fl(empty)}",
         f"- **Escaneadas sem OCR:** {len(scanned)}{fl(scanned)}",
+        f"- **OCR de baixa qualidade:** {len(low_ocr)}{fl(low_ocr)}",
         f"- **Motor:** `{engine}`",
         f"- **Status:** `{status}`",
         f"- **Data/hora:** {now}",
@@ -429,11 +540,14 @@ def main():
     parser.add_argument("--no-markers", action="store_true")
     parser.add_argument("--verbose",    action="store_true")
     parser.add_argument("--report",     action="store_true")
+    parser.add_argument("--compare-ocr", action="store_true",
+                        help="Also run OCR on the raw image for diagnostic comparison (stderr only).")
     args = parser.parse_args()
 
     pdf_path    = Path(args.input).expanduser().resolve()
     output_path = Path(args.output).expanduser().resolve()
     page_markers = not args.no_markers
+    compare_ocr = args.compare_ocr or os.environ.get("PDF_TO_MD_COMPARE_OCR", "") == "1"
     warnings: list[str] = []
 
     if not pdf_path.exists():
@@ -457,8 +571,10 @@ def main():
         print(f"[pdf-to-md] {pdf_path}", file=sys.stderr)
 
     try:
-        pages = (_extract_pdfminer if engine == "pdfminer"
-                 else _extract_pymupdf)(pdf_path, args.verbose)
+        if engine == "pdfminer":
+            pages = _extract_pdfminer(pdf_path, args.verbose)
+        else:
+            pages = _extract_pymupdf(pdf_path, args.verbose, compare_ocr=compare_ocr)
     except ImportError as exc:
         print(f"[ERRO] Motor '{engine}' não instalado: {exc}", file=sys.stderr)
         sys.exit(EXIT_EXTRACT_ERROR)
@@ -471,6 +587,8 @@ def main():
             warnings.append(f"Página {p['page']}: falha na extração")
         elif p["status"] in ("scanned_no_ocr", "scanned_ocr_empty"):
             warnings.append(f"Página {p['page']}: escaneada sem texto recuperável")
+        elif p["status"] == "low_ocr_quality":
+            warnings.append(f"Página {p['page']}: OCR de baixa qualidade — texto substituído por placeholder")
 
     md = build_markdown(pages, page_markers)
 

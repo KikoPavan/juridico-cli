@@ -15,6 +15,7 @@ from convert_pdf_to_md import (
     _needs_ocr,
     MIN_TEXT_QUALITY,
     MIN_CHARS_FOR_TEXT,
+    SHORT_LINE_RATIO_THRESHOLD,
 )
 
 
@@ -31,6 +32,32 @@ CORRUPTED_TEXT_FIXTURE = (
 assert len(CORRUPTED_TEXT_FIXTURE) >= 100, "fixture must have >= 100 chars"
 assert len(CORRUPTED_TEXT_FIXTURE) >= MIN_CHARS_FOR_TEXT, "fixture must pass MIN_CHARS_FOR_TEXT"
 assert all(c.isprintable() or c == "\n" for c in CORRUPTED_TEXT_FIXTURE), "fixture must be printable"
+
+
+# ---------------------------------------------------------------------------
+# Fixture: garbled text with many short lines (procuração_Monica.pdf pattern)
+# Per-char OCR extraction: individual letters on separate lines, quality score ~1.0
+# but content is unusable. short_line_ratio > SHORT_LINE_RATIO_THRESHOLD.
+# ---------------------------------------------------------------------------
+
+GARBLED_LINES_FIXTURE = (
+    "• \nl \n• \n' \n"
+    "T \nI \nD \n"
+    "Esta é uma certidão de teor do livro de notas número 262.\n"
+    "C \nE \nR \nT \nI \nF \nI \nC \nA \n"
+    "O Tabelião da cidade e comarca de Ourinhos.\n"
+    "M \nO \nL \nE \nR \nO \n"
+    "Conteúdo adicional para garantir comprimento suficiente do texto.\n"
+    "P \nR \nO \nC \nU \nR \nA \nÇ \nÃ \nO \n"
+    "Documento lavrado em conformidade com as normas vigentes.\n"
+    "B \nA \nS \nT \nA \nN \nT \nE \n"
+)
+
+assert len(GARBLED_LINES_FIXTURE) >= MIN_CHARS_FOR_TEXT, "garbled fixture must pass MIN_CHARS_FOR_TEXT"
+assert _text_quality_score(GARBLED_LINES_FIXTURE) >= MIN_TEXT_QUALITY, (
+    "garbled fixture must have quality score >= MIN_TEXT_QUALITY "
+    "(documents why the existing score alone is insufficient)"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +160,55 @@ def test_needs_ocr_clean_text_returns_ok():
 
 
 # ---------------------------------------------------------------------------
+# Garbled text: many short lines (procuração_Monica.pdf pattern)
+# ---------------------------------------------------------------------------
+
+def test_needs_ocr_garbled_lines_returns_garbled_text():
+    needs, reason = _needs_ocr(GARBLED_LINES_FIXTURE)
+    _run(
+        f"needs_ocr: garbled lines fixture → ({needs}, '{reason}') == (True, 'garbled_text')",
+        needs is True and reason == "garbled_text",
+    )
+
+
+def test_quality_score_garbled_lines_not_below_threshold():
+    # Verifies the existing score alone is not enough to catch this pattern —
+    # documents why the short_line_ratio check is necessary.
+    score = _text_quality_score(GARBLED_LINES_FIXTURE)
+    _run(
+        f"quality_score: garbled lines → score {score:.3f} >= MIN_TEXT_QUALITY "
+        f"(existing score insufficient; short_line_ratio check is required)",
+        score >= MIN_TEXT_QUALITY,
+    )
+
+
+def test_needs_ocr_short_line_ratio_boundary():
+    # Build text where exactly SHORT_LINE_RATIO_THRESHOLD of lines are single chars.
+    # Use enough single-char and multi-word lines to stay above MIN_CHARS_FOR_TEXT.
+    filler = "Este documento foi lavrado pelo tabelião conforme a lei vigente.\n"
+    single_char_line = "X \n"
+    # Compose: ratio of short lines just below threshold → must NOT trigger garbled_text
+    long_lines = filler * 9
+    short_lines = single_char_line * 1  # 1/(9+1) = 10% < 15% threshold
+    below_text = long_lines + short_lines
+    needs_below, reason_below = _needs_ocr(below_text)
+    _run(
+        f"needs_ocr: short_line_ratio below threshold → ({needs_below}, '{reason_below}') != garbled_text",
+        not (needs_below and reason_below == "garbled_text"),
+    )
+
+    # ratio just above threshold → must trigger garbled_text
+    long_lines_hi = filler * 5
+    short_lines_hi = single_char_line * 2  # 2/(5+2) = 28.6% > 15% threshold
+    above_text = long_lines_hi + short_lines_hi
+    needs_above, reason_above = _needs_ocr(above_text)
+    _run(
+        f"needs_ocr: short_line_ratio above threshold → ({needs_above}, '{reason_above}') == (True, 'garbled_text')",
+        needs_above is True and reason_above == "garbled_text",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Boundary: score at exactly 0.0 (pure glued, no spaces)
 # ---------------------------------------------------------------------------
 
@@ -167,6 +243,9 @@ def main() -> int:
         test_needs_ocr_corrupted_returns_low_quality,
         test_needs_ocr_glued_words_returns_low_quality,
         test_needs_ocr_clean_text_returns_ok,
+        test_needs_ocr_garbled_lines_returns_garbled_text,
+        test_quality_score_garbled_lines_not_below_threshold,
+        test_needs_ocr_short_line_ratio_boundary,
         test_quality_score_empty_returns_zero,
         test_quality_score_range,
     ]
