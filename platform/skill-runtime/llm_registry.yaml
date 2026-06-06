@@ -25,6 +25,10 @@ execution_classes:
         context_window: 128000
         supports_native_json: false
         use_for: [pre_processing, chunking, metadata, routing]
+      - id: "paddlepaddle/paddleocr-vl-1.5-gguf/paddleocr-vl-1.5.gguf"
+        context_window: 4096
+        supports_native_json: false
+        use_for: [ocr, document_image_recognition]
 
 profiles:
   high_reasoning:
@@ -46,6 +50,11 @@ profiles:
     description: "Pré-processamento, chunking e roteamento sem custo de API"
     execution_class: lm_studio_local
     model: "qwen2.5-1.5b-instruct"
+
+  ocr_local:
+    description: "OCR de páginas escaneadas via LM Studio/PaddleOCR-VL"
+    execution_class: lm_studio_local
+    model: "paddlepaddle/paddleocr-vl-1.5-gguf/paddleocr-vl-1.5.gguf"
 
 fallback_model: "gemini-3-flash-preview"
 fallback_execution_class: gemini_api
