@@ -26,48 +26,45 @@ class LegalDocCleaner:
             r"Este documento é cópia do original.*?às \d{2}:\d{2}\s*\.",
             r"DOCUMENTO ASSINADO DIGITALMENTE.*?MARGEM DIREITA",
             r"liberado nos autos em.*?\.",
-            # Repetitive headers
-            r"TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO\s*",
-            r"COMARCA DE CERQUEIRA CÉSAR\s*",
-            r"FORO DE CERQUEIRA CÉSAR\s*",
-            r"1ª VARA\s*",
-            r"Rua Olimpio Pavan.*?355\.centro\.CEP\.18760-000\.Fone:\.14 - 37141014\s*",
-            r"Rua Olimpio Pavan.*?17h00min\s*",
-            r"Rua Olimpio Pavan.*?cerqcesar@tjsp\.jus\.br\s*",  # noqa: E501
-            r"Horário de Atendimento.*?\d{2}h\d{2}min\s*",
-            r"Cerqueira Cesar-SP - E-mail: cerqcesar@tjsp\.jus\.br\s*",
+            # Repetitive headers — trailing [ \t]* (not \s*) to preserve line breaks
+            r"TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO[ \t]*",
+            r"COMARCA DE CERQUEIRA CÉSAR[ \t]*",
+            r"FORO DE CERQUEIRA CÉSAR[ \t]*",
+            r"1ª VARA[ \t]*",
+            r"Rua Olimpio Pavan.*?355\.centro\.CEP\.18760-000\.Fone:\.14 - 37141014[ \t]*",
+            r"Rua Olimpio Pavan.*?17h00min[ \t]*",
+            r"Rua Olimpio Pavan.*?cerqcesar@tjsp\.jus\.br[ \t]*",  # noqa: E501
+            r"Horário de Atendimento.*?\d{2}h\d{2}min[ \t]*",
+            r"Cerqueira Cesar-SP - E-mail: cerqcesar@tjsp\.jus\.br[ \t]*",
             # Repeated case references
-            r"Processo (?:Digital )?nº:?\s*\d+-\d+\.\d+\.\d+\.\d+\.\d+\s*",
-            r"Classe - Assunto.*?Imóvel\s*",
-            r"Requerente:\s*Mare Agropecuaria Ltda\.\s*",
+            r"Processo (?:Digital )?nº:?\s*\d+-\d+\.\d+\.\d+\.\d+\.\d+[ \t]*",
+            r"Classe - Assunto.*?Imóvel[ \t]*",
+            r"Requerente:\s*Mare Agropecuaria Ltda\.[ \t]*",
             r"Requerido:\s*(?:Juraci Pires Pavan e outro|"
-            r"Francisco Carlos Pavan e outro)\s*",
-            r"Juiz\(a\) de Direito:\s*Dr\(a\)\.\s*BRUNA MENDES FERREIRA\s*",
+            r"Francisco Carlos Pavan e outro)[ \t]*",
+            r"Juiz\(a\) de Direito:\s*Dr\(a\)\.\s*BRUNA MENDES FERREIRA[ \t]*",
             # Page numbers and empty references
-            r"fls\.\s*\d+\s*",
+            r"fls\.\s*\d+[ \t]*",
             r"Processo nº \d+-\d+\.\d+\.\d+\.\d+\.\d+ - p\. \d+",
             r"\(fls\.\s*\d+(?:/\d+)?\)",
             r"às fls\.\s*\d+(?:/\d+)?",
-            r"\s+-\s+p\.\s+\d+\s*",
+            r"\s+-\s+p\.\s+\d+[ \t]*",
             r"\(fls?\.\s*\)",
             r"\(\s*/\d+\s*\)",
             r"\(\s*\d+/\s*\)",
             r"\(\s*\)",
             r"fls?\.\s*\d+/\d+",
             # Law firm headers (Kurtz Bruno Amarilha Zequi — repeats on every page)
-            r"AV\. PINHEIRO MACHADO,?\s*\d+\s*\|\s*CENTRO\s*",
-            r"CEP\s*18705[.\-]?\d*\s*\|.*?(?:wWW\.|www\.)\S+\s*",
+            r"AV\. PINHEIRO MACHADO,?\s*\d+\s*\|\s*CENTRO[ \t]*",
+            r"CEP\s*18705[.\-]?\d*\s*\|.*?(?:wWW\.|www\.)\S+[ \t]*",
             # Law firm footers
-            r"BAGAGLI & MORENO\s*A D V O C A C I A\s*",
-            r"Rua Rubens Arruda.*?advocaciabm\.com\s*",
-            r"\(14\) \d+-\d+.*?advocaciabm\.com\s*",
-            r"www\.advocaciabm\.com\s*",
+            r"BAGAGLI & MORENO\s*A D V O C A C I A[ \t]*",
+            r"Rua Rubens Arruda.*?advocaciabm\.com[ \t]*",
+            r"\(14\) \d+-\d+.*?advocaciabm\.com[ \t]*",
+            r"www\.advocaciabm\.com[ \t]*",
             # Signatures
-            r"GUILHERME E\. BAGAGLI\s*OAB\.SP \d+\s*",
-            r"GISELE POMPILIO MORENO\s*OAB\.SP \d+\s*",
-            # Whitespace normalization
-            r"\n{3,}",
-            r" {2,}",
+            r"GUILHERME E\. BAGAGLI\s*OAB\.SP \d+[ \t]*",
+            r"GISELE POMPILIO MORENO\s*OAB\.SP \d+[ \t]*",
         ]
 
         self.legal_structure_patterns = [
@@ -90,7 +87,7 @@ class LegalDocCleaner:
             "Ã§Ãµ": "çõ", "Ã©": "é", "Ã¡": "á", "Ãº": "ú", "Ã­": "í",
             "Ã³": "ó", "Ãª": "ê", "Ã¢": "â", "Ã´": "ô", "Ã£": "ã",
             "Ãµ": "õ", "Ã§": "ç", "Ã¹": "ù",
-            "Ã‰": "É", "Ãƒ": "Ã", 'Ã"': "Ó", "Ã": "Á", "Ãš": "Ú",
+            "Ã‰": "É", "Ãƒ": "Ã", 'Ã"': "Ó", "Ãš": "Ú",
             "ÃŠ": "Ê", "Ã‡": "Ç",
             "DECISãO": "DECISÃO", "CONCLUSãO": "CONCLUSÃO",
             "PETIÃ‡ÃƒO": "PETIÇÃO", "OBRIGAÃ‡Ã•ES": "OBRIGAÇÕES",
