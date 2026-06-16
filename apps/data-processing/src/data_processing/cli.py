@@ -16,7 +16,7 @@ app = typer.Typer(name="data-processing", help="Juridico-cli data processing pip
 @app.command()
 def extract(
     bundle: str = typer.Option(..., "--bundle", "-b", help="ID do bundle extr-* (ex: extr-contrato-social)"),
-    input_file: str = typer.Option(..., "--input", "-i", help="Nome do arquivo em var/input/md/ para processar")
+    input_file: str = typer.Option(..., "--input", "-i", help="Nome do arquivo limpo em var/output/processed/ para extrair")
 ) -> None:
     """Extrai entidades usando DataExtractorApp V1.1 (LLM estruturado)."""
     from .extractor import DataExtractorApp
@@ -79,7 +79,7 @@ def clean(
         ..., "--input", "-i", help="Directory with Markdown files to clean"
     ),
     output: Path = typer.Option(
-        Path("var/staging"), "--output", "-o", help="Output directory for cleaned files"
+        Path("var/output/processed"), "--output", "-o", help="Output directory for cleaned files"
     ),
 ) -> None:
     """Apply legal cleaning to Markdown files."""

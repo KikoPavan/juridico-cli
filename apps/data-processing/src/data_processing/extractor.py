@@ -28,8 +28,9 @@ class DataExtractorApp:
         # Paths obrigatórios V1.1
         self.dirs = {
             "input_md": os.path.join(self.var_dir, "input", "md"),
-            "staging": staging_path if staging_path else os.path.join(self.var_dir, "staging"),
+            "input_clean": os.path.join(self.var_dir, "output", "processed"),
             "output": os.path.join(self.var_dir, "output"),
+            "extracted": os.path.join(self.var_dir, "output", "extracted"),
             "logs": os.path.join(self.var_dir, "logs")
         }
 
@@ -54,13 +55,13 @@ class DataExtractorApp:
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log(f"=== INICIANDO EXTRAÇÃO V1.1: {run_id} ===", run_id)
         
-        # Leitura diretamente de staging (1:1), já limpo
-        staging_path = os.path.join(self.dirs["staging"], input_filename)
-        if not os.path.exists(staging_path):
-            self.log(f"[ERRO] Arquivo não encontrado em staging: {staging_path}", run_id)
+        # Leitura diretamente de input_clean (var/output/processed/)
+        input_path = os.path.join(self.dirs["input_clean"], input_filename)
+        if not os.path.exists(input_path):
+            self.log(f"[ERRO] Arquivo não encontrado: {input_path}", run_id)
             sys.exit(1)
             
-        with open(staging_path, "r", encoding="utf-8") as f:
+        with open(input_path, "r", encoding="utf-8") as f:
             raw_text = f.read()
 
         # Parse do Frontmatter
@@ -75,7 +76,7 @@ class DataExtractorApp:
                 except Exception as e:
                     self.log(f"[AVISO] Falha ao fazer parser do frontmatter: {e}", run_id)
                     
-        self.log(f"Lido de staging 1:1: {staging_path} | Metadados: {frontmatter}", run_id)
+        self.log(f"Lido de: {input_path} | Metadados: {frontmatter}", run_id)
 
         # 2. Despachar via runtime canônico
         try:
@@ -94,19 +95,35 @@ class DataExtractorApp:
         self.log(f"Profile: {skill_config.get('profile')} | Schema: {schema_path}", run_id)
         self.log(f"Instrução carregada com sucesso (Tamanho: {len(system_prompt)} chars)", run_id)
         
-        # 4. Processamento LLM Agnóstico
-        client = LLMClientFactory.create_client()
+        # 4. Processamento LLM Agnóstico — usa provider e model do llm_profile
+        llm_profile = dispatch_result.get("llm_profile", {})
+        execution_class_key = llm_profile.get("execution_class", "")
+        provider = None
+        if execution_class_key:
+            llm_reg_path = os.path.join(self.platform_path, "skill-runtime", "llm_registry.yaml")
+            try:
+                with open(llm_reg_path, "r") as f:
+                    import yaml as _yaml
+                    llm_reg = _yaml.safe_load(f)
+                exec_class = llm_reg.get("execution_classes", {}).get(execution_class_key, {})
+                provider = exec_class.get("provider")
+            except Exception:
+                pass
+        model = llm_profile.get("model")
+        client = LLMClientFactory.create_client(provider_override=provider, model_override=model)
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": raw_text}
         ]
         
+        effective_model = model or getattr(client, 'model_name', 'unknown')
+        self.log(f"Usando provider: {provider or 'gemini'} | model: {effective_model}", run_id)
         self.log(f"Enviando dados para processamento...", run_id)
         response = client.generate_structured(messages, schema=schema_json)
         
-        # 5. Output Final
+        # 5. Output Final — salva em var/output/extracted/
         out_filename = f"result_{bundle_id}_{input_filename.split('.')[0]}.json"
-        out_path = os.path.join(self.dirs["output"], out_filename)
+        out_path = os.path.join(self.dirs["extracted"], out_filename)
         
         with open(out_path, "w", encoding="utf-8") as outf:
             json.dump(response, outf, indent=2, ensure_ascii=False)

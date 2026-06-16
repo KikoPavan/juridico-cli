@@ -54,7 +54,7 @@ class LLMClientFactory:
     """
 
     @staticmethod
-    def create_client(provider_override: str = None) -> "LLMClient":
+    def create_client(provider_override: str = None, model_override: str = None) -> "LLMClient":
         import os
 
         from dotenv import load_dotenv
@@ -113,6 +113,8 @@ class LLMClientFactory:
                 raise ValueError(
                     "GEMINI_API_KEY falhou. Sem API key provisionada no .env para o baseline."
                 )
+            if model_override:
+                return GeminiLLMClient(api_key=api_key, model_name=model_override)
             return GeminiLLMClient(api_key=api_key)
 
         else:
