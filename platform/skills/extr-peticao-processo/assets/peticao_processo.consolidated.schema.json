@@ -68,6 +68,89 @@
       "items": { "$ref": "#/$defs/Pedido" }
     },
 
+    "atos_juridicos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AtoJuridico" },
+      "description": "Atos jurídicos mencionados no documento."
+    },
+
+    "documentos_citados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DocumentoCitado" },
+      "description": "Documentos citados ou anexados."
+    },
+
+    "pessoas_mencionadas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PessoaMencionada" },
+      "description": "Pessoas físicas mencionadas no documento com seus respectivos papéis."
+    },
+
+    "empresas_mencionadas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/EmpresaMencionada" },
+      "description": "Pessoas jurídicas (empresas, bancos, etc.) mencionadas no documento."
+    },
+
+    "imoveis_e_matriculas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ImovelMatricula" },
+      "description": "Imóveis descritos, com suas matrículas e CRI correspondentes."
+    },
+
+    "garantias_e_gravames": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/GarantiaGravame" },
+      "description": "Garantias reais e gravames mencionados (ex.: hipotecas, penhoras, etc.)."
+    },
+
+    "fundamentos_legais": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FundamentoLegal" },
+      "description": "Artigos de lei, súmulas e outros diplomas legais citados estruturadamente."
+    },
+
+    "teses_juridicas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TeseJuridica" },
+      "description": "Teses jurídicas desenvolvidas no documento."
+    },
+
+    "fatos_cronologicos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FatoCronologico" },
+      "description": "Fatos históricos descritos de forma cronológica."
+    },
+
+    "processos_relacionados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProcessoRelacionado" },
+      "description": "Números de processos relacionados mencionados no documento."
+    },
+
+    "pedidos_individualizados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PedidoIndividualizado" },
+      "description": "Pedidos individualizados de forma estruturada, inclusive acessórios."
+    },
+
+    "tutela_urgencia": {
+      "$ref": "#/$defs/TutelaUrgencia",
+      "description": "Informações estruturadas sobre pedido de tutela de urgência/cautelar."
+    },
+
+    "provas_requeridas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProvaRequerida" },
+      "description": "Meios de prova requeridos estruturadamente."
+    },
+
+    "riscos_ou_pontos_de_atencao": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RiscoPontoAtencao" },
+      "description": "Riscos, ressalvas ou pontos de atenção expressamente indicados no documento (sem inferir novos riscos)."
+    },
+
     "anchors": {
       "type": "array",
       "items": { "$ref": "#/$defs/Anchor" },
@@ -223,6 +306,279 @@
         "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
         "label": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
         "pedido_key": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "AtoJuridico": {
+      "type": "object",
+      "required": ["nome", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "data": { "type": "string" },
+        "detalhes": { "type": "string", "maxLength": 2000 },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "DocumentoCitado": {
+      "type": "object",
+      "required": ["nome", "tipo_documento", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "tipo_documento": {
+          "type": "string",
+          "enum": ["contrato_social", "procuracao", "escritura", "certidao_matricula", "contrato_credito", "peticao", "outro"]
+        },
+        "detalhes": { "type": "string", "maxLength": 2000 },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PessoaMencionada": {
+      "type": "object",
+      "required": ["nome", "papel_literal", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "papel_literal": { "type": "string" },
+        "papel_normalizado": {
+          "type": "string",
+          "enum": ["autor", "reu", "procurador", "tabeliao", "advogado", "socio", "outro"]
+        },
+        "qualificacao": { "type": "string", "maxLength": 4000 },
+        "documento_id": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "EmpresaMencionada": {
+      "type": "object",
+      "required": ["nome", "papel_literal", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "papel_literal": { "type": "string" },
+        "papel_normalizado": {
+          "type": "string",
+          "enum": ["autor", "reu", "interveniente_garante", "outro"]
+        },
+        "cnpj": { "type": "string" },
+        "sede": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ImovelMatricula": {
+      "type": "object",
+      "required": ["matricula", "descricao", "anchors"],
+      "properties": {
+        "matricula": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "cri": { "type": "string" },
+        "descricao": { "type": "string", "maxLength": 4000 },
+        "proprietario_atual": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "GarantiaGravame": {
+      "type": "object",
+      "required": ["tipo", "imoveis_matriculas", "anchors"],
+      "properties": {
+        "tipo": { "type": "string" },
+        "grau": { "type": "string" },
+        "credor": { "type": "string" },
+        "devedor": { "type": "string" },
+        "papel_literal": { "type": "string" },
+        "imoveis_matriculas": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "valor_garantido": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "FundamentoLegal": {
+      "type": "object",
+      "required": ["diploma", "artigo", "texto_citado", "anchors"],
+      "properties": {
+        "diploma": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "artigo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "paragrafo_inciso_alinea": { "type": "string" },
+        "texto_citado": { "type": "string", "maxLength": 2000 },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "TeseJuridica": {
+      "type": "object",
+      "required": ["titulo", "descricao_interpretativa", "trecho_literal", "anchors"],
+      "properties": {
+        "titulo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000 },
+        "trecho_literal": { "type": "string", "maxLength": 4000 },
+        "normas_correlatas": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "FatoCronologico": {
+      "type": "object",
+      "required": ["fato", "trecho_literal", "anchors"],
+      "properties": {
+        "data": { "type": "string" },
+        "fato": { "type": "string", "maxLength": 2000 },
+        "trecho_literal": { "type": "string", "maxLength": 2000 },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ProcessoRelacionado": {
+      "type": "object",
+      "required": ["numero_processo", "relacao", "anchors"],
+      "properties": {
+        "numero_processo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "relacao": {
+          "type": "string",
+          "enum": ["dependencia", "processo_da_peticao", "processo_a_ser_suspenso", "outro"]
+        },
+        "detalhes": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PedidoIndividualizado": {
+      "type": "object",
+      "required": ["tipo", "descricao_interpretativa", "trecho_literal", "anchors"],
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": ["tutela_urgencia", "citacao", "procedencia_principal", "sucumbencia", "provas", "outro"]
+        },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000 },
+        "trecho_literal": { "type": "string", "maxLength": 4000 },
+        "valor": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "TutelaUrgencia": {
+      "type": "object",
+      "required": ["requerida", "tipo", "descricao_interpretativa", "trecho_literal", "requisitos_demonstrados", "anchors"],
+      "properties": {
+        "requerida": { "type": "boolean" },
+        "tipo": { "type": "string", "enum": ["cautelar", "antecipada", "outra"] },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000 },
+        "trecho_literal": { "type": "string", "maxLength": 4000 },
+        "requisitos_demonstrados": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["requisito", "argumento", "trecho_literal"],
+            "properties": {
+              "requisito": { "type": "string", "enum": ["probabilidade_direito", "perigo_dano", "reversibilidade", "outro"] },
+              "argumento": { "type": "string" },
+              "trecho_literal": { "type": "string" }
+            },
+            "unevaluatedProperties": false
+          }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ProvaRequerida": {
+      "type": "object",
+      "required": ["tipo_prova", "detalhes", "trecho_literal", "anchors"],
+      "properties": {
+        "tipo_prova": {
+          "type": "string",
+          "enum": ["documental", "pericial", "depoimento_pessoal", "testemunhal", "outro"]
+        },
+        "detalhes": { "type": "string" },
+        "trecho_literal": { "type": "string" },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "RiscoPontoAtencao": {
+      "type": "object",
+      "required": ["descricao", "trecho_literal", "anchors"],
+      "properties": {
+        "descricao": { "type": "string", "maxLength": 2000 },
+        "trecho_literal": { "type": "string", "maxLength": 2000 },
         "anchors": {
           "type": "array",
           "minItems": 1,

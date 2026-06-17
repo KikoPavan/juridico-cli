@@ -25,8 +25,18 @@ def load_json(path: Path) -> dict:
 def validate(input_path: Path, schema_path: Path) -> bool:
     schema = load_json(schema_path)
     data = load_json(input_path)
-    resolver = RefResolver(base_uri=SCHEMAS_DIR.as_uri() + "/", referrer=schema)
+    
+    # Resolução offline de refs de schemas compartilhados
+    common_schema_path = SCHEMAS_DIR / "defs" / "common.schema.json"
+    common_schema = load_json(common_schema_path)
+    store = {
+        schema.get("$id", "https://juridico-cli.local/schemas/peticao_processo.schema.json"): schema,
+        common_schema.get("$id", "https://juridico-cli.local/schemas/defs/common.schema.json"): common_schema
+    }
+    
+    resolver = RefResolver(base_uri=SCHEMAS_DIR.as_uri() + "/", referrer=schema, store=store)
     validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
     if not errors:
         print(f"OK  {input_path} — valid against {schema_path.name}")

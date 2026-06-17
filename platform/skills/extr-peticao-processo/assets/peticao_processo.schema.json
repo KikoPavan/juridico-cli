@@ -56,6 +56,89 @@
       "description": "Pedidos principais/expressos (cada item deve ter âncoras)."
     },
 
+    "atos_juridicos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AtoJuridico" },
+      "description": "Atos jurídicos mencionados no documento (ex.: escritura pública de confissão de dívidas com garantia hipotecária, procuração pública outorgada, contrato social, etc.)."
+    },
+
+    "documentos_citados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DocumentoCitado" },
+      "description": "Documentos citados ou anexados (ex.: Contrato Social, Procuração Pública, Certidão de Matrícula, Planilha, etc.)."
+    },
+
+    "pessoas_mencionadas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PessoaMencionada" },
+      "description": "Pessoas físicas mencionadas no documento com seus respectivos papéis de forma literal e normalizada."
+    },
+
+    "empresas_mencionadas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/EmpresaMencionada" },
+      "description": "Pessoas jurídicas (empresas, bancos, etc.) mencionadas no documento."
+    },
+
+    "imoveis_e_matriculas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ImovelMatricula" },
+      "description": "Imóveis descritos, com suas matrículas e CRI correspondentes."
+    },
+
+    "garantias_e_gravames": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/GarantiaGravame" },
+      "description": "Garantias reais e gravames mencionados (ex.: hipotecas, penhoras, etc.)."
+    },
+
+    "fundamentos_legais": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FundamentoLegal" },
+      "description": "Artigos de lei, súmulas e outros diplomas legais citados estruturadamente."
+    },
+
+    "teses_juridicas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TeseJuridica" },
+      "description": "Teses jurídicas desenvolvidas no documento com literalidade e justificativa."
+    },
+
+    "fatos_cronologicos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FatoCronologico" },
+      "description": "Fatos históricos descritos de forma cronológica."
+    },
+
+    "processos_relacionados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProcessoRelacionado" },
+      "description": "Números de processos relacionados mencionados no documento."
+    },
+
+    "pedidos_individualizados": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/PedidoIndividualizado" },
+      "description": "Pedidos individualizados de forma estruturada, inclusive acessórios."
+    },
+
+    "tutela_urgencia": {
+      "$ref": "#/$defs/TutelaUrgencia",
+      "description": "Informações estruturadas sobre pedido de tutela de urgência/cautelar."
+    },
+
+    "provas_requeridas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProvaRequerida" },
+      "description": "Meios de prova requeridos estruturadamente."
+    },
+
+    "riscos_ou_pontos_de_atencao": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RiscoPontoAtencao" },
+      "description": "Riscos, ressalvas ou pontos de atenção expressamente indicados no documento (sem inferir novos riscos jurídicos)."
+    },
+
     "anchors": {
       "type": "array",
       "items": { "$ref": "#/$defs/Anchor" },
@@ -65,6 +148,7 @@
 
   "anyOf": [
     { "required": ["pedidos"] },
+    { "required": ["pedidos_individualizados"] },
     { "required": ["fatos"] },
     { "required": ["fundamentos"] },
     { "required": ["valor_da_causa"] },
@@ -217,6 +301,288 @@
         }
       },
       "unevaluatedProperties": false
+    },
+
+    "AtoJuridico": {
+      "type": "object",
+      "required": ["nome", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Nome do ato jurídico (ex.: Escritura de Hipoteca, Contrato de Abertura de Crédito, Procuração)." },
+        "data": { "type": "string", "description": "Data opcional em que o ato ocorreu (no formato AAAA-MM-DD se possível, ou texto literal se indisponível)." },
+        "detalhes": { "type": "string", "maxLength": 2000, "description": "Resumo interpretativo ou detalhes do ato." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "DocumentoCitado": {
+      "type": "object",
+      "required": ["nome", "tipo_documento", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Nome ou título do documento (ex.: Contrato Social da JKMG)." },
+        "tipo_documento": {
+          "type": "string",
+          "enum": ["contrato_social", "procuracao", "escritura", "certidao_matricula", "contrato_credito", "peticao", "outro"],
+          "description": "Classificação do documento."
+        },
+        "detalhes": { "type": "string", "maxLength": 2000, "description": "Resumo interpretativo ou detalhes do documento." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PessoaMencionada": {
+      "type": "object",
+      "required": ["nome", "papel_literal", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "papel_literal": { "type": "string", "description": "Papel literal da pessoa física conforme mencionada no texto (ex: 'sócia', 'procurador', 'tabelião', 'viúva', 'esposa')." },
+        "papel_normalizado": {
+          "type": "string",
+          "enum": ["autor", "reu", "procurador", "tabeliao", "advogado", "socio", "outro"],
+          "description": "Classificação padronizada aproximada do papel."
+        },
+        "qualificacao": { "type": "string", "maxLength": 4000, "description": "Qualificação literal da pessoa se constar." },
+        "documento_id": { "type": "string", "description": "CPF, RG ou outro identificador de documento pessoal se constar." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "EmpresaMencionada": {
+      "type": "object",
+      "required": ["nome", "papel_literal", "anchors"],
+      "properties": {
+        "nome": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "papel_literal": { "type": "string", "description": "Papel literal da pessoa jurídica conforme mencionada no texto (ex: 'interveniente garante', 'ré', 'credora')." },
+        "papel_normalizado": {
+          "type": "string",
+          "enum": ["autor", "reu", "interveniente_garante", "outro"],
+          "description": "Classificação padronizada aproximada do papel."
+        },
+        "cnpj": { "type": "string", "description": "CNPJ literal se constar no documento." },
+        "sede": { "type": "string", "description": "Endereço ou local da sede se constar." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ImovelMatricula": {
+      "type": "object",
+      "required": ["matricula", "descricao", "anchors"],
+      "properties": {
+        "matricula": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Número da matrícula do imóvel." },
+        "cri": { "type": "string", "description": "Cartório de Registro de Imóveis (ex.: Cerqueira César/SP), opcional." },
+        "descricao": { "type": "string", "maxLength": 4000, "description": "Descrição física literal ou resumida do imóvel." },
+        "proprietario_atual": { "type": "string", "description": "Nome do proprietário atual conforme o texto." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "GarantiaGravame": {
+      "type": "object",
+      "required": ["tipo", "imoveis_matriculas", "anchors"],
+      "properties": {
+        "tipo": { "type": "string", "description": "Tipo de garantia/gravame (ex.: hipoteca, penhora, alienação fiduciária)." },
+        "grau": { "type": "string", "description": "Grau da garantia (ex.: primeiro grau, terceiro grau), se houver." },
+        "credor": { "type": "string", "description": "Credor ou beneficiário da garantia, opcional." },
+        "devedor": { "type": "string", "description": "Devedor ou outorgante da garantia, opcional." },
+        "papel_literal": { "type": "string", "description": "Papel/relação da garantia conforme descrita no texto." },
+        "imoveis_matriculas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Lista de números de matrícula associados a este gravame."
+        },
+        "valor_garantido": { "type": "string", "description": "Valor associado à garantia ou à dívida garantida, se constar." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "FundamentoLegal": {
+      "type": "object",
+      "required": ["diploma", "artigo", "texto_citado", "anchors"],
+      "properties": {
+        "diploma": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Nome do diploma legal (ex.: Código Civil de 1916, Código Civil de 2002, CPC)." },
+        "artigo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Número do artigo." },
+        "paragrafo_inciso_alinea": { "type": "string", "description": "Parágrafo, inciso ou alínea específico (ex.: §1º, III, a)." },
+        "texto_citado": { "type": "string", "maxLength": 2000, "description": "Trecho literal da norma citado ou transcrito." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "TeseJuridica": {
+      "type": "object",
+      "required": ["titulo", "descricao_interpretativa", "trecho_literal", "anchors"],
+      "properties": {
+        "titulo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString", "description": "Título resumido da tese." },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000, "description": "Explicação interpretativa da tese jurídica formulada pela autora." },
+        "trecho_literal": { "type": "string", "maxLength": 4000, "description": "Trecho literal relevante que sustenta essa tese (não conter reticências artificiais como '...' ou '…')." },
+        "normas_correlatas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Normas que fundamentam a tese (ex.: ['art. 661, §1º do CC/2002'])."
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "FatoCronologico": {
+      "type": "object",
+      "required": ["fato", "trecho_literal", "anchors"],
+      "properties": {
+        "data": { "type": "string", "description": "Data opcional do fato (AAAA-MM-DD ou textual se não for exata)." },
+        "fato": { "type": "string", "maxLength": 2000, "description": "Resumo interpretativo do fato ocorrido." },
+        "trecho_literal": { "type": "string", "maxLength": 2000, "description": "Trecho literal do documento que comprova o fato (sem conter reticências artificiais)." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ProcessoRelacionado": {
+      "type": "object",
+      "required": ["numero_processo", "relacao", "anchors"],
+      "properties": {
+        "numero_processo": { "$ref": "defs/common.schema.json#/$defs/NonEmptyString" },
+        "relacao": {
+          "type": "string",
+          "enum": ["dependencia", "processo_da_peticao", "processo_a_ser_suspenso", "outro"],
+          "description": "Relação jurídica com o processo atual."
+        },
+        "detalhes": { "type": "string", "description": "Qualquer observação adicional sobre este processo." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "PedidoIndividualizado": {
+      "type": "object",
+      "required": ["tipo", "descricao_interpretativa", "trecho_literal", "anchors"],
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": ["tutela_urgencia", "citacao", "procedencia_principal", "sucumbencia", "provas", "outro"],
+          "description": "Categoria do pedido."
+        },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000, "description": "Explicação interpretativa resumida do que é pedido." },
+        "trecho_literal": { "type": "string", "maxLength": 4000, "description": "O texto literal completo do pedido (incluindo acessórios e sem reticências artificiais)." },
+        "valor": { "type": "string", "description": "Valor financeiro explicitamente atribuído a este pedido, se houver." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "TutelaUrgencia": {
+      "type": "object",
+      "required": ["requerida", "tipo", "descricao_interpretativa", "trecho_literal", "requisitos_demonstrados", "anchors"],
+      "properties": {
+        "requerida": { "type": "boolean" },
+        "tipo": { "type": "string", "enum": ["cautelar", "antecipada", "outra"] },
+        "descricao_interpretativa": { "type": "string", "maxLength": 4000, "description": "Resumo interpretativo do pleito liminar." },
+        "trecho_literal": { "type": "string", "maxLength": 4000, "description": "Trecho literal da petição que pede a tutela." },
+        "requisitos_demonstrados": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["requisito", "argumento", "trecho_literal"],
+            "properties": {
+              "requisito": { "type": "string", "enum": ["probabilidade_direito", "perigo_dano", "reversibilidade", "outro"] },
+              "argumento": { "type": "string", "description": "Argumentação tecida para demonstrar este requisito." },
+              "trecho_literal": { "type": "string", "description": "Trecho literal do documento que prova a fundamentação do requisito (sem reticências artificiais)." }
+            },
+            "unevaluatedProperties": false
+          }
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "ProvaRequerida": {
+      "type": "object",
+      "required": ["tipo_prova", "detalhes", "trecho_literal", "anchors"],
+      "properties": {
+        "tipo_prova": {
+          "type": "string",
+          "enum": ["documental", "pericial", "depoimento_pessoal", "testemunhal", "outro"],
+          "description": "Categoria do meio de prova pleiteado."
+        },
+        "detalhes": { "type": "string", "description": "Resumo interpretativo da finalidade ou dos itens da prova." },
+        "trecho_literal": { "type": "string", "description": "Trecho literal contendo a especificação/protesto de provas (sem reticências)." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "RiscoPontoAtencao": {
+      "type": "object",
+      "required": ["descricao", "trecho_literal", "anchors"],
+      "properties": {
+        "descricao": { "type": "string", "maxLength": 2000, "description": "Resumo interpretativo de riscos, ressalvas ou pontos de atenção expressamente indicados no documento (sem inferir novos riscos sem base literal)." },
+        "trecho_literal": { "type": "string", "maxLength": 2000, "description": "Trecho literal correspondente do documento que indica o risco (sem reticências)." },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Anchor" }
+        }
+      },
+      "unevaluatedProperties": false
     }
   }
 }
+
