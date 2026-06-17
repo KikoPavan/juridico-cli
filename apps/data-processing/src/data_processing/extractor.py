@@ -29,6 +29,8 @@ class DataExtractorApp:
         self.dirs = {
             "input_md": os.path.join(self.var_dir, "input", "md"),
             "input_clean": os.path.join(self.var_dir, "output", "processed"),
+            "input_md_frontmatter": os.path.join(self.var_dir, "output", "md-frontmatter-yaml"),
+            "input_processed_fm_legacy": os.path.join(self.var_dir, "output", "processed_fm"),
             "output": os.path.join(self.var_dir, "output"),
             "extracted": os.path.join(self.var_dir, "output", "extracted"),
             "logs": os.path.join(self.var_dir, "logs")
@@ -55,10 +57,22 @@ class DataExtractorApp:
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log(f"=== INICIANDO EXTRAÇÃO V1.1: {run_id} ===", run_id)
         
-        # Leitura diretamente de input_clean (var/output/processed/)
-        input_path = os.path.join(self.dirs["input_clean"], input_filename)
-        if not os.path.exists(input_path):
-            self.log(f"[ERRO] Arquivo não encontrado: {input_path}", run_id)
+        # Tenta ler preferencialmente da pasta md-frontmatter-yaml, com fallbacks
+        input_path_fm = os.path.join(self.dirs["input_md_frontmatter"], input_filename)
+        input_path_clean = os.path.join(self.dirs["input_clean"], input_filename)
+        input_path_fm_legacy = os.path.join(self.dirs["input_processed_fm_legacy"], input_filename)
+        
+        if os.path.exists(input_path_fm):
+            input_path = input_path_fm
+            self.log(f"Entrada enriquecida localizada em md-frontmatter-yaml: {input_path}", run_id)
+        elif os.path.exists(input_path_clean):
+            input_path = input_path_clean
+            self.log(f"Entrada com frontmatter não localizada. Usando fallback limpo: {input_path}", run_id)
+        elif os.path.exists(input_path_fm_legacy):
+            input_path = input_path_fm_legacy
+            self.log(f"[FALLBACK LEGADO] Entrada localizada em processed_fm (remover em migração futura): {input_path}", run_id)
+        else:
+            self.log(f"[ERRO] Arquivo não encontrado em md-frontmatter-yaml, processed nem processed_fm: {input_filename}", run_id)
             sys.exit(1)
             
         with open(input_path, "r", encoding="utf-8") as f:
@@ -121,6 +135,8 @@ class DataExtractorApp:
         self.log(f"Enviando dados para processamento...", run_id)
         response = client.generate_structured(messages, schema=schema_json)
         
+        failed_blocks = response.pop("_failed_blocks", []) if isinstance(response, dict) else []
+        
         # 5. Output Final — salva em var/output/extracted/
         out_filename = f"result_{bundle_id}_{input_filename.split('.')[0]}.json"
         out_path = os.path.join(self.dirs["extracted"], out_filename)
@@ -128,5 +144,8 @@ class DataExtractorApp:
         with open(out_path, "w", encoding="utf-8") as outf:
             json.dump(response, outf, indent=2, ensure_ascii=False)
             
-        self.log(f"Extração concluída com sucesso! Resultado em: {out_path}", run_id)
+        if failed_blocks:
+            self.log(f"⚠️ Extração concluída com ressalvas! Blocos que falharam: {', '.join(failed_blocks)}. Resultado em: {out_path}", run_id)
+        else:
+            self.log(f"Extração concluída com sucesso! Resultado em: {out_path}", run_id)
         return out_path
