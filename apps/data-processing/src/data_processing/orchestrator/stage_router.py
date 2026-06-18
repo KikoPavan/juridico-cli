@@ -232,38 +232,15 @@ def run_collect_stage(collector: CollectorName, config_path: Path, staging_dir: 
 
 def _flatten_nullable_types(schema: dict) -> dict:
     """
-    Converte recursivamente type: ["X", "null"] para type: "X" em todo o schema.
-    O Gemini response_json_schema não suporta arrays de tipos — requer tipo simples.
-    Remove também additionalProperties: false que pode causar conflitos.
+    Mantém o schema inalterado.
+
+    Gemini Structured Outputs atual aceita type arrays com null, por exemplo:
+    type: ["string", "null"].
+
+    A compatibilização principal do schema ocorre em
+    packages/shared-llm/gemini_client.py.
     """
-    def _walk(node):
-        if isinstance(node, dict):
-            # Converter type array
-            if "type" in node and isinstance(node["type"], list):
-                non_null_types = [t for t in node["type"] if t != "null"]
-                if len(non_null_types) == 1:
-                    node["type"] = non_null_types[0]
-                elif len(non_null_types) > 1:
-                    # Múltiplos tipos não-null → usar "string" como fallback
-                    node["type"] = "string"
-                # Se só tinha "null", remover type (campo opcional nulo)
-                else:
-                    node.pop("type", None)
-            # Remover additionalProperties: false (não suportado pelo Gemini)
-            if node.get("additionalProperties") is False:
-                node.pop("additionalProperties")
-            # Recursão
-            for v in node.values():
-                if isinstance(v, (dict, list)):
-                    _walk(v)
-        elif isinstance(node, list):
-            for item in node:
-                if isinstance(item, (dict, list)):
-                    _walk(item)
-
-    _walk(schema)
     return schema
-
 
 def _repair_json_from_text(text: str) -> dict:
     """

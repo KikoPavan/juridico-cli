@@ -42,9 +42,10 @@ def load_json(path: Path) -> dict:
 def _assert_no_prohibited_keys(node, path="root"):
     """Verifica recursivamente que nenhuma chave proibida existe em qualquer profundidade."""
     prohibited_keys = {
-        "$schema", "$id", "$defs", "$ref", "unevaluatedProperties",
-        "maxLength", "minLength", "minItems", "maxItems", "pattern",
-        "format", "anyOf", "oneOf", "allOf"
+        "$schema", "$id", "$defs", "$ref", "defs/common.schema.json",
+        "$vocabulary", "$anchor", "$dynamicRef", "$dynamicAnchor",
+        "unevaluatedProperties", "patternProperties", "dependentSchemas",
+        "if", "then", "else", "not", "oneOf", "allOf"
     }
     
     if isinstance(node, dict):
@@ -71,7 +72,12 @@ def test_gemini_schema_sanitizer():
     _assert_no_prohibited_keys(sanitized)
     
     # 2. Verifica se a estrutura de chaves permitidas está correta na raiz
-    allowed_keys = {"type", "properties", "items", "required", "enum", "description"}
+    allowed_keys = {
+        "type", "title", "description",
+        "properties", "required", "additionalProperties",
+        "items", "prefixItems", "minItems", "maxItems",
+        "enum", "format", "minimum", "maximum", "anyOf",
+    }
     for k in sanitized.keys():
         assert k in allowed_keys, f"Key '{k}' in root is not in the allowed list"
         

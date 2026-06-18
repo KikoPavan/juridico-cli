@@ -64,8 +64,9 @@ class GeminiLLMClient(LLMClient):
         # 4. Função de varredura profunda para verificar chaves proibidas antes de enviar ao Gemini
         prohibited_keys = {
             "$schema", "$id", "$defs", "$ref", "defs/common.schema.json",
-            "unevaluatedProperties", "maxLength", "minLength", "minItems", "maxItems",
-            "pattern", "format", "anyOf", "oneOf", "allOf"
+            "$vocabulary", "$anchor", "$dynamicRef", "$dynamicAnchor",
+            "unevaluatedProperties", "patternProperties", "dependentSchemas",
+            "if", "then", "else", "not", "oneOf", "allOf"
         }
 
         def _scan_deep(node, path="root"):
@@ -826,7 +827,12 @@ class GeminiLLMClient(LLMClient):
                         node["type"] = "string"  # Fallback genérico se houver múltiplos tipos
 
                 # Define chaves permitidas pelo Gemini
-                allowed_keys = {"type", "properties", "items", "required", "enum", "description"}
+                allowed_keys = {
+                    "type", "title", "description",
+                    "properties", "required", "additionalProperties",
+                    "items", "prefixItems", "minItems", "maxItems",
+                    "enum", "format", "minimum", "maximum", "anyOf",
+                }
                 
                 # Filtra o dicionário mantendo apenas as chaves permitidas no nó do schema
                 filtered_dict = {k: v for k, v in node.items() if k in allowed_keys}
