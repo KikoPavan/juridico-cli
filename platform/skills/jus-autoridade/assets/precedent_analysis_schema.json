@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PrecedentAnalysis",
+  "description": "Schema para análise individual de cada precedente pela skill Jus-Autoridade",
+  "type": "object",
+  "required": [
+    "identificacao",
+    "fatos_relevantes_do_precedente",
+    "questao_juridica_decidida",
+    "ratio_decidendi",
+    "obiter_dictum_identificado",
+    "forca_normativa",
+    "analogia_com_o_caso_concreto",
+    "distinguishing",
+    "risco_de_superacao",
+    "conclusao_de_uso"
+  ],
+  "properties": {
+    "identificacao": {
+      "type": "object",
+      "description": "Identificação formal do precedente",
+      "properties": {
+        "tribunal": {
+          "type": "string",
+          "description": "Ex.: STF, STJ, TRT-15, TJSP"
+        },
+        "orgao_julgador": {
+          "type": "string",
+          "description": "Ex.: Plenário, 1ª Turma, 2ª Seção"
+        },
+        "processo": {
+          "type": "string",
+          "description": "Classe e número do processo, se informado. Nunca inventar."
+        },
+        "relator": {
+          "type": "string",
+          "description": "Nome do relator, se informado. Nunca inventar."
+        },
+        "data_julgamento": {
+          "type": "string",
+          "description": "Data do julgamento, se informada. Nunca inventar."
+        },
+        "tipo_precedente": {
+          "type": "string",
+          "enum": ["vinculante", "qualificado", "persuasivo", "ilustrativo"],
+          "description": "Classificação da força normativa do precedente"
+        }
+      }
+    },
+    "fatos_relevantes_do_precedente": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Fatos que foram determinantes para a decisão no precedente original"
+    },
+    "questao_juridica_decidida": {
+      "type": "string",
+      "description": "Problema jurídico central que o precedente resolveu"
+    },
+    "ratio_decidendi": {
+      "type": "string",
+      "description": "Fundamento determinante que resolveu a controvérsia. É o único trecho vinculante."
+    },
+    "obiter_dictum_identificado": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Trechos ou argumentos identificados como obiter dictum — não vinculantes"
+    },
+    "forca_normativa": {
+      "type": "string",
+      "description": "Descrição da força normativa: ex. 'Tese de repercussão geral — vinculante para todos os graus', 'Precedente persuasivo de tribunal superior'"
+    },
+    "analogia_com_o_caso_concreto": {
+      "type": "object",
+      "properties": {
+        "semelhancas_faticas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fatos do caso atual que se assemelham aos do precedente"
+        },
+        "semelhancas_juridicas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Questões jurídicas comuns entre o precedente e o caso atual"
+        },
+        "grau_de_aderencia": {
+          "type": "string",
+          "enum": ["baixo", "medio", "alto"],
+          "description": "Grau de aderência entre o precedente e o caso concreto"
+        }
+      }
+    },
+    "distinguishing": {
+      "type": "object",
+      "properties": {
+        "existe": {
+          "type": "boolean",
+          "description": "true se há diferença material relevante que justifique distinguishing"
+        },
+        "fundamento": {
+          "type": "string",
+          "description": "Qual diferença fática ou jurídica justifica o distinguishing"
+        },
+        "impacto": {
+          "type": "string",
+          "enum": ["baixo", "medio", "alto"],
+          "description": "Impacto do distinguishing sobre a aplicabilidade do precedente"
+        }
+      }
+    },
+    "risco_de_superacao": {
+      "type": "object",
+      "properties": {
+        "classificacao": {
+          "type": "string",
+          "enum": [
+            "estavel",
+            "estavel_com_ressalvas",
+            "controvertido",
+            "em_risco_de_superacao",
+            "superado"
+          ]
+        },
+        "justificativa": {
+          "type": "string",
+          "description": "Por que o precedente está nessa classificação de risco"
+        }
+      }
+    },
+    "conclusao_de_uso": {
+      "type": "string",
+      "enum": [
+        "aplicavel",
+        "aplicavel_com_ressalvas",
+        "distinguivel",
+        "inaplicavel",
+        "superado"
+      ],
+      "description": "Resultado final da análise de aplicabilidade do precedente ao caso concreto"
+    }
+  }
+}

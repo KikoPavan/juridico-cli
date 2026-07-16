@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AuthorityOutput",
+  "description": "Schema completo de saída da skill Jus-Autoridade",
+  "type": "object",
+  "required": [
+    "skill",
+    "metodo",
+    "tipo_de_peca",
+    "tese_principal",
+    "questao_juridica",
+    "precedentes_analisados",
+    "auditoria_argumentativa",
+    "placar_de_forca_argumentativa"
+  ],
+  "properties": {
+    "skill": {
+      "type": "string",
+      "const": "Jus-Autoridade"
+    },
+    "metodo": {
+      "type": "string",
+      "const": "CREAC"
+    },
+    "tipo_de_peca": {
+      "type": "string",
+      "description": "inicial | contestação | impugnação | recurso | parecer | memoriais"
+    },
+    "tese_principal": {
+      "type": "string",
+      "description": "A tese jurídica central que se pretende sustentar"
+    },
+    "questao_juridica": {
+      "type": "string",
+      "description": "O problema jurídico concreto a ser resolvido"
+    },
+    "precedentes_analisados": {
+      "type": "array",
+      "description": "Array com a análise individual de cada precedente. Ver precedent_analysis_schema.json para o schema de cada item.",
+      "items": {
+        "type": "object",
+        "description": "Ver assets/precedent_analysis_schema.json"
+      }
+    },
+    "auditoria_argumentativa": {
+      "type": "object",
+      "description": "Auditoria contra os principais vícios de uso de jurisprudência",
+      "properties": {
+        "ha_cultura_da_ementa": {
+          "type": "boolean",
+          "description": "true se há risco de uso de ementa como substituto do precedente"
+        },
+        "ha_aproximacao_meramente_tematica": {
+          "type": "boolean",
+          "description": "true se o precedente foi atraído apenas por identidade de assunto, sem identidade fática e jurídica"
+        },
+        "ha_uso_de_obiter_como_ratio": {
+          "type": "boolean",
+          "description": "true se há trechos de obiter dictum sendo usados como se fossem ratio decidendi"
+        },
+        "ha_comparacao_fatica_suficiente": {
+          "type": "boolean",
+          "description": "true se a fundamentação demonstra comparação fática adequada"
+        },
+        "observacoes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Observações específicas sobre a qualidade argumentativa"
+        }
+      }
+    },
+    "placar_de_forca_argumentativa": {
+      "type": "object",
+      "properties": {
+        "classificacao": {
+          "type": "string",
+          "enum": ["baixo", "medio", "alto"],
+          "description": "Avaliação geral da força da fundamentação construída"
+        },
+        "justificativa": {
+          "type": "string",
+          "description": "Por que a fundamentação recebeu essa classificação"
+        }
+      }
+    }
+  }
+}

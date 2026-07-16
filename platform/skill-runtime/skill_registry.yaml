@@ -89,3 +89,12 @@ skills:
     profile: "high_reasoning"
     schema_ref: "platform/skills/yaml-normalizador-juridico/assets/io.schema.json"
     validator: "platform/skills/yaml-normalizador-juridico/scripts/validate_yaml_normalizador_juridico.py"
+
+  # --- jus-autoridade: fundamentação de autoridade com precedentes jurídicos ---
+
+  jus-autoridade:
+    path: "platform/skills/jus-autoridade"
+    profile: "high_reasoning"
+    schema_ref: "platform/skills/jus-autoridade/assets/authority_output_schema.json"
+    validator: "platform/skills/jus-autoridade/scripts/validate_structure.py"
+
