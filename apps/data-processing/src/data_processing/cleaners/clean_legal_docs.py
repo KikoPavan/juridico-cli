@@ -82,6 +82,8 @@ class LegalDocCleaner:
             return result["encoding"] or "utf-8"
 
     def fix_encoding(self, text: str) -> str:
+        import html
+        text = html.unescape(text)
         replacements = {
             "Ã£o": "ão", "Ã§Ã£o": "ção", "Ã§Ãµes": "ções", "Ã§Ã£": "çã",
             "Ã§Ãµ": "çõ", "Ã©": "é", "Ã¡": "á", "Ãº": "ú", "Ã­": "í",
