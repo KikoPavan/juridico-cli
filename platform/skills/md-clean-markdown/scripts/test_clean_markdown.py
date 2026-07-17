@@ -394,6 +394,28 @@ def test_cli_e2e_preserves_markers_and_legal_content(tmp_path):
     assert "793.933.908-78" in content, "CPF missing from CLI output"
 
 
+def test_judicial_locator_preserved():
+    lines = ['[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", event="43", document_code="CONTES1", page="2"]]\n']
+    stats = CleanStats()
+    result = clean_lines(lines, max_blank=2, preserve_markers=True, stats=stats, verbose=False)
+    assert result[0] == '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", event="43", document_code="CONTES1", page="2"]]\n', repr(result[0])
+
+
+def test_cli_e2e_decodes_html_entities(tmp_path):
+    input_file = tmp_path / "entity_input.md"
+    input_file.write_text("Certid&atilde;o da d&iacute;vida.", encoding="utf-8")
+    output_file = tmp_path / "entity_output.md"
+    script = Path(__file__).parent / "clean_markdown.py"
+    
+    subprocess.run(
+        [sys.executable, str(script), "--input", str(input_file), "--output", str(output_file)],
+        capture_output=True,
+        check=True,
+    )
+    content = output_file.read_text(encoding="utf-8")
+    assert "Certidão da dívida." in content, f"HTML entity not decoded: {repr(content)}"
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------

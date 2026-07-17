@@ -25,7 +25,8 @@ from pathlib import Path
 # Formato primário: [[Pág. N]] — output real de pdf-to-md
 # Formato legado:   <!-- page N --> e variantes
 PAGE_MARKER_RE = re.compile(
-    r"\[\[Pág\.\s*\d+\]\]"
+    r"\[\[judicial_locator:[^\]]*\]\]"
+    r"|\[\[Pág\.\s*\d+\]\]"
     r"|<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
 )
 

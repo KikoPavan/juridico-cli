@@ -240,3 +240,43 @@ def test_cli_preserves_page_markers(tmp_path, monkeypatch):
     assert "<!-- page 2 -->" in output_body
     assert "[[Pág. 3]]" in output_body
     assert "<!-- page 4 -->" in output_body
+
+
+def test_detect_title_h1_with_judicial_locator():
+    body = '[[judicial_locator: page="2", process_number="123"]] # Judicial Heading\nSome content.'
+    title, method = apply_frontmatter._detect_title(body)
+    assert title == "Judicial Heading"
+    assert method == "h1"
+
+
+def test_cli_judicial_locator_metadata_injected(tmp_path, monkeypatch):
+    input_file = tmp_path / "test_input.md"
+    output_file = tmp_path / "test_output.md"
+
+    body_content = (
+        '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", event="43", document_code="CONTES1", page="1", date="2026-07-17", user="kiko"]]\n'
+        "# CONTESTACAO DE TESTE\n"
+        "Body content.\n"
+    )
+    input_file.write_text(body_content, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", [
+        "apply_frontmatter.py",
+        "--input", str(input_file),
+        "--output", str(output_file)
+    ])
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_frontmatter.main()
+
+    assert exc_info.value.code == 0
+    output_text = output_file.read_text(encoding="utf-8")
+    parts = output_text.split("---", 2)
+    assert len(parts) >= 3
+    yaml_data = yaml.safe_load(parts[1])
+
+    assert yaml_data["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert yaml_data["event"] == "43"
+    assert yaml_data["document_code"] == "CONTES1"
+    assert yaml_data["document_date"] == "2026-07-17"
+    assert yaml_data["author"] == "kiko"

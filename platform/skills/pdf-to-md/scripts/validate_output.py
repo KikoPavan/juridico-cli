@@ -43,17 +43,29 @@ def _no_yaml(content, lines):
 
 @check("Presença de anchors de página")
 def _has_markers(content, lines):
-    found = re.findall(r"\[\[Pág\.\s+\d+\]\]", content)
+    found = re.findall(r"\[\[judicial_locator:[^\]]*\]\]|\[\[Pág\.\s+\d+\]\]", content)
     if not found:
-        return False, "Nenhum anchor [[Pág. N]] encontrado."
+        return False, "Nenhum anchor [[judicial_locator: ...]] ou [[Pág. N]] encontrado."
     return True, f"{len(found)} anchor(s) encontrado(s)."
 
 
 @check("Anchors de página bem formados")
 def _marker_format(content, lines):
-    raw = re.findall(r"\[\[Pág\.[^\]]*\]\]", content)
-    valid = re.compile(r"\[\[Pág\.\s+\d+\]\]")
-    bad = [m for m in raw if not valid.match(m.strip())]
+    raw = re.findall(r"\[\[judicial_locator:[^\]]*\]\]|\[\[Pág\.[^\]]*\]\]", content)
+    valid_legacy = re.compile(r"^\[\[Pág\.\s*\d+\]\]$")
+    # Structured allows one or more key="value" separated by comma or space
+    valid_structured = re.compile(r"^\[\[judicial_locator:\s*\w+\s*=\s*\"[^\"]*\"(?:\s*,\s*\w+\s*=\s*\"[^\"]*\")*\s*\]\]$", re.IGNORECASE)
+    bad = []
+    for m in raw:
+        m_strip = m.strip()
+        if m_strip.startswith("[[Pág."):
+            if not valid_legacy.match(m_strip):
+                bad.append(m)
+        elif m_strip.startswith("[[judicial_locator:"):
+            if not valid_structured.match(m_strip):
+                bad.append(m)
+        else:
+            bad.append(m)
     if bad:
         return False, f"Malformados: {bad[:3]}"
     return True, ""

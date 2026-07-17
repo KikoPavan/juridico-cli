@@ -25,6 +25,13 @@ import os
 import re
 import sys
 import time
+
+from pathlib import Path
+# Dynamically add packages/shared-llm to path
+_project_root = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_project_root / "packages" / "shared-llm"))
+
+import judicial_locator
 import unicodedata
 from collections import Counter
 from pathlib import Path
@@ -1251,7 +1258,17 @@ def build_markdown(pages: list[dict], page_markers: bool) -> str:
         n, status, text = entry["page"], entry["status"], entry.get("text", "")
 
         if page_markers:
-            blocks.append(PAGE_ANCHOR_TPL.format(n=n))
+            # Extract judicial metadata from text if available
+            meta = {}
+            if status == "ok" and text:
+                meta = judicial_locator.extract_judicial_metadata_from_text(text)
+            
+            # Ensure page field is set to n if not parsed
+            if not meta.get("page"):
+                meta["page"] = str(n)
+                
+            locator_str = judicial_locator.format_locator(meta)
+            blocks.append(locator_str)
 
         if status == "ok" and text:
             blocks.append(_format_page(text))

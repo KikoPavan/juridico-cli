@@ -30,6 +30,12 @@ import re
 import sys
 from pathlib import Path
 
+# Dynamically add packages/shared-llm to path
+_project_root = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_project_root / "packages" / "shared-llm"))
+
+import judicial_locator
+
 try:
     import yaml
 except ImportError:
@@ -68,6 +74,7 @@ def _detect_title(body: str) -> tuple[str | None, str]:
         # Remover marcadores de página antes de checar headings
         clean = re.sub(r"<!--[^>]*-->", "", line).strip()
         clean = re.sub(r"\[\[Pág\.\s*\d+\]\]", "", clean).strip()
+        clean = re.sub(r"\[\[judicial_locator:[^\]]*\]\]", "", clean).strip()
         m = re.match(r"^#\s+(.+)", clean)
         if m:
             return m.group(1).strip(), "h1"
@@ -167,6 +174,14 @@ def build_frontmatter(meta: dict) -> str:
     fm["language"] = meta.get("language", "pt-BR")
     fm["tags"] = meta.get("tags", [])
     fm["status"] = meta.get("status", "raw")
+    
+    # Append judicial locator fields if present
+    if "process_number" in meta and meta["process_number"] is not None:
+        fm["process_number"] = meta["process_number"]
+    if "event" in meta and meta["event"] is not None:
+        fm["event"] = meta["event"]
+    if "document_code" in meta and meta["document_code"] is not None:
+        fm["document_code"] = meta["document_code"]
     fm["created_by_skill"] = SKILL_NAME
 
     # Serializar com pyyaml, default_flow_style=False para bloco legível
@@ -271,6 +286,31 @@ def main() -> None:
     # --- Inferir metadados ---
     methods: dict[str, str] = {}
 
+    # Extract metadata from judicial locators in body first
+    extracted_meta = {
+        "process_number": None,
+        "event": None,
+        "document_code": None,
+        "date": None,
+        "user": None
+    }
+    
+    locators = re.findall(r"\[\[judicial_locator:[^\]]*\]\]", body, re.IGNORECASE)
+    for loc_str in locators:
+        parsed = judicial_locator.parse_locator_text(loc_str)
+        if parsed:
+            for k in ["process_number", "event", "document_code", "date", "user"]:
+                val = parsed.get(k)
+                if val and not extracted_meta[k]:
+                    extracted_meta[k] = val
+
+    # Fallback secondary scan for processes with fls or old formats
+    if not extracted_meta["process_number"]:
+        sec_meta = judicial_locator.extract_judicial_metadata_from_text("\n".join(body.splitlines()[:50]))
+        for k in ["process_number", "event", "document_code", "date", "user"]:
+            if sec_meta.get(k) and not extracted_meta[k]:
+                extracted_meta[k] = sec_meta[k]
+
     if args.title:
         title, methods["title"] = args.title, "cli"
     else:
@@ -278,11 +318,15 @@ def main() -> None:
 
     if args.date:
         document_date, methods["date"] = args.date, "cli"
+    elif extracted_meta.get("date"):
+        document_date, methods["date"] = extracted_meta["date"], "locator"
     else:
         document_date, methods["date"] = _detect_date(body)
 
     if args.author:
         author, methods["author"] = args.author, "cli"
+    elif extracted_meta.get("user"):
+        author, methods["author"] = extracted_meta["user"], "locator"
     else:
         author, methods["author"] = _detect_author(body)
 
@@ -298,6 +342,9 @@ def main() -> None:
         "language": args.language,
         "tags": tags,
         "status": args.status,
+        "process_number": extracted_meta.get("process_number"),
+        "event": extracted_meta.get("event"),
+        "document_code": extracted_meta.get("document_code"),
     }
 
     if args.verbose:

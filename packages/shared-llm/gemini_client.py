@@ -951,6 +951,8 @@ class GeminiLLMClient(LLMClient):
 
         # Encontra todos os marcadores de página com suas posições
         markers = []
+        for m in re.finditer(r'\[\[judicial_locator:[^\]]*\bpage="(\d+)"[^\]]*\]\]', markdown_text, re.IGNORECASE):
+            markers.append((int(m.group(1)), m.start(), m.end(), m.group(0)))
         for m in re.finditer(r'\[\[Pág\.\s*(\d+)\]\]', markdown_text):
             markers.append((int(m.group(1)), m.start(), m.end(), f"[[Pág. {m.group(1)}]]"))
         for m in re.finditer(r'<!--\s*page\s*(\d+)\s*-->', markdown_text):
@@ -1099,6 +1101,9 @@ class GeminiLLMClient(LLMClient):
             
         # Find all page markers with their positions
         markers = []
+        # Matches [[judicial_locator: ... page="N" ...]]
+        for m in re.finditer(r'\[\[judicial_locator:[^\]]*\bpage="(\d+)"[^\]]*\]\]', markdown_text, re.IGNORECASE):
+            markers.append((int(m.group(1)), m.start(), m.end(), m.group(0)))
         # Matches [[Pág. N]]
         for m in re.finditer(r'\[\[Pág\.\s*(\d+)\]\]', markdown_text):
             markers.append((int(m.group(1)), m.start(), m.end(), m.group(0)))

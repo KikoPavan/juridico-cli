@@ -1,0 +1,205 @@
+import re
+from typing import Dict, Any, Optional
+
+# Structured locator format regex: [[judicial_locator: key1="value1", key2="value2", ...]]
+STRUCTURED_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\s*\]\]", re.IGNORECASE)
+ATTR_RE = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+
+# Legacy page markers regex
+LEGACY_MARKER_RE = re.compile(r"\[\[Pág\.\s*(\d+)\]\]", re.IGNORECASE)
+LEGACY_COMMENT_RE = re.compile(r"<!--\s*page\s*(\d+)(?:\s*:\s*\w+)?\s*-->", re.IGNORECASE)
+LEGACY_FLS_MARKER_RE = re.compile(r"\bfls?\.?\s*(\d+)\b", re.IGNORECASE)
+
+# Electronic locator header/footer formats
+# e.g., "Processo 4000153-37.2026.8.26.0136/SP, Evento 43, CONTES1, Página 1"
+# or ".0136/SP, Evento 43, CONTES1, Pägina 33"
+TJSP_ELECTRONIC_RE = re.compile(
+    r"(?:Processo\s+)?([\d\.\-/]*\d+[\d\.\-/A-Z]*),\s*Evento\s*(\d+),\s*([A-Z0-9_\-]+),\s*P[áaä]gina\s*(\d+)",
+    re.IGNORECASE
+)
+
+# Flexible individual regexes
+PROCESS_RE = re.compile(
+    r"\bProcesso\s*(?:Digital)?\s*(?:nº|no)?:?\s*([\d\.\-/]+[A-Z]{0,2})\b",
+    re.IGNORECASE
+)
+EVENT_RE = re.compile(
+    r"\b(?:Evento|Ev\.?)\s*:?\s*(\d+)\b",
+    re.IGNORECASE
+)
+DOC_CODE_RE = re.compile(
+    r"\b(?:Cód(?:igo)?\.?\s*do\s*documento|Cód\.?\s*Doc\.?|Doc\.?)\s*:?\s*([A-Z0-9_\-]+)\b",
+    re.IGNORECASE
+)
+PAGE_RE = re.compile(
+    r"\bP[áaä]gina\s*:?\s*(\d+)\b",
+    re.IGNORECASE
+)
+FLS_RE = re.compile(
+    r"\bfls?\.?\s*(\d+)\b",
+    re.IGNORECASE
+)
+SEQ_RE = re.compile(
+    r"\b(?:Seq(?:uência)?\.?|seq)\s*:?\s*(\d+)\b",
+    re.IGNORECASE
+)
+USER_RE = re.compile(
+    r"\b(?:Usuário|User|Assinado\s+por)\s*:?\s*([A-Za-z0-9_\s\.\-À-ÿ]+?)(?=\s*-\s*|\s*,\s*|\n|$)",
+    re.IGNORECASE
+)
+DATE_RE = re.compile(
+    r"\b(?:Data|Date)\s*:?\s*(\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?|\d{4}-\d{2}-\d{2})\b",
+    re.IGNORECASE
+)
+
+
+def parse_locator_text(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Parses a page marker line and extracts locator fields.
+    Supports structured judicial_locator, legacy [[Pág. N]], <!-- page N -->, and fls. N formats.
+    """
+    text_strip = text.strip()
+    
+    # 1. Parse structured locator
+    m = STRUCTURED_LOCATOR_RE.match(text_strip)
+    if m:
+        attrs = {}
+        for key, val in ATTR_RE.findall(m.group(1)):
+            attrs[key] = val
+        return attrs
+
+    # 2. Parse legacy marker format [[Pág. N]]
+    m = LEGACY_MARKER_RE.match(text_strip)
+    if m:
+        return {"page": m.group(1)}
+
+    # 3. Parse legacy comment format <!-- page N -->
+    m = LEGACY_COMMENT_RE.match(text_strip)
+    if m:
+        return {"page": m.group(1)}
+
+    # 4. Parse physical leaf fls. N format
+    m = LEGACY_FLS_MARKER_RE.search(text_strip)
+    if m:
+        return {"page": m.group(1), "page_separation": f"fls. {m.group(1)}"}
+
+    return None
+
+
+def format_locator(meta: Dict[str, Any]) -> str:
+    """
+    Formats the metadata dictionary into a structured locator string:
+    [[judicial_locator: key1="value1", key2="value2", ...]]
+    """
+    # Order of fields for clean formatting
+    field_order = [
+        "process_number",
+        "event",
+        "document_code",
+        "page",
+        "page_separation",
+        "date",
+        "user",
+        "sequence"
+    ]
+    
+    parts = []
+    for field in field_order:
+        val = meta.get(field)
+        if val is not None and val != "":
+            parts.append(f'{field}="{val}"')
+            
+    # Include any other fields not in field_order
+    for key, val in meta.items():
+        if key not in field_order and val is not None and val != "":
+            parts.append(f'{key}="{val}"')
+            
+    return f"[[judicial_locator: {', '.join(parts)}]]"
+
+
+def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
+    """
+    Scans raw text of a page to extract judicial metadata fields.
+    """
+    meta: Dict[str, Any] = {
+        "process_number": None,
+        "event": None,
+        "document_code": None,
+        "page": None,
+        "page_separation": None,
+        "date": None,
+        "user": None,
+        "sequence": None
+    }
+    
+    # Pre-parse lines to look for the TJSP electronic locator pattern
+    lines = text.splitlines()
+    for line in lines:
+        line_strip = line.strip()
+        m_tjsp = TJSP_ELECTRONIC_RE.search(line_strip)
+        if m_tjsp:
+            meta["process_number"] = m_tjsp.group(1)
+            meta["event"] = m_tjsp.group(2)
+            meta["document_code"] = m_tjsp.group(3)
+            meta["page"] = m_tjsp.group(4)
+            break
+            
+    # Flexible scan of the entire page for missing values
+    # Process number
+    if not meta["process_number"]:
+        m = PROCESS_RE.search(text)
+        if m:
+            meta["process_number"] = m.group(1)
+            
+    # Event
+    if not meta["event"]:
+        m = EVENT_RE.search(text)
+        if m:
+            meta["event"] = m.group(1)
+            
+    # Document Code
+    if not meta["document_code"]:
+        m = DOC_CODE_RE.search(text)
+        if m:
+            meta["document_code"] = m.group(1)
+            
+    # Page
+    if not meta["page"]:
+        m = PAGE_RE.search(text)
+        if m:
+            meta["page"] = m.group(1)
+            
+    # Physical leaves (fls.)
+    m_fls = FLS_RE.search(text)
+    if m_fls:
+        # Save the physical leaves (fls) reference
+        meta["page_separation"] = f"fls. {m_fls.group(1)}"
+        if not meta["page"]:
+            meta["page"] = m_fls.group(1)
+            
+    # Sequence
+    m = SEQ_RE.search(text)
+    if m:
+        meta["sequence"] = m.group(1)
+        
+    # User
+    m = USER_RE.search(text)
+    if m:
+        meta["user"] = m.group(1).strip()
+        
+    # Date
+    m = DATE_RE.search(text)
+    if m:
+        dt_val = m.group(1)
+        m_dmy = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})", dt_val)
+        if m_dmy:
+            day, month, year = int(m_dmy.group(1)), int(m_dmy.group(2)), int(m_dmy.group(3))
+            if 1 <= month <= 12 and 1 <= day <= 31:
+                time_part = dt_val[m_dmy.end():]
+                meta["date"] = f"{year:04d}-{month:02d}-{day:02d}{time_part}"
+            else:
+                meta["date"] = dt_val
+        else:
+            meta["date"] = dt_val
+        
+    return meta

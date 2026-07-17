@@ -146,14 +146,13 @@ def check_encoding(content: str, _ctx: dict) -> tuple[bool, str]:
     return True, ""
 
 
-@check("Sem campos jurídicos especializados")
+@check("Sem campos jurídicos especializados não autorizados")
 def check_no_legal_fields(content: str, ctx: dict) -> tuple[bool, str]:
     data = ctx.get("yaml_data", {}) or {}
-    legal_fields = {"process_number", "court", "comarca", "vara", "parties",
-                    "classe_processual"}
+    legal_fields = {"court", "comarca", "vara", "parties", "classe_processual"}
     found = [f for f in legal_fields if f in data]
     if found:
-        return True, f"WARNING: campos especializados presentes: {found}"
+        return True, f"WARNING: campos especializados não autorizados presentes: {found}"
     return True, ""
 
 

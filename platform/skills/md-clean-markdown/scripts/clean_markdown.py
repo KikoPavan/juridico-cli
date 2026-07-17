@@ -42,7 +42,8 @@ OUTPUT_ENCODING = "utf-8"
 # Formato primário: [[Pág. N]] — output real de pdf-to-md
 # Formato legado:   <!-- page N --> e variantes — compatibilidade retroativa
 PAGE_MARKER_RE = re.compile(
-    r"\[\[Pág\.\s*\d+\]\]"
+    r"\[\[judicial_locator:[^\]]*\]\]"
+    r"|\[\[Pág\.\s*\d+\]\]"
     r"|<!--\s*page\s+\d+(\s*:\s*(empty|extraction_failed|scanned_no_ocr))?\s*-->"
 )
 
@@ -354,6 +355,8 @@ def main() -> None:
     # --- Ler ---
     try:
         raw_text = input_path.read_text(encoding=OUTPUT_ENCODING, errors="replace")
+        import html
+        raw_text = html.unescape(raw_text)
     except Exception as exc:
         print(f"[ERRO] Falha ao ler {input_path}: {exc}", file=sys.stderr)
         sys.exit(EXIT_INPUT_ERROR)
