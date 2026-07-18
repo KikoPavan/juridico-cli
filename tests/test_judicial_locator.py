@@ -3,6 +3,7 @@ from judicial_locator import (
     parse_locator_text,
     format_locator,
     extract_judicial_metadata_from_text,
+    structure_eproc_event_separator_markdown,
     strip_judicial_metadata_text,
 )
 
@@ -120,6 +121,68 @@ def test_extract_partial_separator_does_not_invent_missing_fields():
     assert meta["date"] is None
     assert meta["user"] is None
     assert meta["user_role"] is None
+
+
+def test_extract_grouped_eproc_event_separator_metadata():
+    text = (
+        "# PÁGINA DE SEPARAÇÃO\n"
+        "(Gerada automaticamente pelo sistema.)\n"
+        "Evento 32\n"
+        "Evento:\n"
+        "Data:\n"
+        "Usuário:\n"
+        "Processo:\n"
+        "Sequência Evento:\n"
+        "# DETERMINADA A CITACAO\n"
+        "27/04/2026 13:34:24\n"
+        "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO - MAGISTRADO\n"
+        "4000153-37.2026.8.26.0136/SP\n"
+        "32\n"
+    )
+
+    meta = extract_judicial_metadata_from_text(text)
+
+    assert meta["event"] == "32"
+    assert meta["event_title"] == "DETERMINADA A CITACAO"
+    assert meta["date"] == "27/04/2026 13:34:24"
+    assert meta["user"] == "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO"
+    assert meta["user_role"] == "MAGISTRADO"
+    assert meta["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert meta["sequence"] == "32"
+
+
+def test_structure_grouped_eproc_separator_enriches_first_locator():
+    markdown = (
+        '[[judicial_locator: event="32", page="1"]]\n\n'
+        "# PÁGINA DE SEPARAÇÃO\n"
+        "(Gerada automaticamente pelo sistema.)\n"
+        "Evento 32\nEvento:\nData:\nUsuário:\nProcesso:\nSequência Evento:\n"
+        "# DETERMINADA A CITACAO\n"
+        "27/04/2026 13:34:24\n"
+        "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO - MAGISTRADO\n"
+        "4000153-37.2026.8.26.0136/SP\n32\n"
+        "Conteúdo jurídico posterior.\n"
+    )
+
+    structured = structure_eproc_event_separator_markdown(markdown)
+    first_line = structured.splitlines()[0]
+    parsed = parse_locator_text(first_line)
+
+    assert parsed == {
+        "process_number": "4000153-37.2026.8.26.0136/SP",
+        "event": "32",
+        "event_title": "DETERMINADA A CITACAO",
+        "page": "1",
+        "date": "27/04/2026 13:34:24",
+        "user": "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO",
+        "user_role": "MAGISTRADO",
+        "sequence": "32",
+        "kind": "event_separator",
+    }
+    assert "Evento: 32" in structured
+    assert "Título do Evento: DETERMINADA A CITACAO" in structured
+    assert "Evento:\nData:" not in structured
+    assert "Conteúdo jurídico posterior." in structured
 
 
 def test_locator_round_trip_preserves_new_fields_and_escaping():

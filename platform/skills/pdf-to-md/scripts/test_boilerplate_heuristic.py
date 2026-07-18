@@ -15,6 +15,7 @@ from convert_pdf_to_md import (
     _is_locator_or_boilerplate_dominated,
     _needs_ocr,
     _strip_boilerplate,
+    build_markdown,
 )
 
 
@@ -41,6 +42,28 @@ def test_strip_fls_numeration():
 def test_strip_fl_lowercase():
     result = _strip_boilerplate("fl. 5")
     _run("strip: 'fl. 5' → empty", result.strip() == "")
+
+
+def test_build_markdown_structures_grouped_eproc_separator_locator():
+    text = (
+        "PÁGINA DE SEPARAÇÃO\n(Gerada automaticamente pelo sistema.)\nEvento 32\n"
+        "Evento:\nData:\nUsuário:\nProcesso:\nSequência Evento:\n"
+        "DETERMINADA A CITACAO\n27/04/2026 13:34:24\n"
+        "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO - MAGISTRADO\n"
+        "4000153-37.2026.8.26.0136/SP\n32"
+    )
+
+    markdown = build_markdown([{"page": 1, "status": "ok", "text": text}], page_markers=True)
+    locator = markdown.splitlines()[0]
+
+    _run("pdf-to-md: grouped event number", 'event="32"' in locator)
+    _run("pdf-to-md: grouped event title", 'event_title="DETERMINADA A CITACAO"' in locator)
+    _run("pdf-to-md: grouped event date", 'date="27/04/2026 13:34:24"' in locator)
+    _run("pdf-to-md: grouped event user", 'user="J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO"' in locator)
+    _run("pdf-to-md: grouped event role", 'user_role="MAGISTRADO"' in locator)
+    _run("pdf-to-md: grouped process", 'process_number="4000153-37.2026.8.26.0136/SP"' in locator)
+    _run("pdf-to-md: grouped sequence", 'sequence="32"' in locator)
+    _run("pdf-to-md: separator kind", 'kind="event_separator"' in locator)
 
 
 def test_strip_standalone_page_number():

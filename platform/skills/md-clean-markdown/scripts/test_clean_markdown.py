@@ -448,6 +448,34 @@ def test_judicial_locator_preserved():
     assert result[0] == '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", event="43", document_code="CONTES1", page="2"]]\n', repr(result[0])
 
 
+def test_cli_structures_grouped_eproc_event_separator(tmp_path):
+    input_file = FIXTURE_DIR / "eproc_event_32_separator.md"
+    output_file = tmp_path / "cleaned.md"
+    script = Path(__file__).parent / "clean_markdown.py"
+
+    subprocess.run(
+        [sys.executable, str(script), "--input", str(input_file), "--output", str(output_file)],
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    content = output_file.read_text(encoding="utf-8")
+    first_locator = content.splitlines()[0]
+    assert 'process_number="4000153-37.2026.8.26.0136/SP"' in first_locator
+    assert 'event="32"' in first_locator
+    assert 'event_title="DETERMINADA A CITACAO"' in first_locator
+    assert 'page="1"' in first_locator
+    assert 'date="27/04/2026 13:34:24"' in first_locator
+    assert 'user="J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO"' in first_locator
+    assert 'user_role="MAGISTRADO"' in first_locator
+    assert 'sequence="32"' in first_locator
+    assert 'kind="event_separator"' in first_locator
+    assert "Evento: 32" in content
+    assert "Título do Evento: DETERMINADA A CITACAO" in content
+    assert "Evento:\nData:" not in content
+
+
 def test_cli_e2e_decodes_html_entities(tmp_path):
     input_file = tmp_path / "entity_input.md"
     input_file.write_text("Certid&atilde;o da d&iacute;vida.", encoding="utf-8")

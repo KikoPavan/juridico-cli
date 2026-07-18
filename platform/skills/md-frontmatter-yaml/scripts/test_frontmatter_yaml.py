@@ -280,3 +280,32 @@ def test_cli_judicial_locator_metadata_injected(tmp_path, monkeypatch):
     assert yaml_data["document_code"] == "CONTES1"
     assert yaml_data["document_date"] == "2026-07-17"
     assert yaml_data["author"] == "kiko"
+
+
+def test_cli_preserves_enriched_event_separator_locator(tmp_path, monkeypatch):
+    input_file = tmp_path / "event_separator.md"
+    output_file = tmp_path / "event_separator_frontmatter.md"
+    locator = (
+        '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", '
+        'event="32", event_title="DETERMINADA A CITACAO", page="1", '
+        'date="27/04/2026 13:34:24", '
+        'user="J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO", '
+        'user_role="MAGISTRADO", sequence="32", kind="event_separator"]]'
+    )
+    body = locator + "\n# PÁGINA DE SEPARAÇÃO\nEvento: 32\n"
+    input_file.write_text(body, encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv",
+        ["apply_frontmatter.py", "--input", str(input_file), "--output", str(output_file)],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_frontmatter.main()
+
+    assert exc_info.value.code == 0
+    output_text = output_file.read_text(encoding="utf-8")
+    assert locator in output_text
+    yaml_data = yaml.safe_load(output_text.split("---", 2)[1])
+    assert yaml_data["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert yaml_data["event"] == "32"
+    assert yaml_data["author"] == "J14432 - MARCOS ROGÉRIO SANCHES CRUZ GERALDO"
