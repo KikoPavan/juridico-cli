@@ -10,7 +10,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from convert_pdf_to_md import _strip_boilerplate, _needs_ocr, MIN_CHARS_FOR_TEXT
+from convert_pdf_to_md import (
+    MIN_CHARS_FOR_TEXT,
+    _is_locator_or_boilerplate_dominated,
+    _needs_ocr,
+    _strip_boilerplate,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +116,28 @@ def test_needs_ocr_empty():
 def test_needs_ocr_short_real_text():
     needs, _ = _needs_ocr("Olá mundo.")
     _run("needs_ocr: 10-char real text → True", needs is True)
+
+
+def test_minimum_useful_text_threshold_is_30():
+    _run("MIN_CHARS_FOR_TEXT is 30", MIN_CHARS_FOR_TEXT == 30)
+
+
+def test_strip_structured_judicial_locator_before_counting():
+    locator = '[[judicial_locator: process_number="123", event="4", page="1"]]'
+    _run("strip: structured locator → empty", _strip_boilerplate(locator) == "")
+
+
+def test_locator_dominated_page_requires_explicit_fallback():
+    residual = "conteúdo jurídico residual ainda analisável aqui"
+    text = "\n".join(
+        ["TRIBUNAL DE JUSTIÇA DO ESTADO DE SÃO PAULO"] * 8 + [residual]
+    )
+    initial_needs, _ = _needs_ocr(text)
+    _run("locator fallback: initial _needs_ocr is False", initial_needs is False)
+    _run(
+        "locator fallback: metadata-dominated page is detected",
+        _is_locator_or_boilerplate_dominated(text) is True,
+    )
 
 
 # ---------------------------------------------------------------------------

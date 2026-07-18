@@ -13,11 +13,58 @@ from clean_markdown import (
     _fix_horizontal_rule,
     _fix_trailing_whitespace,
     _remove_decorative_line,
+    _recompose_hyphenated_words,
+    _recompose_prose_lines,
     _restore_code_blocks,
     clean_lines,
 )
 
 FIXTURE_DIR = Path(__file__).parent / "tests" / "fixtures"
+
+
+# ---------------------------------------------------------------------------
+# Artificial line recomposition unit tests
+# ---------------------------------------------------------------------------
+
+def test_recompose_hyphenated_word_with_lowercase_continuation():
+    assert _recompose_hyphenated_words(["juris-\n", "prudência\n"]) == [
+        "jurisprudência\n"
+    ]
+
+
+def test_recompose_hyphenated_words_preserves_semantic_hyphen():
+    lines = ["relação jurídico-\n", "Processual autônoma\n"]
+    assert _recompose_hyphenated_words(lines) == lines
+
+
+def test_recompose_fragmented_prose_with_space():
+    assert _recompose_prose_lines(
+        ["A parte apresentou fundamento\n", "jurídico relevante.\n"]
+    ) == ["A parte apresentou fundamento jurídico relevante.\n"]
+
+
+def test_recompose_prose_does_not_cross_markdown_boundaries():
+    lines = [
+        "Texto sem pontuação\n",
+        "\n",
+        "continuação após parágrafo\n",
+        "# heading\n",
+        "continuação após heading\n",
+        "- item\n",
+        "continuação após lista\n",
+        '[[judicial_locator: page="2"]]\n',
+        "continuação após marcador\n",
+        "__CODE_BLOCK_0__\n",
+    ]
+    assert _recompose_prose_lines(lines) == lines
+
+
+def test_line_recomposition_is_idempotent_for_chained_fragments():
+    lines = ["juris-\n", "pru-\n", "dência sem\n", "interrupção final.\n"]
+    once = _recompose_prose_lines(_recompose_hyphenated_words(lines))
+    twice = _recompose_prose_lines(_recompose_hyphenated_words(once))
+    assert once == ["jurisprudência sem interrupção final.\n"]
+    assert twice == once
 
 
 # ---------------------------------------------------------------------------

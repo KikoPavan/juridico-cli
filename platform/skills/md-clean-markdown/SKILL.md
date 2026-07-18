@@ -4,8 +4,8 @@ description: >
   Recebe um arquivo Markdown bruto oriundo de qualquer domínio e produz
   Markdown limpo, normalizado e pronto para processamento posterior.
   Remove ruído visual e textual, normaliza espaçamento e quebras de linha,
-  preserva títulos, listas e marcadores de página [[Pág. N]] (primário) e
-  <!-- page N --> (legado). Use esta skill sempre que o usuário quiser
+  preserva títulos, listas e marcadores de página [[judicial_locator: ...]]
+  (primário), [[Pág. N]] e <!-- page N --> (legados). Use esta skill sempre que o usuário quiser
   limpar ou normalizar um arquivo Markdown, preparar um .md para etapas
   subsequentes (extração, YAML, análise), ou mencionar palavras como
   "limpar markdown", "normalizar markdown", "md limpo", "segunda etapa do
@@ -33,10 +33,12 @@ Ela não interpreta nem classifica o conteúdo.
 
 - Recebe 1 arquivo Markdown bruto por execução
 - Remove espaços redundantes no final das linhas
+- Expande ligaduras tipográficas Unicode antes das correções de encoding
+- Recompõe palavras hifenizadas e linhas de prosa fragmentadas antes da limpeza estrutural
 - Colapsa sequências de 3+ linhas em branco para no máximo 2
 - Normaliza separadores horizontais (`---`, `***`, `___`, `===`) para `---`
 - Remove espaços inconsistentes entre `#` e o texto do heading
-- Preserva marcadores de página `[[Pág. N]]` (primário) e `<!-- page N -->` (legado)
+- Preserva marcadores `[[judicial_locator: ...]]` (primário), `[[Pág. N]]` e `<!-- page N -->` (legados)
 - Preserva a estrutura de listas (ordenadas e não ordenadas)
 - Preserva blocos de código (não toca no conteúdo interno)
 - Normaliza bullets: `*` e `+` soltos → `-`
@@ -71,7 +73,7 @@ Ela não interpreta nem classifica o conteúdo.
 |------------------|------------------|--------|---------|------------------------------------------------|
 | `input_md`       | `--input`        | ✅     | —       | Caminho do `.md` bruto de entrada              |
 | `output_md`      | `--output`       | ✅     | —       | Caminho do `.md` limpo de saída                |
-| `page_markers`   | `--no-markers`   | ❌     | `true`  | Preservar `[[Pág. N]]` (primário) e `<!-- page N -->` (legado) |
+| `page_markers`   | `--no-markers`   | ❌     | `true`  | Preservar `[[judicial_locator: ...]]` (primário), `[[Pág. N]]` e `<!-- page N -->` (legados) |
 | `verbose`        | `--verbose`      | ❌     | `false` | Exibir log de operações no stderr              |
 | `report`         | `--report`       | ❌     | `false` | Gerar `cleaning_report.md` junto ao output     |
 | `max_blank_lines`| `--max-blank`    | ❌     | `2`     | Máximo de linhas em branco consecutivas        |
@@ -90,14 +92,16 @@ Ela não interpreta nem classifica o conteúdo.
 ## Regras de limpeza
 
 1. **Preservação** — nunca remover conteúdo sem regra explícita
-2. **Espaços finais** — remover trailing whitespace em cada linha
-3. **Linhas em branco** — colapsar 3+ linhas em branco consecutivas para `max_blank_lines`
-4. **Headings** — normalizar espaço entre `#` e texto (`##Título` → `## Título`)
-5. **Bullets** — normalizar `*` e `+` como marcadores de lista para `-`
-6. **Separadores** — unificar variantes de `<hr>` para `---`
-7. **Blocos de código** — preservar integralmente, sem tocar no conteúdo interno
-8. **Marcadores de página** — preservar `[[Pág. N]]` (primário) e `<!-- page N -->` (legado); nunca converter entre formatos
-9. **Linha final** — garantir exatamente `\n` ao final do arquivo
+2. **Ligaduras** — expandir `ﬀ`, `ﬁ`, `ﬂ`, `ﬃ`, `ﬄ`, `ﬅ` e `ﬆ` antes das demais correções
+3. **Recomposição** — unir palavras hifenizadas e fragmentos de prosa sem atravessar estruturas Markdown
+4. **Espaços finais** — remover trailing whitespace em cada linha
+5. **Linhas em branco** — colapsar 3+ linhas em branco consecutivas para `max_blank_lines`
+6. **Headings** — normalizar espaço entre `#` e texto (`##Título` → `## Título`)
+7. **Bullets** — normalizar `*` e `+` como marcadores de lista para `-`
+8. **Separadores** — unificar variantes de `<hr>` para `---`
+9. **Blocos de código** — preservar integralmente, sem tocar no conteúdo interno
+10. **Marcadores de página** — preservar `[[judicial_locator: ...]]` (primário), `[[Pág. N]]` e `<!-- page N -->` (legados); nunca converter entre formatos
+11. **Linha final** — garantir exatamente `\n` ao final do arquivo
 
 → Regras detalhadas em [`assets/cleaning_rules.md`](assets/cleaning_rules.md)
 
@@ -124,13 +128,19 @@ Ela não interpreta nem classifica o conteúdo.
        │
        ├── lê arquivo linha a linha
        ├── detecta blocos de código (isola, não toca)
+       ├── expande ligaduras e recompõe quebras artificiais
        ├── aplica regras de normalização fora dos blocos
-       ├── preserva marcadores <!-- page N -->
+       ├── preserva marcadores judiciais primários e legados
        └── escreve <output_md>
                 │
                 ├── (opcional) escreve cleaning_report.md
                 └── [validate_output.py]
 ```
+
+O pipeline consumidor aplica, antes da extração JSON, validação configurável
+com limiar padrão de 50 caracteres úteis. Um documento vazio ou composto apenas
+por frontmatter, boilerplate e localizadores recebe
+`rejected: no_meaningful_content` e não é enviado ao LLM.
 
 ---
 

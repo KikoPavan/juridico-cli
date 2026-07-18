@@ -42,7 +42,7 @@ EXIT_OK, EXIT_INPUT_ERROR, EXIT_EXTRACT_ERROR, EXIT_WRITE_ERROR = 0, 1, 2, 3
 PAGE_ANCHOR_TPL = "[[Pág. {n}]]"
 
 # Density thresholds for OCR fallback decision (tasks.md §3)
-MIN_CHARS_FOR_TEXT = 50    # minimum useful characters per page
+MIN_CHARS_FOR_TEXT = 30    # minimum useful characters per page after locator/boilerplate removal
 MIN_PRINTABLE_RATIO = 0.6  # minimum ratio of printable chars
 MIN_TEXT_QUALITY = 0.45    # minimum heuristic quality score (space density + long-token ratio)
 MIN_OCR_POST_QUALITY = MIN_TEXT_QUALITY  # minimum post-OCR quality score (design decision 5)
@@ -765,8 +765,14 @@ def _ocr_post_quality_score(text: str) -> float:
         0.0,
         min(1.0, (intrusive - 0.005) / 0.015)
     )
-    
-    return max(0.0, base - chaos_penalty - intrusive_penalty)
+
+    original_chars = sum(1 for char in text if char.isalnum())
+    locator_residual = judicial_locator.strip_judicial_metadata_text(text)
+    residual_chars = sum(1 for char in locator_residual if char.isalnum())
+    locator_ratio = 1.0 - (residual_chars / original_chars) if original_chars else 0.0
+    locator_penalty = max(0.0, min(1.0, (locator_ratio - 0.5) / 0.25))
+
+    return max(0.0, base - chaos_penalty - intrusive_penalty - locator_penalty)
 
 
 _NATIVE_STAMP_INTRUSIVE_RE = re.compile(
@@ -824,7 +830,7 @@ def _strip_boilerplate(text: str) -> str:
         line for line in text.splitlines()
         if not any(p.search(line) for p in BOILERPLATE_PATTERNS)
     ]
-    return "\n".join(kept)
+    return judicial_locator.strip_judicial_metadata_text("\n".join(kept))
 
 
 def _needs_ocr(text: str) -> tuple[bool, str]:
@@ -847,6 +853,16 @@ def _needs_ocr(text: str) -> tuple[bool, str]:
         if short_ratio > SHORT_LINE_RATIO_THRESHOLD:
             return (True, "garbled_text")
     return (False, "ok")
+
+
+def _is_locator_or_boilerplate_dominated(text: str) -> bool:
+    """Return True when useful residual text is at most 25% of page text."""
+    original_chars = sum(1 for char in text if char.isalnum())
+    if original_chars == 0:
+        return False
+    residual = _strip_boilerplate(text)
+    residual_chars = sum(1 for char in residual if char.isalnum())
+    return residual_chars / original_chars <= 0.25
 
 
 def _assess(text: str) -> tuple[str, str]:
@@ -964,6 +980,8 @@ def _extract_pymupdf(pdf_path: Path, verbose: bool) -> list[dict]:
                 reason = "failed"
             else:
                 needs, reason = _needs_ocr(raw)
+                if not needs and _is_locator_or_boilerplate_dominated(raw):
+                    needs, reason = True, "locator_dominated"
                 if needs:
                     try:
                         img_bytes = _render_page_image(doc, page_idx)

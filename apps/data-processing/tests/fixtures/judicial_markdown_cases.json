@@ -1,0 +1,9 @@
+{
+  "rich_document": {
+    "separator_text": "Processo: 4000153-37.2026.8.26.0136/SP\nEvento: 43\nTítulo do Evento: Contestação\nData: 17/07/2026\nUsuário: Maria da Silva\nPapel do Usuário: Advogada\nSequência: 1",
+    "markdown": "---\ndocument_type: contestacao\n---\n[[judicial_locator: process_number=\"4000153-37.2026.8.26.0136/SP\", event=\"43\", page=\"1\"]]\nA ﬁnalidade desta contes-\ntação é demonstrar fundamento\njurídico relevante para o julgamento.\n[[judicial_locator: page=\"2\"]]\n[low_ocr_quality]\n"
+  },
+  "locator_only_document": {
+    "markdown": "---\ndocument_type: separador\n---\n[[judicial_locator: process_number=\"4000153-37.2026.8.26.0136/SP\", event=\"43\", page=\"1\"]]\nProcesso: 4000153-37.2026.8.26.0136/SP\nEvento: 43\nSequência: 1\n"
+  }
+}

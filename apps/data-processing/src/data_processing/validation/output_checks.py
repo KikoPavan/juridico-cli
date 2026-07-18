@@ -5,7 +5,63 @@ These checks enforce traceability and business rules that JSON Schema
 cannot express (e.g., source_id must be non-empty, payload must not be empty).
 """
 
+import re
 from typing import Any, Dict, List, Tuple
+
+
+DEFAULT_MIN_MEANINGFUL_CONTENT = 50
+
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*(?:\n|\Z)", re.DOTALL)
+_STRUCTURED_LOCATOR_RE = re.compile(
+    r"^\s*\[\[judicial_locator:[^\]]*\]\]\s*$", re.IGNORECASE
+)
+_TEXTUAL_LOCATOR_RES = (
+    re.compile(
+        r"^\s*(?:Processo\s+)?[\d.\-/]+(?:/[A-Z]{2})?,\s*Evento\s*\d+,"
+        r"\s*[A-Z0-9_-]+,\s*P[áaä]gina\s*\d+\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*(?:Processo|Evento|Título\s+do\s+Evento|Título|Descrição\s+do\s+Evento|"
+        r"Data|Usuário|User|Papel\s+do\s+Usuário|Papel|Perfil|Sequência|Seq\.?|"
+        r"Cód(?:igo)?\.?\s+do\s+documento|P[áaä]gina)\s*:\s*.+$",
+        re.IGNORECASE,
+    ),
+)
+_BOILERPLATE_RES = (
+    re.compile(r"^\s*[Ff]l[s]?\.?\s*\d+\s*$"),
+    re.compile(r"^\s*\d{1,4}\s*$"),
+    re.compile(r"^\s*(?:TRIBUNAL\s+DE\s+JUSTI[CÇ]A|PODER\s+JUDICI[AÁ]RIO)", re.IGNORECASE),
+    re.compile(r"^\s*(?:FORO|VARA|COMARCA)\s+", re.IGNORECASE),
+    re.compile(r"^\s*Assinado\s+eletronicamente\s+por", re.IGNORECASE),
+    re.compile(r"^\s*Para\s+conferir\s+o\s+original", re.IGNORECASE),
+    re.compile(r"^\s*[-_=]{5,}\s*$"),
+)
+
+
+def _meaningful_content(text: str) -> str:
+    without_frontmatter = _FRONTMATTER_RE.sub("", text, count=1)
+    kept: list[str] = []
+    for line in without_frontmatter.splitlines():
+        if _STRUCTURED_LOCATOR_RE.fullmatch(line):
+            continue
+        if any(pattern.fullmatch(line) for pattern in _TEXTUAL_LOCATOR_RES):
+            continue
+        if any(pattern.search(line) for pattern in _BOILERPLATE_RES):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
+def check_document_has_content(
+    markdown: str, *, min_meaningful_chars: int = DEFAULT_MIN_MEANINGFUL_CONTENT
+) -> bool:
+    """Return whether Markdown reaches the configured useful-character threshold."""
+    if min_meaningful_chars < 0:
+        raise ValueError("min_meaningful_chars must be non-negative")
+    meaningful = _meaningful_content(markdown)
+    useful_chars = sum(1 for char in meaningful if not char.isspace())
+    return useful_chars >= min_meaningful_chars
 
 
 def check_extraction_result(result: Dict) -> Tuple[bool, List[str]]:

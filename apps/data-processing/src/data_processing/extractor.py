@@ -4,6 +4,8 @@ import json
 import argparse
 from datetime import datetime
 
+from .validation.output_checks import check_document_has_content
+
 def load_module_from_path(module_name, file_path):
     import importlib.util
     spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -77,6 +79,10 @@ class DataExtractorApp:
             
         with open(input_path, "r", encoding="utf-8") as f:
             raw_text = f.read()
+
+        if not check_document_has_content(raw_text):
+            self.log("rejected: no_meaningful_content", run_id)
+            return None
 
         # Parse do Frontmatter
         frontmatter = {}

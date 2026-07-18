@@ -2,7 +2,8 @@ import pytest
 from judicial_locator import (
     parse_locator_text,
     format_locator,
-    extract_judicial_metadata_from_text
+    extract_judicial_metadata_from_text,
+    strip_judicial_metadata_text,
 )
 
 
@@ -83,6 +84,79 @@ def test_extract_judicial_metadata_flexible():
     assert meta["event"] == "5"
     assert meta["date"] == "2026-07-17 14:00:00"
     assert meta["user"] == "Francisco Carlos"
+
+
+def test_extract_complete_eproc_separator_metadata():
+    text = (
+        "Processo: 4000153-37.2026.8.26.0136/SP\n"
+        "Evento: 43\n"
+        "Título do Evento: Contestação\n"
+        "Data: 17/07/2026\n"
+        "Usuário: Maria da Silva\n"
+        "Papel do Usuário: Advogada\n"
+        "Sequência: 1\n"
+    )
+
+    meta = extract_judicial_metadata_from_text(text)
+
+    assert meta["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert meta["event"] == "43"
+    assert meta["event_title"] == "Contestação"
+    assert meta["date"] == "2026-07-17"
+    assert meta["user"] == "Maria da Silva"
+    assert meta["user_role"] == "Advogada"
+    assert meta["sequence"] == "1"
+
+
+def test_extract_partial_separator_does_not_invent_missing_fields():
+    meta = extract_judicial_metadata_from_text(
+        "Processo: 4000153-37.2026.8.26.0136/SP\nEvento: 43\nSequência: 2\n"
+    )
+
+    assert meta["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert meta["event"] == "43"
+    assert meta["sequence"] == "2"
+    assert meta["event_title"] is None
+    assert meta["date"] is None
+    assert meta["user"] is None
+    assert meta["user_role"] is None
+
+
+def test_locator_round_trip_preserves_new_fields_and_escaping():
+    meta = {
+        "process_number": "4000153-37.2026.8.26.0136/SP",
+        "event": "43",
+        "event_title": 'Petição "urgente"',
+        "date": "2026-07-17",
+        "user": "Maria \\ Silva",
+        "user_role": "Advogada",
+        "sequence": "1",
+    }
+
+    formatted = format_locator(meta)
+    parsed = parse_locator_text(formatted)
+
+    assert formatted.index('event="43"') < formatted.index('event_title=')
+    assert formatted.index('event_title=') < formatted.index('date="2026-07-17"')
+    assert parsed == meta
+
+
+def test_separator_only_text_has_no_judicial_body():
+    text = (
+        "Processo: 4000153-37.2026.8.26.0136/SP\n"
+        "Evento: 43\n"
+        "Título do Evento: Contestação\n"
+        "Data: 17/07/2026\n"
+        "Usuário: Maria da Silva\n"
+        "Papel do Usuário: Advogada\n"
+        "Sequência: 1\n"
+    )
+    assert strip_judicial_metadata_text(text) == ""
+
+
+def test_separator_stripping_preserves_judicial_body():
+    text = "Evento: 43\nA parte apresentou contestação tempestiva.\n"
+    assert strip_judicial_metadata_text(text) == "A parte apresentou contestação tempestiva."
 
 
 def test_gemini_client_extract_pages_with_judicial_locator():

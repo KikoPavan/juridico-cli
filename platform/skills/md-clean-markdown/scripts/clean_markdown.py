@@ -38,6 +38,10 @@ EXIT_WRITE_ERROR = 3
 
 OUTPUT_ENCODING = "utf-8"
 
+TYPOGRAPHIC_LIGATURES = str.maketrans(
+    {"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"}
+)
+
 # Regex para marcadores de página (gerados por pdf-to-md)
 # Formato primário: [[Pág. N]] — output real de pdf-to-md
 # Formato legado:   <!-- page N --> e variantes — compatibilidade retroativa
@@ -118,6 +122,84 @@ def _restore_code_blocks(lines: list[str], blocks: dict[str, str]) -> list[str]:
             result.extend(blocks[key].splitlines(keepends=True))
         else:
             result.append(line)
+    return result
+
+
+def _normalize_typographic_ligatures(text: str) -> str:
+    """Expand known ligatures before line-oriented structural cleaning."""
+    return text.translate(TYPOGRAPHIC_LIGATURES)
+
+
+def _recompose_hyphenated_words(lines: list[str]) -> list[str]:
+    """Join words split by a line-ending hyphen and lowercase continuation."""
+    result: list[str] = []
+    index = 0
+
+    while index < len(lines):
+        current = lines[index]
+        index += 1
+        while index < len(lines):
+            following = lines[index]
+            current_body = current.rstrip("\r\n")
+            following_body = following.rstrip("\r\n")
+            if (
+                re.search(r"[^\W\d_]-$", current_body, flags=re.UNICODE)
+                and re.match(r"^[^\W\d_]", following_body, flags=re.UNICODE)
+                and following_body[0].islower()
+            ):
+                newline = "\n" if following.endswith(("\n", "\r")) else ""
+                current = current_body[:-1] + following_body + newline
+                index += 1
+                continue
+            break
+
+        result.append(current)
+
+    return result
+
+
+_STRUCTURAL_LINE_RE = re.compile(
+    r"^(?:"
+    r"\s*$"
+    r"|\s{4,}\S"
+    r"|\s{0,3}(?:#{1,6}\s*|[-+*]\s+|\d+[.)]\s+|>\s*|```|~~~)"
+    r"|\s{0,3}(?:---+|___+|\*\*\*+)\s*$"
+    r"|\s*\|"
+    r"|__CODE_BLOCK_\d+__\s*$"
+    r")"
+)
+
+
+def _is_structural_line(line: str) -> bool:
+    return bool(_STRUCTURAL_LINE_RE.match(line)) or _is_page_marker(line)
+
+
+def _recompose_prose_lines(lines: list[str]) -> list[str]:
+    """Join prose fragments without crossing Markdown structural boundaries."""
+    result: list[str] = []
+    index = 0
+
+    while index < len(lines):
+        current = lines[index]
+        index += 1
+        while index < len(lines):
+            following = lines[index]
+            current_body = current.rstrip("\r\n")
+            following_body = following.rstrip("\r\n")
+            if (
+                not _is_structural_line(current_body)
+                and not _is_structural_line(following_body)
+                and not re.search(r"[.!?;:…—–-][\"')\]]*$", current_body.rstrip())
+                and re.match(r"^[a-zà-öø-ÿ]", following_body)
+            ):
+                newline = "\n" if following.endswith(("\n", "\r")) else ""
+                current = current_body.rstrip() + " " + following_body.lstrip() + newline
+                index += 1
+                continue
+            break
+
+        result.append(current)
+
     return result
 
 
@@ -357,6 +439,7 @@ def main() -> None:
         raw_text = input_path.read_text(encoding=OUTPUT_ENCODING, errors="replace")
         import html
         raw_text = html.unescape(raw_text)
+        raw_text = _normalize_typographic_ligatures(raw_text)
     except Exception as exc:
         print(f"[ERRO] Falha ao ler {input_path}: {exc}", file=sys.stderr)
         sys.exit(EXIT_INPUT_ERROR)
@@ -370,6 +453,10 @@ def main() -> None:
 
     # --- Isolar blocos de código ---
     lines_no_code, code_blocks = _extract_code_blocks(lines)
+
+    # --- Recompor quebras artificiais antes da limpeza estrutural ---
+    lines_no_code = _recompose_hyphenated_words(lines_no_code)
+    lines_no_code = _recompose_prose_lines(lines_no_code)
 
     # --- Aplicar regras de limpeza ---
     try:

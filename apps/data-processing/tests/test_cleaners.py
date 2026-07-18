@@ -14,6 +14,37 @@ def test_fix_encoding_replaces_artifacts():
     assert result == "ão", f"Expected 'ão', got '{result}'"
 
 
+def test_fix_typographic_ligatures_expands_all_supported_characters():
+    cleaner = LegalDocCleaner()
+    assert cleaner.fix_typographic_ligatures("oﬁcial ﬂagrante oﬀício ﬃ ﬄ ﬅ ﬆ") == (
+        "oficial flagrante offício ffi ffl st st"
+    )
+
+
+def test_fix_typographic_ligatures_preserves_other_unicode():
+    cleaner = LegalDocCleaner()
+    text = "AÇÃO, NÃO e § 1º"
+    assert cleaner.fix_typographic_ligatures(text) == text
+
+
+def test_fix_typographic_ligatures_is_idempotent():
+    cleaner = LegalDocCleaner()
+    once = cleaner.fix_typographic_ligatures("ﬁnal e ﬂagrante")
+    assert cleaner.fix_typographic_ligatures(once) == once
+
+
+def test_clean_document_expands_ligatures_before_encoding_fix(tmp_path):
+    cleaner = LegalDocCleaner()
+    src = tmp_path / "ligatures.md"
+    src.write_text("A ﬁnalidade do oﬀício é o ﬂagrante.", encoding="utf-8")
+    dst = tmp_path / "ligatures_clean.md"
+
+    ok, msg = cleaner.clean_document(str(src), str(dst))
+
+    assert ok, msg
+    assert dst.read_text(encoding="utf-8") == "A finalidade do offício é o flagrante."
+
+
 def test_remove_page_references():
     cleaner = LegalDocCleaner()
     text = "Texto relevante fls. 123 mais texto."

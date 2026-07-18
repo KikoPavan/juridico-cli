@@ -1,9 +1,10 @@
+import json
 import re
 from typing import Dict, Any, Optional
 
 # Structured locator format regex: [[judicial_locator: key1="value1", key2="value2", ...]]
 STRUCTURED_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\s*\]\]", re.IGNORECASE)
-ATTR_RE = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+ATTR_RE = re.compile(r'(\w+)\s*=\s*"((?:\\.|[^"\\])*)"')
 
 # Legacy page markers regex
 LEGACY_MARKER_RE = re.compile(r"\[\[Pág\.\s*(\d+)\]\]", re.IGNORECASE)
@@ -27,6 +28,10 @@ EVENT_RE = re.compile(
     r"\b(?:Evento|Ev\.?)\s*:?\s*(\d+)\b",
     re.IGNORECASE
 )
+EVENT_TITLE_RE = re.compile(
+    r"\b(?:Título\s+do\s+Evento|Título|Descrição\s+do\s+Evento)\s*:\s*(.+?)(?=\n|$)",
+    re.IGNORECASE,
+)
 DOC_CODE_RE = re.compile(
     r"\b(?:Cód(?:igo)?\.?\s*do\s*documento|Cód\.?\s*Doc\.?|Doc\.?)\s*:?\s*([A-Z0-9_\-]+)\b",
     re.IGNORECASE
@@ -47,10 +52,41 @@ USER_RE = re.compile(
     r"\b(?:Usuário|User|Assinado\s+por)\s*:?\s*([A-Za-z0-9_\s\.\-À-ÿ]+?)(?=\s*-\s*|\s*,\s*|\n|$)",
     re.IGNORECASE
 )
+USER_ROLE_RE = re.compile(
+    r"\b(?:Papel\s+do\s+Usuário|Papel|Perfil)\s*:\s*(.+?)(?=\n|$)",
+    re.IGNORECASE,
+)
 DATE_RE = re.compile(
     r"\b(?:Data|Date)\s*:?\s*(\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?|\d{4}-\d{2}-\d{2})\b",
     re.IGNORECASE
 )
+
+SEPARATOR_METADATA_LINE_RES = (
+    TJSP_ELECTRONIC_RE,
+    PROCESS_RE,
+    EVENT_RE,
+    EVENT_TITLE_RE,
+    DOC_CODE_RE,
+    PAGE_RE,
+    FLS_RE,
+    SEQ_RE,
+    USER_RE,
+    USER_ROLE_RE,
+    DATE_RE,
+)
+
+
+def strip_judicial_metadata_text(text: str) -> str:
+    """Remove locator/separator-only lines while preserving judicial body text."""
+    body_lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or STRUCTURED_LOCATOR_RE.fullmatch(stripped):
+            continue
+        if any(pattern.fullmatch(stripped) for pattern in SEPARATOR_METADATA_LINE_RES):
+            continue
+        body_lines.append(line)
+    return "\n".join(body_lines).strip()
 
 
 def parse_locator_text(text: str) -> Optional[Dict[str, Any]]:
@@ -65,7 +101,7 @@ def parse_locator_text(text: str) -> Optional[Dict[str, Any]]:
     if m:
         attrs = {}
         for key, val in ATTR_RE.findall(m.group(1)):
-            attrs[key] = val
+            attrs[key] = json.loads(f'"{val}"')
         return attrs
 
     # 2. Parse legacy marker format [[Pág. N]]
@@ -95,11 +131,13 @@ def format_locator(meta: Dict[str, Any]) -> str:
     field_order = [
         "process_number",
         "event",
+        "event_title",
         "document_code",
         "page",
         "page_separation",
         "date",
         "user",
+        "user_role",
         "sequence"
     ]
     
@@ -107,12 +145,12 @@ def format_locator(meta: Dict[str, Any]) -> str:
     for field in field_order:
         val = meta.get(field)
         if val is not None and val != "":
-            parts.append(f'{field}="{val}"')
+            parts.append(f"{field}={json.dumps(str(val), ensure_ascii=False)}")
             
     # Include any other fields not in field_order
     for key, val in meta.items():
         if key not in field_order and val is not None and val != "":
-            parts.append(f'{key}="{val}"')
+            parts.append(f"{key}={json.dumps(str(val), ensure_ascii=False)}")
             
     return f"[[judicial_locator: {', '.join(parts)}]]"
 
@@ -124,11 +162,13 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
     meta: Dict[str, Any] = {
         "process_number": None,
         "event": None,
+        "event_title": None,
         "document_code": None,
         "page": None,
         "page_separation": None,
         "date": None,
         "user": None,
+        "user_role": None,
         "sequence": None
     }
     
@@ -156,6 +196,11 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
         m = EVENT_RE.search(text)
         if m:
             meta["event"] = m.group(1)
+
+    # Event title
+    m = EVENT_TITLE_RE.search(text)
+    if m:
+        meta["event_title"] = m.group(1).strip()
             
     # Document Code
     if not meta["document_code"]:
@@ -186,6 +231,11 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
     m = USER_RE.search(text)
     if m:
         meta["user"] = m.group(1).strip()
+
+    # User role
+    m = USER_ROLE_RE.search(text)
+    if m:
+        meta["user_role"] = m.group(1).strip()
         
     # Date
     m = DATE_RE.search(text)

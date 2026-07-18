@@ -178,6 +178,21 @@ def test_ocr_post_quality_clean_text_passes():
     )
 
 
+def test_ocr_post_quality_penalizes_locator_only_text():
+    locator_only = (
+        "Processo: 4000153-37.2026.8.26.0136/SP\n"
+        "Evento: 43\n"
+        "Título do Evento: Contestação\n"
+        "Usuário: Maria\n"
+        "Sequência: 1\n"
+    )
+    score = _ocr_post_quality_score(locator_only)
+    _run(
+        f"locator-only OCR score {score:.3f} < MIN_OCR_POST_QUALITY",
+        score < MIN_OCR_POST_QUALITY,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Test 6.3 — _preprocess_image returns non-empty bytes for valid PNG
 # ---------------------------------------------------------------------------

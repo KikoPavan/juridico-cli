@@ -34,6 +34,9 @@ ou qualquer outro tipo de PDF textual.
 - Preserva listas quando detectáveis
 - Insere anchors `[[Pág. N]]` entre páginas (configurável)
 - Usa PaddleOCR como fallback para páginas escaneadas ou de baixa densidade textual
+- Remove boilerplate e localizadores da contagem e exige 30 caracteres úteis por página
+- Força fallback OCR quando boilerplate ou localizadores dominam o texto nativo
+- Penaliza OCR composto apenas ou predominantemente por localizadores judiciais
 - Emite opcionalmente um `conversion_report.md` com diagnóstico da conversão
 
 ## O que esta skill NÃO faz
@@ -89,10 +92,12 @@ PDF de entrada
      │  motor: pymupdf → pdfminer (fallback automático)
      │
      ├─ extrai texto por página (PyMuPDF)
-     ├─ avalia densidade textual (MIN_CHARS=50, PRINTABLE_RATIO=0.6)
+     ├─ remove boilerplate/localizadores da avaliação de texto útil
+     ├─ avalia densidade textual (MIN_CHARS=30, PRINTABLE_RATIO=0.6)
      │    ├─ texto suficiente → usa texto nativo
-     │    └─ texto insuficiente → renderiza página como imagem → PaddleOCR
-     ├─ insere [[Pág. N]] (se habilitado)
+     │    └─ texto insuficiente ou dominado por metadados → renderiza página → PaddleOCR
+     ├─ avalia qualidade pós-OCR e registra `ocr_preprocessed`, `ocr_raw` ou `low_ocr_quality`
+     ├─ insere `[[judicial_locator: ...]]` (ou marcador legado quando aplicável)
      ├─ detecta e mapeia headings → #, ##, ###
      ├─ preserva listas quando detectáveis
      └─ escreve <output_md>
@@ -146,6 +151,11 @@ bash scripts/package_skill.sh
 Esta skill é **exclusivamente pré-processamento de conversão**.
 Etapas de limpeza, estruturação semântica ou extração de dados
 pertencem às skills subsequentes.
+
+Antes da extração JSON, o pipeline consumidor valida o documento completo com
+limiar padrão configurável de 50 caracteres úteis. Documentos vazios ou apenas
+com localizadores são interrompidos com `rejected: no_meaningful_content` e não
+são enviados ao LLM; essa rejeição pertence ao consumidor, não ao conversor PDF.
 
 ---
 

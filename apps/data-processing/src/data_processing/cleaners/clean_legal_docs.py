@@ -17,6 +17,18 @@ import chardet
 class LegalDocCleaner:
     """Intelligent cleaner for converted legal documents."""
 
+    TYPOGRAPHIC_LIGATURES = str.maketrans(
+        {
+            "ﬀ": "ff",
+            "ﬁ": "fi",
+            "ﬂ": "fl",
+            "ﬃ": "ffi",
+            "ﬄ": "ffl",
+            "ﬅ": "st",
+            "ﬆ": "st",
+        }
+    )
+
     def __init__(self):
         # Patterns to remove
         self.patterns_to_remove = [
@@ -81,6 +93,10 @@ class LegalDocCleaner:
             result = chardet.detect(raw_data)
             return result["encoding"] or "utf-8"
 
+    def fix_typographic_ligatures(self, text: str) -> str:
+        """Expand known typographic ligatures without changing other Unicode."""
+        return text.translate(self.TYPOGRAPHIC_LIGATURES)
+
     def fix_encoding(self, text: str) -> str:
         import html
         text = html.unescape(text)
@@ -126,6 +142,7 @@ class LegalDocCleaner:
             with open(input_path, "r", encoding=encoding, errors="ignore") as f:
                 text = f.read()
 
+            text = self.fix_typographic_ligatures(text)
             text = self.fix_encoding(text)
             text = self.remove_headers_footers(text)
             text = self.preserve_legal_structure(text)
