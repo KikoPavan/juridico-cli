@@ -57,6 +57,43 @@ def test_detect_title_no_h1():
 
 
 # ---------------------------------------------------------------------------
+# Unit Tests: Legal Document-Type Title Detection (contestação)
+# ---------------------------------------------------------------------------
+
+def test_detect_legal_doc_type_title_overrides_truncated_h1():
+    body = (
+        "AÇÃO DE\n"
+        "# PROCEDIMENTO COMUM (NULIDADE DE ESCRITURA PÚBLICA c.c.  CANCELAMENTO DE\n"
+        "HIPOTECA) promovida pelo espólio de JURACI PIRES PAVAN, vem apresentar\n"
+        "\n"
+        "pelas razões de fato e de direito a seguir articulados.\n"
+        "CONTESTAÇÃO\n"
+        "Processo 4000153-37.2026.8.26.0136/SP, Evento 43, CONTES1, Página 1\n"
+    )
+    title, method = apply_frontmatter._detect_legal_doc_type_title(body, "contestacao_processo")
+    assert title == "CONTESTAÇÃO"
+    assert method == "legal_doc_type_line"
+
+
+def test_detect_legal_doc_type_title_falls_back_without_explicit_line():
+    body = "# PROCEDIMENTO COMUM (NULIDADE DE ESCRITURA PÚBLICA)\nSome content.\n"
+    title, method = apply_frontmatter._detect_legal_doc_type_title(body, "contestacao_processo")
+    assert title is None
+    assert method == "null"
+    # Fallback to the generic H1 detector reproduces current behavior.
+    fallback_title, fallback_method = apply_frontmatter._detect_title(body)
+    assert fallback_title == "PROCEDIMENTO COMUM (NULIDADE DE ESCRITURA PÚBLICA)"
+    assert fallback_method == "h1"
+
+
+def test_detect_legal_doc_type_title_unknown_document_type():
+    body = "CONTESTAÇÃO\nSome content.\n"
+    title, method = apply_frontmatter._detect_legal_doc_type_title(body, "document")
+    assert title is None
+    assert method == "null"
+
+
+# ---------------------------------------------------------------------------
 # Unit Tests: Date Detection
 # ---------------------------------------------------------------------------
 
@@ -103,6 +140,39 @@ def test_detect_author_labels(text, expected_author, expected_method):
 def test_detect_author_ignores_after_30_lines():
     body = "\n" * 31 + "Responsável: John Doe"
     author, method = apply_frontmatter._detect_author(body)
+    assert author is None
+    assert method == "null"
+
+
+# ---------------------------------------------------------------------------
+# Unit Tests: Petition Party Author Detection
+# ---------------------------------------------------------------------------
+
+def test_detect_petition_party_author_matches_real_case():
+    body = (
+        "EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A) DE DIREITO\n"
+        "\n"
+        "Processo: 4000153-37.2026.8.26.0136\n"
+        "\n"
+        "BANCO DO BRASIL S.A., instituição financeira regularmente inscrita no CNPJ (MF) sob nº\n"
+        "000.000.000/001-91, com sede no Setor de Autarquias Norte, Quadra 5, Lote B – Brasília –\n"
+        "DF, representado por seu Núcleo Jurídico Regional na cidade de Bauru, nos autos da AÇÃO DE\n"
+        "# PROCEDIMENTO COMUM (NULIDADE DE ESCRITURA PÚBLICA c.c.  CANCELAMENTO DE\n"
+        "HIPOTECA) promovida pelo espólio de JURACI PIRES PAVAN, vem, com o devido respeito\n"
+        "e acatamento perante Vossa Excelência, tempestivamente, apresentar\n"
+    )
+    author, method = apply_frontmatter._detect_petition_party_author(body)
+    assert author == "BANCO DO BRASIL S.A."
+    assert method == "regex_petition_party"
+
+
+def test_detect_petition_party_author_no_match_stays_none():
+    body = (
+        "Documento sem qualificação de parte em formato de petição.\n"
+        "Apenas um texto corrido qualquer, sem vírgula após nome em caixa alta\n"
+        "e sem cláusula de protocolo.\n"
+    )
+    author, method = apply_frontmatter._detect_petition_party_author(body)
     assert author is None
     assert method == "null"
 
@@ -280,6 +350,77 @@ def test_cli_judicial_locator_metadata_injected(tmp_path, monkeypatch):
     assert yaml_data["document_code"] == "CONTES1"
     assert yaml_data["document_date"] == "2026-07-17"
     assert yaml_data["author"] == "kiko"
+
+
+def test_cli_contestacao_real_case_title_author_and_body_preservation(tmp_path, monkeypatch):
+    """Regression test based on the real contestação (evento 43) case.
+
+    Reproduces the essential structure of the source document: judicial
+    locator, address/letterhead block, a truncated H1 heading produced by
+    PDF conversion, the petition party opening clause, and a standalone
+    CONTESTAÇÃO line further down. Verifies both the improved metadata
+    (title/author) and that the body remains byte-identical after removing
+    the frontmatter block.
+    """
+    input_file = tmp_path / "CONTESTACAO_evento_43.md"
+    output_file = tmp_path / "CONTESTACAO_evento_43_frontmatter.md"
+
+    body_content = (
+        '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", '
+        'event="43", document_code="CONTES1", page="1"]]\n'
+        "\n"
+        "Núcleo Jurídico\n"
+        "Bauru | SP\n"
+        "\n"
+        "EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A)JUIZ(A) DE DIREITO DA 1ª VARA CÍVEL DA\n"
+        "COMARCA DE CERQUEIRA CESAR-SP.\n"
+        "\n"
+        "\n"
+        "Processo: 4000153-37.2026.8.26.0136\n"
+        "\n"
+        "\n"
+        "BANCO DO BRASIL S.A., instituição financeira regularmente inscrita no CNPJ (MF) sob nº\n"
+        "000.000.000/001-91, com sede no Setor de Autarquias Norte, Quadra 5, Lote B – Brasília –\n"
+        "DF, representado por seu Núcleo Jurídico Regional na cidade de Bauru, sito à Rua 1º de\n"
+        "Agosto, 7-51, 5º andar, Centro, CEP 17.010-010 - Bauru-SP, para onde deverão ser encaminhadas as intimações emanadas do presente feito, nos autos da AÇÃO DE\n"
+        "# PROCEDIMENTO COMUM (NULIDADE DE ESCRITURA PÚBLICA c.c.  CANCELAMENTO DE\n"
+        "HIPOTECA) promovida pelo espólio de  JURACI PIRES PAVAN, vem, com o devido respeito e acatamento perante Vossa Excelência, tempestivamente, apresentar  \n"
+        "\n"
+        "\n"
+        "pelas razões de fato e de direito a seguir articulados.\n"
+        "Falta de representação da parte autora – decadência e prescrição\n"
+        "CONTESTAÇÃO\n"
+        "Processo 4000153-37.2026.8.26.0136/SP, Evento 43, CONTES1, Página 1\n"
+    )
+    input_file.write_text(body_content, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", [
+        "apply_frontmatter.py",
+        "--input", str(input_file),
+        "--output", str(output_file),
+        "--doc-type", "contestacao_processo",
+    ])
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_frontmatter.main()
+
+    assert exc_info.value.code == 0
+    output_text = output_file.read_text(encoding="utf-8")
+    parts = output_text.split("---", 2)
+    assert len(parts) >= 3
+    yaml_data = yaml.safe_load(parts[1])
+
+    assert yaml_data["title"] == "CONTESTAÇÃO"
+    assert yaml_data["document_type"] == "contestacao_processo"
+    assert yaml_data["author"] == "BANCO DO BRASIL S.A."
+    assert yaml_data["document_date"] is None
+    assert yaml_data["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert yaml_data["event"] == "43"
+    assert yaml_data["document_code"] == "CONTES1"
+
+    # Body must be preserved byte-for-byte once the frontmatter block is removed.
+    output_body = parts[2].lstrip("\n")
+    assert output_body == body_content
 
 
 def test_cli_preserves_enriched_event_separator_locator(tmp_path, monkeypatch):

@@ -82,6 +82,38 @@ def _detect_title(body: str) -> tuple[str | None, str]:
 
 
 # ---------------------------------------------------------------------------
+# Detecção de título por linha canônica de tipo de peça jurídica
+# ---------------------------------------------------------------------------
+# Mapeia document_type -> linha isolada esperada no corpo que nomeia a peça.
+# A conversão PDF→Markdown pode produzir um H1 espúrio a partir de texto
+# corrido truncado (ex.: descrição da ação); quando o tipo de peça é
+# conhecido e o próprio corpo contém a linha canônica correspondente, ela
+# prevalece sobre o H1 genérico.
+_LEGAL_DOC_TYPE_LINES = {
+    "contestacao_processo": "CONTESTAÇÃO",
+}
+
+
+def _detect_legal_doc_type_title(body: str, document_type: str | None) -> tuple[str | None, str]:
+    """Detecta título a partir de linha isolada com o nome canônico da peça.
+
+    Retorna (None, "null") quando document_type não é conhecido ou a linha
+    canônica não é encontrada nas primeiras 40 linhas do corpo.
+    """
+    expected_line = _LEGAL_DOC_TYPE_LINES.get(document_type or "")
+    if not expected_line:
+        return None, "null"
+
+    for line in body.splitlines()[:40]:
+        clean = re.sub(r"<!--[^>]*-->", "", line).strip()
+        clean = re.sub(r"\[\[Pág\.\s*\d+\]\]", "", clean).strip()
+        clean = re.sub(r"\[\[judicial_locator:[^\]]*\]\]", "", clean).strip()
+        if clean == expected_line:
+            return expected_line, "legal_doc_type_line"
+    return None, "null"
+
+
+# ---------------------------------------------------------------------------
 # Detecção de data (regex, primeiras 20 linhas)
 # ---------------------------------------------------------------------------
 def _detect_date(body: str) -> tuple[str | None, str]:
@@ -152,6 +184,48 @@ def _detect_author(body: str) -> tuple[str | None, str]:
             value = m.group(1).strip()
             if value:
                 return value, "regex_label"
+    return None, "null"
+
+
+# ---------------------------------------------------------------------------
+# Detecção de autor pelo padrão de abertura de petição brasileira
+# ---------------------------------------------------------------------------
+# Padrão clássico de qualificação de parte em petições: nome em caixa alta
+# (podendo incluir sufixo societário como S.A., LTDA, EIRELI, ME) seguido de
+# vírgula, com a cláusula de protocolo "vem ... apresentar" próxima. Isso é
+# estrutural (não depende do nome específico da parte).
+_PETITION_PARTY_NAME = re.compile(
+    r"^([A-ZÀ-Ú][A-ZÀ-Ú0-9À-Ü.\-\s]{2,80}?),\s"
+)
+
+
+def _detect_petition_party_author(body: str) -> tuple[str | None, str]:
+    """Detecta autor a partir do padrão de abertura de petição (parte, vem ... apresentar).
+
+    Busca nas primeiras 30 linhas do corpo por uma linha iniciada por nome
+    em caixa alta seguido de vírgula; confirma o padrão exigindo que "vem"
+    e, posteriormente, "apresentar" apareçam dentro das próximas linhas.
+    """
+    lines = body.splitlines()[:30]
+    window = 6  # linhas seguintes onde a cláusula "vem ... apresentar" é buscada
+
+    for idx, line in enumerate(lines):
+        clean = re.sub(r"<!--[^>]*-->", "", line).strip()
+        clean = re.sub(r"\[\[Pág\.\s*\d+\]\]", "", clean).strip()
+        clean = re.sub(r"\[\[judicial_locator:[^\]]*\]\]", "", clean).strip()
+        m = _PETITION_PARTY_NAME.match(clean)
+        if not m:
+            continue
+
+        party_name = m.group(1).strip()
+        nearby = "\n".join(lines[idx:idx + window])
+        vem_pos = re.search(r"\bvem\b", nearby, re.IGNORECASE)
+        if not vem_pos:
+            continue
+        apresentar_pos = re.search(r"\bapresentar\b", nearby[vem_pos.start():], re.IGNORECASE)
+        if apresentar_pos:
+            return party_name, "regex_petition_party"
+
     return None, "null"
 
 
@@ -314,7 +388,9 @@ def main() -> None:
     if args.title:
         title, methods["title"] = args.title, "cli"
     else:
-        title, methods["title"] = _detect_title(body)
+        title, methods["title"] = _detect_legal_doc_type_title(body, args.doc_type)
+        if title is None:
+            title, methods["title"] = _detect_title(body)
 
     if args.date:
         document_date, methods["date"] = args.date, "cli"
@@ -329,6 +405,8 @@ def main() -> None:
         author, methods["author"] = extracted_meta["user"], "locator"
     else:
         author, methods["author"] = _detect_author(body)
+        if author is None:
+            author, methods["author"] = _detect_petition_party_author(body)
 
     tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
 
