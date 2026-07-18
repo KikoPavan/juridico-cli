@@ -28,6 +28,12 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Reuse the canonical judicial locator parser/serializer used by pdf-to-md.
+_project_root = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_project_root / "packages" / "shared-llm"))
+
+import judicial_locator
+
 # ---------------------------------------------------------------------------
 # Exit codes
 # ---------------------------------------------------------------------------
@@ -453,6 +459,12 @@ def main() -> None:
 
     # --- Isolar blocos de código ---
     lines_no_code, code_blocks = _extract_code_blocks(lines)
+
+    # --- Estruturar páginas de separação eproc fora de blocos de código ---
+    structured_text = judicial_locator.structure_eproc_event_separator_markdown(
+        "".join(lines_no_code)
+    )
+    lines_no_code = structured_text.splitlines(keepends=True)
 
     # --- Recompor quebras artificiais antes da limpeza estrutural ---
     lines_no_code = _recompose_hyphenated_words(lines_no_code)

@@ -75,6 +75,128 @@ SEPARATOR_METADATA_LINE_RES = (
     DATE_RE,
 )
 
+_EPROC_SEPARATOR_HEADING = "PÁGINA DE SEPARAÇÃO"
+_EPROC_GROUPED_LABELS = (
+    "EVENTO:",
+    "DATA:",
+    "USUÁRIO:",
+    "PROCESSO:",
+    "SEQUÊNCIA EVENTO:",
+)
+_EPROC_EVENT_SUMMARY_RE = re.compile(r"^Evento\s+(\d+)\s*$", re.IGNORECASE)
+_EPROC_DATE_VALUE_RE = re.compile(r"^\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$")
+_EPROC_PROCESS_VALUE_RE = re.compile(r"^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/[A-Z]{2}$", re.IGNORECASE)
+_EPROC_ROLE_SUFFIX_RE = re.compile(r"^(?P<user>.+)\s+-\s+(?P<role>[A-ZÀ-ÖØ-Ý][A-ZÀ-ÖØ-Ý ]+)$")
+
+
+def _without_markdown_heading(line: str) -> str:
+    return re.sub(r"^\s*#{1,6}\s*", "", line).strip()
+
+
+def _find_grouped_eproc_separator(text: str) -> Optional[tuple[Dict[str, Any], int, int]]:
+    """Find the conservative grouped-label eproc separator layout."""
+    lines = text.splitlines(keepends=True)
+    compact = [(index, line.strip()) for index, line in enumerate(lines) if line.strip()]
+
+    for compact_start, (line_start, raw_heading) in enumerate(compact):
+        if _without_markdown_heading(raw_heading).upper() != _EPROC_SEPARATOR_HEADING:
+            continue
+
+        cursor = compact_start + 1
+        if cursor < len(compact) and "GERADA AUTOMATICAMENTE" in compact[cursor][1].upper():
+            cursor += 1
+        if cursor >= len(compact):
+            continue
+
+        event_match = _EPROC_EVENT_SUMMARY_RE.fullmatch(compact[cursor][1])
+        if not event_match:
+            continue
+        cursor += 1
+
+        candidate_labels = tuple(
+            compact[cursor + offset][1].upper()
+            for offset in range(len(_EPROC_GROUPED_LABELS))
+            if cursor + offset < len(compact)
+        )
+        if candidate_labels != _EPROC_GROUPED_LABELS:
+            continue
+        cursor += len(_EPROC_GROUPED_LABELS)
+
+        if cursor + 4 >= len(compact):
+            continue
+        values = [compact[cursor + offset][1] for offset in range(5)]
+        event_title = _without_markdown_heading(values[0])
+        event_date, event_user_role, process_number, sequence = values[1:]
+        if (
+            not event_title
+            or not _EPROC_DATE_VALUE_RE.fullmatch(event_date)
+            or not _EPROC_PROCESS_VALUE_RE.fullmatch(process_number)
+            or not sequence.isdigit()
+        ):
+            continue
+
+        user = event_user_role
+        user_role = None
+        role_match = _EPROC_ROLE_SUFFIX_RE.fullmatch(event_user_role)
+        if role_match:
+            user = role_match.group("user").strip()
+            user_role = role_match.group("role").strip()
+
+        meta: Dict[str, Any] = {
+            "process_number": process_number,
+            "event": event_match.group(1),
+            "event_title": event_title,
+            "date": event_date,
+            "user": user,
+            "sequence": sequence,
+            "kind": "event_separator",
+        }
+        if user_role:
+            meta["user_role"] = user_role
+
+        line_end = compact[cursor + 4][0] + 1
+        return meta, line_start, line_end
+
+    return None
+
+
+def structure_eproc_event_separator_markdown(text: str) -> str:
+    """Enrich the first locator and rewrite a grouped eproc separator as key/value text."""
+    found = _find_grouped_eproc_separator(text)
+    if not found:
+        return text
+
+    meta, line_start, line_end = found
+    lines = text.splitlines(keepends=True)
+
+    for index in range(line_start):
+        locator_match = STRUCTURED_LOCATOR_RE.fullmatch(lines[index].strip())
+        if not locator_match:
+            continue
+        existing = parse_locator_text(lines[index]) or {}
+        existing.update(meta)
+        newline = "\n" if lines[index].endswith(("\n", "\r")) else ""
+        lines[index] = format_locator(existing) + newline
+        break
+
+    rendered = [
+        "# PÁGINA DE SEPARAÇÃO\n",
+        f"Evento: {meta['event']}\n",
+        f"Título do Evento: {meta['event_title']}\n",
+        f"Data: {meta['date']}\n",
+        f"Usuário: {meta['user']}\n",
+    ]
+    if meta.get("user_role"):
+        rendered.append(f"Papel do Usuário: {meta['user_role']}\n")
+    rendered.extend(
+        [
+            f"Processo: {meta['process_number']}\n",
+            f"Sequência Evento: {meta['sequence']}\n",
+        ]
+    )
+    lines[line_start:line_end] = rendered
+    return "".join(lines)
+
 
 def strip_judicial_metadata_text(text: str) -> str:
     """Remove locator/separator-only lines while preserving judicial body text."""
@@ -138,7 +260,8 @@ def format_locator(meta: Dict[str, Any]) -> str:
         "date",
         "user",
         "user_role",
-        "sequence"
+        "sequence",
+        "kind",
     ]
     
     parts = []
@@ -169,8 +292,16 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
         "date": None,
         "user": None,
         "user_role": None,
-        "sequence": None
+        "sequence": None,
+        "kind": None,
     }
+
+    grouped_separator = _find_grouped_eproc_separator(text)
+    if grouped_separator:
+        grouped_meta = grouped_separator[0]
+        for key in meta:
+            if key in grouped_meta:
+                meta[key] = grouped_meta[key]
     
     # Pre-parse lines to look for the TJSP electronic locator pattern
     lines = text.splitlines()
@@ -199,7 +330,7 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
 
     # Event title
     m = EVENT_TITLE_RE.search(text)
-    if m:
+    if m and not meta["event_title"]:
         meta["event_title"] = m.group(1).strip()
             
     # Document Code
@@ -224,22 +355,22 @@ def extract_judicial_metadata_from_text(text: str) -> Dict[str, Any]:
             
     # Sequence
     m = SEQ_RE.search(text)
-    if m:
+    if m and not meta["sequence"]:
         meta["sequence"] = m.group(1)
         
     # User
     m = USER_RE.search(text)
-    if m:
+    if m and not meta["user"]:
         meta["user"] = m.group(1).strip()
 
     # User role
     m = USER_ROLE_RE.search(text)
-    if m:
+    if m and not meta["user_role"]:
         meta["user_role"] = m.group(1).strip()
         
     # Date
     m = DATE_RE.search(text)
-    if m:
+    if m and not meta["date"]:
         dt_val = m.group(1)
         m_dmy = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})", dt_val)
         if m_dmy:
