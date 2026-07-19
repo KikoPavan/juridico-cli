@@ -36,6 +36,8 @@
 | `pages_start` | integer \| null | ✅ | Página de início (≥ 1 ou null) |
 | `pages_end` | integer \| null | ✅ | Página de fim (≥ 1 ou null) |
 | `pages_total` | integer \| null | ✅ | `pages_end - pages_start + 1` (null se extremo null) |
+| `page_number_start` | integer \| null | ❌ | Alias aceito; preenche `pages_start` somente quando o campo canônico está vazio |
+| `page_number_end` | integer \| null | ❌ | Alias aceito; preenche `pages_end` somente quando o campo canônico está vazio |
 
 ### 2.3. Conteúdo
 
@@ -46,7 +48,7 @@
 | `impacto_sentenca_proposto` | string \| null (≤ 500) | ✅ | Impacto potencial na sentença |
 | `text_excerpt` | string | ✅ | Trecho inicial (~200 chars) |
 | `text` | string | ✅ | **Texto COMPLETO** da peça |
-| `anchors` | array de `{label, page}` | ✅ | Âncoras de delimitação (minItems: 1) |
+| `anchors` | array de `{label, page, process_number?, event?, document_code?}` | ✅ | Âncoras de delimitação e rastreabilidade (minItems: 1) |
 | `observacoes` | string \| null | ❌ | Observações de auditoria (≤ 500 chars) |
 
 ### 2.4. Proveniência
@@ -58,6 +60,9 @@
 | `source_sha256` | string (64 hex) | ✅ | SHA-256 hex do arquivo de origem |
 | `process_group_id` | string | ✅ | ID do grupo processual |
 | `origin_piece_index` | integer ≥ 0 | ✅ | Índice ordinal da peça no documento |
+| `process_number` / `processo_id` | string | ❌ | Número/identificador do processo, preservado quando disponível |
+| `event` / `event_id` | string \| integer | ❌ | Evento processual, preservado quando disponível |
+| `document_code` | string | ❌ | Código do documento no evento, preservado quando disponível |
 
 ### 2.5. Análise
 
@@ -143,6 +148,9 @@ Cada âncora é um **objeto** com `label` e `page`:
 |-------|------|-----------|
 | `label` | string | Identificador legível da âncora |
 | `page` | integer ≥ 1 | Página onde a âncora ocorre |
+| `process_number` | string | Processo associado, quando disponível |
+| `event` | string \| integer | Evento associado, quando disponível |
+| `document_code` | string | Código documental associado, quando disponível |
 
 ---
 
