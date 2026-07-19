@@ -152,7 +152,7 @@
 ### `audit_trail`
 
 | Campo | Tipo | Descrição |
-|-------|------|-----------|
+| ------- | ------ | ----------- |
 | `regra_aplicada` | string | ID da regra que determinou a ação (ex: `R01_nuclear_sentenca_confirmado`) |
 | `gatilhos` | string[] | Condições que ativaram a regra |
 | `relevancia_entrada` | float\|null | Score de relevância recebido do segmentador |

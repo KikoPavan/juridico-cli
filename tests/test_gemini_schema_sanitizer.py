@@ -619,15 +619,37 @@ def test_gemini_block_page_cutting():
     # Mock do generate_content
     mock_generate = MagicMock(return_value=mock_resp)
     
+    # md com um cabeçalho estrutural de pedidos na página 14 (não na 13), para provar
+    # que o recorte de E1-E4 segue o cabeçalho e não um número de página fixo.
+    md_com_cabecalho = (
+        "Cabeçalho inicial da petição\n"
+        "[[Pág. 1]]\n"
+        "Texto da página um\n"
+        "[[Pág. 2]]\n"
+        "Texto da página dois\n"
+        "<!-- page 3 -->\n"
+        "Texto da página três\n"
+        "[[Pág. 13]]\n"
+        "Texto da página treze\n"
+        "<!-- page 14 -->\n"
+        "DOS PEDIDOS:\n"
+        "Texto da página quatorze\n"
+        "[[Pág. 15]]\n"
+        "Texto da página quinze\n"
+    )
+    messages_com_cabecalho = [
+        {"role": "user", "content": md_com_cabecalho}
+    ]
+
     with patch.object(client.client.models, 'generate_content', mock_generate):
         try:
             client._execute_extraction_in_blocks(messages, schema, "/tmp", 2000, str(ROOT_DIR))
         except Exception:
             pass
-            
+
         calls = mock_generate.call_args_list
         assert len(calls) > 0
-        
+
         # A primeira chamada deve ser do bloco A (ou o primeiro bloco processado que esteja no schema)
         # O bloco A usa mensagens completas, sem recorte
         # Mas no schema de teste reduzido, quais blocos serão gerados?
@@ -664,18 +686,33 @@ def test_gemini_block_page_cutting():
         # idx 4: bloco E1
         # Vamos validar isso:
         assert len(calls) >= 5
-        
-        # Chamada 2 (bloco C):
+
+        # Chamada 2 (bloco C): continua usando recorte por páginas fixas (fora de escopo desta correção)
         call_c_contents = calls[2][1]['contents']
         assert "Texto da página um" in call_c_contents
         assert "Texto da página quinze" in call_c_contents
-        
-        # Mas para o bloco E1 (idx 4):
-        call_e1_contents = calls[4][1]['contents']
-        # E1 usa apenas [13, 14, 15]
-        assert "Texto da página treze" in call_e1_contents
+
+    # Repete apenas o recorte do bloco E1 com o md que tem cabeçalho estrutural,
+    # para validar que o recorte de E1-E4 agora segue o cabeçalho "DOS PEDIDOS"
+    # (não um número de página fixo).
+    mock_generate_2 = MagicMock(return_value=mock_resp)
+    with patch.object(client.client.models, 'generate_content', mock_generate_2):
+        try:
+            client._execute_extraction_in_blocks(messages_com_cabecalho, schema, "/tmp", 2000, str(ROOT_DIR))
+        except Exception:
+            pass
+
+        calls_2 = mock_generate_2.call_args_list
+        assert len(calls_2) >= 5
+
+        # Bloco E1 (idx 4): deve conter o conteúdo a partir do cabeçalho "DOS PEDIDOS"
+        # (página 14), incluindo a página 15, mas NÃO a página 13 (antes do cabeçalho)
+        # nem as páginas 1/2/3.
+        call_e1_contents = calls_2[4][1]['contents']
+        assert "DOS PEDIDOS" in call_e1_contents
+        assert "Texto da página quatorze" in call_e1_contents
         assert "Texto da página quinze" in call_e1_contents
-        # NÃO deve conter a página 1 nem a 2 nem a 3!
+        assert "Texto da página treze" not in call_e1_contents
         assert "Texto da página um" not in call_e1_contents
         assert "Texto da página dois" not in call_e1_contents
         assert "Texto da página três" not in call_e1_contents

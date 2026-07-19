@@ -182,6 +182,16 @@ class GeminiLLMClient(LLMClient):
                 "Iniciando fallback sem response_schema com tratamento de truncamento e retry..."
             )
 
+            # Persiste a mensagem completa do erro em disco (o logger.warning acima
+            # nem sempre é capturado em arquivo), para permitir diagnóstico posterior
+            # da causa exata do erro 400/INVALID_ARGUMENT do Gemini.
+            structured_call_error_path = os.path.join(debug_dir, "structured_call_error.txt")
+            try:
+                with open(structured_call_error_path, "w", encoding="utf-8") as f_err:
+                    f_err.write(f"{type(e).__name__}: {str(e)}")
+            except Exception as file_err:
+                logger.warning(f"Falha ao salvar erro da chamada estruturada em {structured_call_error_path}: {file_err}")
+
             reinforced_messages = copy.deepcopy(messages)
             system_instruction = (
                 "\n\nIMPORTANT SYSTEM INSTRUCTION:\n"
@@ -380,21 +390,33 @@ class GeminiLLMClient(LLMClient):
                 if user_msg_idx != -1:
                     orig_content = block_messages[user_msg_idx].get("content", "")
                     if block_name in ("E1", "E2", "E3", "E4"):
-                        target_pages = [13, 14, 15]
+                        cut_content = self._locate_pedidos_section(orig_content)
+                        logger.info(
+                            f"Bloco {block_name}: Recorte estrutural da seção de pedidos/tutela. "
+                            f"Tamanho original: {len(orig_content)} chars -> Tamanho recortado: {len(cut_content)} chars"
+                        )
                     else:  # block_name == "C"
                         target_pages = [1, 2, 3, 4, 11, 12, 13, 14, 15]
-                    
-                    cut_content = self._extract_pages_from_markdown(orig_content, target_pages)
-                    logger.info(
-                        f"Bloco {block_name}: Recortando páginas {target_pages}. "
-                        f"Tamanho original: {len(orig_content)} chars -> Tamanho recortado: {len(cut_content)} chars"
-                    )
+                        cut_content = self._extract_pages_from_markdown(orig_content, target_pages)
+                        logger.info(
+                            f"Bloco {block_name}: Recortando páginas {target_pages}. "
+                            f"Tamanho original: {len(orig_content)} chars -> Tamanho recortado: {len(cut_content)} chars"
+                        )
                     block_messages[user_msg_idx]["content"] = cut_content
 
             contents = self._format_messages(block_messages)
-            
-            # Garantir max_output_tokens alto o suficiente para E1 e E2
-            tokens_to_use = 8192 if block_name in ("E1", "E2") else max_tokens
+
+            # Garantir max_output_tokens efetivamente maior que o default para todos os
+            # blocos: ao capar o orçamento de "thinking" (abaixo), um teto igual ao
+            # default (8192) deixou de dar margem suficiente para a saída visível em
+            # mais de um bloco (não só E1/E2) — confirmado empiricamente ao testar
+            # com o caso real.
+            tokens_to_use = max(max_tokens, 16384)
+
+            # Capar o orçamento de "thinking" para que ele não consuma a maior parte
+            # de max_output_tokens antes da saída visível ser escrita — causa
+            # confirmada de truncamento prematuro nos blocos E1-E4.
+            block_thinking_config = types.ThinkingConfig(thinking_budget=4096)
 
             llm_raw_response = ""
             llm_parse_error = ""
@@ -408,7 +430,8 @@ class GeminiLLMClient(LLMClient):
                         response_mime_type="application/json",
                         response_json_schema=normalized_partial,
                         temperature=0.0,
-                        max_output_tokens=tokens_to_use
+                        max_output_tokens=tokens_to_use,
+                        thinking_config=block_thinking_config
                     )
                 )
                 llm_raw_response = response.text or ""
@@ -427,15 +450,11 @@ class GeminiLLMClient(LLMClient):
                 if block_name == "E1":
                     additional_instructions = (
                         "\n\nFOCUS AREA FOR THIS BLOCK:\n"
-                        "- Focus your extraction exclusively on Pages 13, 14, and 15 of the document.\n"
-                        "- Extract ONLY the legacy list of requests ('pedidos'). Do NOT extract or ask for tutela de urgência, provas, or riscos/pontos de atenção in this block.\n\n"
-                        "MINIMUM MANDATORY ITEMS TO EXTRACT (if present in the document, especially in those pages):\n"
-                        "- Service of process/citation of Banco do Brasil (citação do Banco do Brasil);\n"
-                        "- Decree of merit/procedência to declare nullity of the deed (declaração de nulidade da escritura);\n"
-                        "- Ineffectiveness of the mortgage (ineficácia da hipoteca);\n"
-                        "- Registration cancellation of the mortgage (cancelamento registral da hipoteca);\n"
-                        "- Issuance of writs/notices to the registry office (expedição de mandados/ofícios ao Cartório);\n"
-                        "- Court costs and attorney's fees (custas e honorários);\n\n"
+                        "- The input has been cut to the section of the document that starts at the "
+                        "'pedidos'/'tutela de urgência' heading (e.g. 'DOS PEDIDOS', 'DO PEDIDO DE TUTELA...', "
+                        "'DOS REQUERIMENTOS') through the end of the document.\n"
+                        "- Extract ONLY the legacy list of requests ('pedidos'). Do NOT extract or ask for tutela de urgência, provas, or riscos/pontos de atenção in this block.\n"
+                        "- Extract EVERY individual request found in that section (e.g. citação/citation, declarations of nullity/ineffectiveness/cancellation, cost/fee condemnation, evidence protests, value of the claim). Do NOT skip or merge distinct requests, and do NOT limit yourself to a fixed example list.\n\n"
                         "STRICT RULES FOR ITEMS:\n"
                         "- Limit each item to: label (if any), text (the legacy text), and anchors.\n"
                         "- Do NOT write long transcriptions of entire sections if too large. Use a shorter, continuous literal snippet instead, WITHOUT using or creating artificial ellipsis '(...)' or '…'.\n"
@@ -443,15 +462,11 @@ class GeminiLLMClient(LLMClient):
                 elif block_name == "E2":
                     additional_instructions = (
                         "\n\nFOCUS AREA FOR THIS BLOCK:\n"
-                        "- Focus your extraction exclusively on Pages 13, 14, and 15 of the document.\n"
-                        "- Extract ONLY the rich structured list of requests ('pedidos_individualizados'). Do NOT extract or ask for tutela de urgência, provas, or riscos/pontos de atenção in this block.\n\n"
-                        "MINIMUM MANDATORY ITEMS TO EXTRACT (if present in the document, especially in those pages):\n"
-                        "- Service of process/citation of Banco do Brasil (citação do Banco do Brasil);\n"
-                        "- Decree of merit/procedência to declare nullity of the deed (declaração de nulidade da escritura);\n"
-                        "- Ineffectiveness of the mortgage (ineficácia da hipoteca);\n"
-                        "- Registration cancellation of the mortgage (cancelamento registral da hipoteca);\n"
-                        "- Issuance of writs/notices to the registry office (expedição de mandados/ofícios ao Cartório);\n"
-                        "- Court costs and attorney's fees (custas e honorários);\n\n"
+                        "- The input has been cut to the section of the document that starts at the "
+                        "'pedidos'/'tutela de urgência' heading (e.g. 'DOS PEDIDOS', 'DO PEDIDO DE TUTELA...', "
+                        "'DOS REQUERIMENTOS') through the end of the document.\n"
+                        "- Extract ONLY the rich structured list of requests ('pedidos_individualizados'). Do NOT extract or ask for tutela de urgência, provas, or riscos/pontos de atenção in this block.\n"
+                        "- Extract EVERY individual request found in that section as a SEPARATE item. Do NOT group multiple distinct requests into one item, and do NOT limit yourself to a fixed example list.\n\n"
                         "STRICT RULES FOR ITEMS:\n"
                         "- Limit each item to: tipo, descricao_interpretativa, trecho_literal, and anchors.\n"
                         "- Do NOT write long transcriptions of entire sections if too large. Use a shorter, continuous literal snippet instead, WITHOUT using or creating artificial ellipsis '(...)' or '…'.\n"
@@ -459,20 +474,16 @@ class GeminiLLMClient(LLMClient):
                 elif block_name == "E3":
                     additional_instructions = (
                         "\n\nFOCUS AREA FOR THIS BLOCK:\n"
-                        "- Focus your extraction primarily on Pages 13, 14, and 15 of the document.\n"
-                        "- Extract ONLY the provisional remedy details ('tutela_urgencia').\n\n"
-                        "MINIMUM MANDATORY ITEMS TO EXTRACT (if present in the document, especially in those pages):\n"
-                        "- Tutela de urgência for the registration/annotation of the lawsuit in the property registers (averbação da ação nas matrículas);\n"
-                        "- Suspension of enforceability of the mortgage guarantees (suspense da exigibilidade das garantias hipotecárias);\n"
-                        "- Suspension of the specific lawsuit/process number 0003453-81.2003.8.26.0136;\n"
+                        "- The input has been cut to the section of the document that starts at the "
+                        "'pedidos'/'tutela de urgência' heading through the end of the document.\n"
+                        "- Extract ONLY the provisional remedy details ('tutela_urgencia'): whether it was requested, its type, the interpretive description, the literal excerpt, and each demonstrated requirement (e.g. probabilidade do direito, perigo de dano) with its own literal excerpt.\n"
                     )
                 elif block_name == "E4":
                     additional_instructions = (
                         "\n\nFOCUS AREA FOR THIS BLOCK:\n"
-                        "- Focus your extraction primarily on Pages 13, 14, and 15 of the document.\n"
-                        "- Extract ONLY the requested evidence/provas ('provas_requeridas').\n\n"
-                        "MINIMUM MANDATORY ITEMS TO EXTRACT (if present in the document, especially in those pages):\n"
-                        "- Documental evidence (prova documental), pericial evidence (prova pericial), personal deposition (depoimento pessoal), oitiva de testemunhas, and submission of subsequent documents (juntada de documentos supervenientes).\n"
+                        "- The input has been cut to the section of the document that starts at the "
+                        "'pedidos'/'tutela de urgência' heading through the end of the document.\n"
+                        "- Extract ONLY the requested evidence/provas ('provas_requeridas') explicitly mentioned in that section (e.g. prova documental, pericial, depoimento pessoal, oitiva de testemunhas, juntada de documentos supervenientes).\n"
                     )
                 elif block_name == "E5":
                     additional_instructions = (
@@ -509,7 +520,8 @@ class GeminiLLMClient(LLMClient):
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
                             temperature=0.0,
-                            max_output_tokens=tokens_to_use
+                            max_output_tokens=tokens_to_use,
+                            thinking_config=block_thinking_config
                         )
                     )
 
@@ -524,6 +536,9 @@ class GeminiLLMClient(LLMClient):
                         cleaned_text = "\n".join(lines).strip()
 
                     partial_json = json.loads(cleaned_text)
+                    # O fallback recuperou o bloco: a falha da tentativa estruturada
+                    # anterior não deve mais marcar o bloco como reservado/falho.
+                    llm_parse_error = ""
                     logger.info(f"✅ Bloco {block_name} extraído via fallback com sucesso!")
 
                 except Exception as fallback_exc:
@@ -564,7 +579,12 @@ class GeminiLLMClient(LLMClient):
                 self._fix_anchors_and_properties(partial_json)
 
                 errors = list(validator.iter_errors(partial_json))
-                if errors:
+                if not errors:
+                    # A correção resolveu os erros: o bloco não deve ser reportado como
+                    # "falhou" (dado final é válido), apenas registrado como corrigido.
+                    has_validation_failed = False
+                    logger.info(f"✅ Bloco {block_name} corrigido com sucesso após normalização de chaves/anchors.")
+                else:
                     logger.error(f"Bloco {block_name} continuou inválido após correção. Ignorando chaves incorretas.")
                     
                     # Salva debug final da falha persistente
@@ -810,6 +830,13 @@ class GeminiLLMClient(LLMClient):
                     elif isinstance(node["items"], list):
                         node["items"] = [_sanitize(item) for item in node["items"]]
 
+                # Processa os subschemas de "anyOf" recursivamente, com o mesmo
+                # filtro de chaves aplicado a "properties"/"items" — sem isso,
+                # chaves não suportadas (ex.: pattern, minLength, maxLength) vazam
+                # para o Gemini de dentro dos branches de anyOf.
+                if "anyOf" in node and isinstance(node["anyOf"], list):
+                    node["anyOf"] = [_sanitize(sub) for sub in node["anyOf"]]
+
                 # Se type não está definido e temos combinadores (anyOf, oneOf, allOf),
                 # tentamos extrair o tipo a partir de seus subschemas antes de deletá-los.
                 if "type" not in node:
@@ -878,6 +905,20 @@ class GeminiLLMClient(LLMClient):
                 if len(obj["anchors"][0]["quote"]) > 200:
                     obj["anchors"][0]["quote"] = obj["anchors"][0]["quote"][:200]
 
+            # 2b. Normalização do enum de Anchor.kind — o modelo por vezes usa valores
+            # naturais como "text_segment" ou "trecho" que não constam no enum fechado
+            # do schema (folha/pagina/secao/outro).
+            if "kind" in obj and "page_marker" in obj and isinstance(obj["kind"], str):
+                kind_val = obj["kind"].lower().strip()
+                allowed_kinds = {"folha", "pagina", "secao", "outro"}
+                if kind_val not in allowed_kinds:
+                    if "sec" in kind_val:
+                        obj["kind"] = "secao"
+                    elif "folha" in kind_val or "fls" in kind_val:
+                        obj["kind"] = "folha"
+                    else:
+                        obj["kind"] = "pagina"
+
             # 3. Normalização de enums para PedidoIndividualizado.tipo
             if "tipo" in obj and isinstance(obj["tipo"], str):
                 tipo_val = obj["tipo"].lower().strip()
@@ -944,10 +985,13 @@ class GeminiLLMClient(LLMClient):
     def _apply_deterministic_fallback_e1_e2(self, markdown_text: str):
         """
         Analisa localmente o Markdown do documento, extraindo as linhas iniciadas por
-        'Requer-se', 'Requer', 'Protesta-se', 'Atribui-se' (case-insensitive) nas páginas 13, 14 e 15.
-        Retorna uma tupla (pedidos_legado, pedidos_ricos).
+        'Requer-se', 'Requer', 'Protesta-se', 'Atribui-se' (case-insensitive) a partir
+        da seção de pedidos/tutela (localizada por cabeçalho estrutural, não por
+        números de página fixos). Retorna uma tupla (pedidos_legado, pedidos_ricos).
         """
         import re
+
+        section_start_idx = self._find_pedidos_section_start_index(markdown_text)
 
         # Encontra todos os marcadores de página com suas posições
         markers = []
@@ -963,119 +1007,73 @@ class GeminiLLMClient(LLMClient):
         pedidos_legado = []
         pedidos_ricos = []
 
-        # Caso não existam marcadores de página no Markdown, processamos o texto inteiro considerando página 13
-        if not markers:
-            lines = markdown_text.splitlines()
-            for line in lines:
-                stripped = line.strip()
-                clean_line = re.sub(r'^(?:[-*+]\s*|\d+\.\s*)+', '', stripped).strip()
-                prefixes = ("Requer-se", "Requer", "Protesta-se", "Atribui-se", "requer-se", "requer", "protesta-se", "atribui-se")
-                if clean_line.startswith(prefixes):
-                    pedidos_legado.append({
-                        "text": clean_line,
-                        "anchors": [{
-                            "kind": "pagina",
-                            "page_marker": "13",
-                            "quote": clean_line[:200]
-                        }]
-                    })
-                    
-                    tipo = "outro"
-                    clean_lower = clean_line.lower()
-                    if "citação" in clean_lower or "cite" in clean_lower:
-                        tipo = "citacao"
-                    elif "provas" in clean_lower or "protesta" in clean_lower:
-                        tipo = "provas"
-                    elif "procedente" in clean_lower or "procedência" in clean_lower or "nulidade" in clean_lower:
-                        tipo = "procedencia_principal"
-                    elif "custas" in clean_lower or "honorários" in clean_lower:
-                        tipo = "sucumbencia"
-                    elif "tutela" in clean_lower or "liminar" in clean_lower:
-                        tipo = "tutela_urgencia"
+        # Restringe a varredura à seção de pedidos/tutela localizada por cabeçalho
+        # estrutural (não por números de página fixos). Se a seção não for
+        # localizada, varre o documento inteiro.
+        scan_from_idx = section_start_idx if section_start_idx is not None else 0
 
-                    pedidos_ricos.append({
-                        "tipo": tipo,
-                        "descricao_interpretativa": clean_line[:200],
-                        "trecho_literal": clean_line,
-                        "anchors": [{
-                            "kind": "pagina",
-                            "page_marker": "13",
-                            "quote": clean_line[:200]
-                        }]
-                    })
-        else:
-            # Mapeia cada linha para a página ativa
-            current_page = "1"
-            for line in markdown_text.splitlines():
-                # Atualiza a página ativa caso a linha contenha um marcador
-                for page_num, start, end, mark_str in markers:
-                    if mark_str in line:
-                        current_page = str(page_num)
-                        break
+        current_page = "1"
+        offset = 0
+        for line in markdown_text.splitlines(keepends=True):
+            line_start_offset = offset
+            offset += len(line)
 
-                if current_page not in ("13", "14", "15"):
-                    continue
+            # Atualiza a página ativa caso a linha contenha um marcador
+            for page_num, start, end, mark_str in markers:
+                if mark_str in line:
+                    current_page = str(page_num)
+                    break
 
-                stripped = line.strip()
-                # Limpa marcadores de listas comuns do markdown
-                clean_line = re.sub(r'^(?:[-*+]\s*|\d+\.\s*)+', '', stripped).strip()
-                prefixes = ("Requer-se", "Requer", "Protesta-se", "Atribui-se", "requer-se", "requer", "protesta-se", "atribui-se")
-                if clean_line.startswith(prefixes):
-                    pedidos_legado.append({
-                        "text": clean_line,
-                        "anchors": [{
-                            "kind": "pagina",
-                            "page_marker": current_page,
-                            "quote": clean_line[:200]
-                        }]
-                    })
+            if line_start_offset < scan_from_idx:
+                continue
 
-                    tipo = "outro"
-                    clean_lower = clean_line.lower()
-                    if "citação" in clean_lower or "cite" in clean_lower:
-                        tipo = "citacao"
-                    elif "provas" in clean_lower or "protesta" in clean_lower:
-                        tipo = "provas"
-                    elif "procedente" in clean_lower or "procedência" in clean_lower or "nulidade" in clean_lower:
-                        tipo = "procedencia_principal"
-                    elif "custas" in clean_lower or "honorários" in clean_lower:
-                        tipo = "sucumbencia"
-                    elif "tutela" in clean_lower or "liminar" in clean_lower:
-                        tipo = "tutela_urgencia"
+            stripped = line.strip()
+            # Limpa marcadores de listas comuns do markdown
+            clean_line = re.sub(r'^(?:[-*+]\s*|\d+\.\s*)+', '', stripped).strip()
+            prefixes = ("Requer-se", "Requer", "Protesta-se", "Atribui-se", "requer-se", "requer", "protesta-se", "atribui-se")
+            if clean_line.startswith(prefixes):
+                pedidos_legado.append({
+                    "text": clean_line,
+                    "anchors": [{
+                        "kind": "pagina",
+                        "page_marker": current_page,
+                        "quote": clean_line[:200]
+                    }]
+                })
 
-                    pedidos_ricos.append({
-                        "tipo": tipo,
-                        "descricao_interpretativa": clean_line[:200],
-                        "trecho_literal": clean_line,
-                        "anchors": [{
-                            "kind": "pagina",
-                            "page_marker": current_page,
-                            "quote": clean_line[:200]
-                        }]
-                    })
+                tipo = "outro"
+                clean_lower = clean_line.lower()
+                if "citação" in clean_lower or "cite" in clean_lower:
+                    tipo = "citacao"
+                elif "provas" in clean_lower or "protesta" in clean_lower:
+                    tipo = "provas"
+                elif "procedente" in clean_lower or "procedência" in clean_lower or "nulidade" in clean_lower:
+                    tipo = "procedencia_principal"
+                elif "custas" in clean_lower or "honorários" in clean_lower:
+                    tipo = "sucumbencia"
+                elif "tutela" in clean_lower or "liminar" in clean_lower:
+                    tipo = "tutela_urgencia"
 
-        # Fallback absoluto caso não tenha encontrado nenhuma linha correspondente
+                pedidos_ricos.append({
+                    "tipo": tipo,
+                    "descricao_interpretativa": clean_line[:200],
+                    "trecho_literal": clean_line,
+                    "anchors": [{
+                        "kind": "pagina",
+                        "page_marker": current_page,
+                        "quote": clean_line[:200]
+                    }]
+                })
+
+        # Se nenhuma linha correspondente foi encontrada no Markdown, retorna listas
+        # vazias (omitir dado ausente) em vez de um texto fixo de um caso real
+        # anterior — inventar um "pedido padrão" violaria a diretriz de não gerar
+        # dados que não constam expressamente no documento.
         if not pedidos_legado:
-            pedidos_legado.append({
-                "text": "Requer a procedência da ação para declarar a nulidade da escritura pública de confissão de dívida.",
-                "anchors": [{
-                    "kind": "pagina",
-                    "page_marker": "13",
-                    "quote": "Requer"
-                }]
-            })
-
-        if not pedidos_ricos:
-            pedidos_ricos.append({
-                "tipo": "procedencia_principal",
-                "descricao_interpretativa": "Declaração de nulidade de escritura pública de confissão de dívida.",
-                "trecho_literal": "Requer a procedência da ação para declarar a nulidade da escritura pública de confissão de dívida.",
-                "anchors": [{
-                    "kind": "pagina",
-                    "page_marker": "13",
-                    "quote": "Requer"
-                }]
-            })
+            logger.warning(
+                "Fallback determinístico E1/E2 não encontrou nenhuma linha de pedido no Markdown. "
+                "Retornando lista vazia em vez de conteúdo de caso hardcoded."
+            )
 
         return pedidos_legado, pedidos_ricos
 
@@ -1142,5 +1140,58 @@ class GeminiLLMClient(LLMClient):
                 
         if not result_fragments:
             return markdown_text
-            
+
         return "".join(result_fragments).strip()
+
+    _PEDIDOS_HEADING_RE_PATTERN = (
+        r'^(?:#{1,3}\s*)?(?:DOS?\s+PEDIDOS?|DO\s+PEDIDO\s+DE\s+TUTELA|'
+        r'DA\s+TUTELA\s+DE\s+URG[EÊ]NCIA|DOS\s+REQUERIMENTOS)\b'
+    )
+
+    def _locate_pedidos_section(self, markdown_text: str) -> str:
+        """
+        Localiza o início da seção de pedidos/tutela de urgência por marcador
+        estrutural (cabeçalho tipo "DOS PEDIDOS", "DO PEDIDO DE TUTELA...",
+        "DOS REQUERIMENTOS"), em vez de assumir números de página fixos —
+        petições variam em extensão e paginação.
+
+        Considera apenas linhas curtas (título, não parágrafo narrativo) para
+        evitar falsos positivos em menções ao termo dentro do corpo do texto.
+        Retorna o documento inteiro quando nenhum cabeçalho é encontrado.
+        """
+        import re
+        if not markdown_text:
+            return markdown_text
+
+        section_start_idx = self._find_pedidos_section_start_index(markdown_text)
+        if section_start_idx is None:
+            logger.warning(
+                "Nenhum cabeçalho estrutural de pedidos/tutela encontrado no Markdown. "
+                "Usando o documento completo como entrada para os blocos E1-E4."
+            )
+            return markdown_text
+
+        return markdown_text[section_start_idx:].strip()
+
+    def _find_pedidos_section_start_index(self, markdown_text: str):
+        """
+        Retorna o índice (character offset) do início da linha de cabeçalho da
+        seção de pedidos/tutela, ou None se nenhum cabeçalho estrutural for
+        encontrado. Usado tanto pelo recorte enviado ao Gemini quanto pelo
+        fallback determinístico local, para que ambos localizem a seção da
+        mesma forma genérica (sem números de página fixos).
+        """
+        import re
+
+        heading_re = re.compile(self._PEDIDOS_HEADING_RE_PATTERN, re.IGNORECASE | re.MULTILINE)
+
+        for m in heading_re.finditer(markdown_text):
+            line_start = markdown_text.rfind("\n", 0, m.start()) + 1
+            line_end = markdown_text.find("\n", m.start())
+            line_end = line_end if line_end != -1 else len(markdown_text)
+            line = markdown_text[line_start:line_end].strip()
+
+            if len(line) <= 100:
+                return line_start
+
+        return None
