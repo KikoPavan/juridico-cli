@@ -373,7 +373,9 @@ def _normalize_document_type(raw_type: str) -> str:
 
 
 def _enrich_peca_with_provenance(peca: dict, source_file: str, source_path: str,
-                                  source_sha256: str, process_group_id: str, index: int) -> dict:
+                                  source_sha256: str, process_group_id: str, index: int,
+                                  envelope_metadata: dict | None = None,
+                                  source_text: str = "") -> dict:
     """
     Enriquece uma peça com metadados de proveniência do arquivo .md de origem.
     Campos obrigatórios para o yaml-normalizador-juridico que o LLM pode omitir:
@@ -401,16 +403,113 @@ def _enrich_peca_with_provenance(peca: dict, source_file: str, source_path: str,
         else:
             peca["text"] = peca.get("text_excerpt", f"[Texto não extraído para {peca.get('piece_id', 'unknown')}]")
 
-    if "anchors" not in peca or not peca.get("anchors"):
-        peca["anchors"] = [{"label": peca.get("document_type", "desconhecido"),
-                            "page": peca.get("pages_start", 1) or 1}]
+    _canonicalize_piece_traceability(
+        peca,
+        envelope_metadata=envelope_metadata or {},
+        source_text=source_text,
+    )
 
-    if "pages_start" not in peca:
-        # LLM pode usar nomes alternativos
-        peca["pages_start"] = peca.get("start_page", peca.get("pagina_inicio"))
-    if "pages_end" not in peca:
-        peca["pages_end"] = peca.get("end_page", peca.get("pagina_fim"))
+    return peca
 
+
+_JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
+_JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+
+
+def _extract_judicial_locators(text: str) -> list[tuple[str, dict]]:
+    """Retorna locators literais e seus atributos, na ordem do Markdown."""
+    result = []
+    for match in _JUDICIAL_LOCATOR_RE.finditer(text or ""):
+        result.append((match.group(0), dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))))
+    return result
+
+
+def _first_non_null(*values):
+    return next((value for value in values if value is not None and value != ""), None)
+
+
+def _locator_is_in_piece(attrs: dict, pages_start, pages_end) -> bool:
+    """Filtra locator por página quando a peça possui intervalo conhecido."""
+    if pages_start is None or pages_end is None or attrs.get("page") is None:
+        return True
+    try:
+        page = int(attrs["page"])
+        return int(pages_start) <= page <= int(pages_end)
+    except (TypeError, ValueError):
+        return True
+
+
+def _canonicalize_piece_traceability(
+    peca: dict,
+    envelope_metadata: dict | None = None,
+    source_text: str = "",
+) -> dict:
+    """Canonicaliza paginação, identidade, anchors e locators de uma peça."""
+    metadata = envelope_metadata or {}
+
+    peca["pages_start"] = _first_non_null(
+        peca.get("pages_start"),
+        peca.get("page_number_start"),
+        peca.get("start_page"),
+        peca.get("pagina_inicio"),
+    )
+    peca["pages_end"] = _first_non_null(
+        peca.get("pages_end"),
+        peca.get("page_number_end"),
+        peca.get("end_page"),
+        peca.get("pagina_fim"),
+    )
+
+    piece_locators = _extract_judicial_locators(peca.get("text", ""))
+    source_locators = [
+        locator
+        for locator in _extract_judicial_locators(source_text)
+        if _locator_is_in_piece(locator[1], peca["pages_start"], peca["pages_end"])
+    ]
+    locator_attrs = (piece_locators or source_locators or [("", {})])[0][1]
+
+    process_number = _first_non_null(
+        peca.get("process_number"), peca.get("processo_id"),
+        metadata.get("process_number"), metadata.get("processo_id"),
+        locator_attrs.get("process_number"),
+    )
+    event = _first_non_null(
+        peca.get("event"), peca.get("event_id"),
+        metadata.get("event"), metadata.get("event_id"),
+        locator_attrs.get("event"),
+    )
+    document_code = _first_non_null(
+        peca.get("document_code"), metadata.get("document_code"),
+        locator_attrs.get("document_code"),
+    )
+    if process_number is not None:
+        peca["process_number"] = process_number
+    if event is not None:
+        peca["event"] = event
+    if document_code is not None:
+        peca["document_code"] = document_code
+
+    # O texto do modelo pode omitir os marcadores do Markdown fonte. Reinsere
+    # somente os locators pertencentes ao intervalo desta peça, sem reconstruí-los.
+    text = peca.get("text", "")
+    missing_locators = [literal for literal, _ in source_locators if literal not in text]
+    if missing_locators:
+        peca["text"] = "\n".join(missing_locators) + "\n\n" + text
+
+    anchors = peca.get("anchors") or [{
+        "label": peca.get("document_type", "desconhecido"),
+        "page": peca.get("pages_start") or 1,
+    }]
+    for anchor in anchors:
+        if anchor.get("page") is None:
+            anchor["page"] = peca.get("pages_start") or 1
+        if process_number is not None:
+            anchor.setdefault("process_number", process_number)
+        if event is not None:
+            anchor.setdefault("event", event)
+        if document_code is not None:
+            anchor.setdefault("document_code", document_code)
+    peca["anchors"] = anchors
     return peca
 
 
@@ -540,6 +639,31 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     # obrigatórios para o yaml-normalizador-juridico. Enriquecemos aqui com
     # dados canônicos do arquivo .md de origem.
     # =========================================================================
+    if "metadata" not in envelope:
+        envelope["metadata"] = {}
+    metadata = envelope["metadata"]
+    source_locator_attrs = (_extract_judicial_locators(body) or [("", {})])[0][1]
+    process_number = _first_non_null(
+        frontmatter.get("process_number"), frontmatter.get("processo_id"),
+        metadata.get("process_number"), metadata.get("processo_id"),
+        source_locator_attrs.get("process_number"),
+    )
+    event = _first_non_null(
+        frontmatter.get("event"), frontmatter.get("event_id"),
+        metadata.get("event"), metadata.get("event_id"),
+        source_locator_attrs.get("event"),
+    )
+    document_code = _first_non_null(
+        frontmatter.get("document_code"), metadata.get("document_code"),
+        source_locator_attrs.get("document_code"),
+    )
+    if process_number is not None:
+        metadata["process_number"] = process_number
+    if event is not None:
+        metadata["event"] = event
+    if document_code is not None:
+        metadata["document_code"] = document_code
+
     pecas = envelope.get("pecas", [])
     for idx, peca in enumerate(pecas):
         _enrich_peca_with_provenance(
@@ -549,11 +673,11 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
             source_sha256=source_sha256,
             process_group_id=process_group_id,
             index=idx,
+            envelope_metadata=metadata,
+            source_text=body,
         )
 
     # Atualizar metadata com proveniência canônica
-    if "metadata" not in envelope:
-        envelope["metadata"] = {}
     envelope["metadata"]["source_file"] = source_file
     envelope["metadata"]["source_sha256"] = source_sha256
 
@@ -675,6 +799,10 @@ def run_normalizador_stage(envelope_curado_path: Path, staging_path: Path) -> in
         "source_path", "source_sha256", "process_group_id", "origin_piece_index",
     ]
     for peca in pecas_elegiveis:
+        _canonicalize_piece_traceability(
+            peca,
+            envelope_metadata=envelope.get("metadata", {}),
+        )
         piece_id = peca.get("piece_id", "<desconhecido>")
         missing = [f for f in NORM_REQUIRED if f not in peca]
         if missing:
@@ -690,12 +818,6 @@ def run_normalizador_stage(envelope_curado_path: Path, staging_path: Path) -> in
                     break
             else:
                 peca.setdefault("text", peca.get("text_excerpt", f"[Texto ausente para {piece_id}]"))
-        peca.setdefault("anchors", [{"label": peca.get("document_type", "desconhecido"),
-                                      "page": peca.get("pages_start", 1) or 1}])
-        if "pages_start" not in peca:
-            peca["pages_start"] = peca.get("start_page", peca.get("pagina_inicio"))
-        if "pages_end" not in peca:
-            peca["pages_end"] = peca.get("end_page", peca.get("pagina_fim"))
         peca.setdefault("source_file", envelope.get("metadata", {}).get("source_file", "unknown"))
         peca.setdefault("source_path", "unknown")
         peca.setdefault("source_sha256", envelope.get("metadata", {}).get("source_sha256", "0" * 64))
@@ -703,7 +825,13 @@ def run_normalizador_stage(envelope_curado_path: Path, staging_path: Path) -> in
         peca.setdefault("origin_piece_index", 0)
         peca.setdefault("modo_aplicado", envelope.get("metadata", {}).get("modo_aplicado", "padrao"))
         peca.setdefault("justificativa_curta", "Sem justificativa disponível")
-        peca.setdefault("impacto_processual", "irrelevante")
+        if peca.get("document_type") in {
+            "peticao_inicial", "contestacao", "decisao", "decisao_interlocutoria",
+            "sentenca", "recurso",
+        } and peca.get("impacto_processual") in (None, "irrelevante"):
+            peca["impacto_processual"] = "relevante"
+        else:
+            peca.setdefault("impacto_processual", "irrelevante")
         peca.setdefault("impacto_sentenca_confirmado", False)
         peca.setdefault("prioridade", 3)
         peca.setdefault("compressao_sugerida", None)

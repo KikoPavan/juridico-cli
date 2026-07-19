@@ -12,6 +12,10 @@
       "description": "Metadata original do segmentador preservado integralmente + campos enriquecidos pelo curador.",
       "properties": {
         "processo_id": { "type": "string" },
+        "process_number": { "type": "string" },
+        "event": { "type": ["string", "integer", "null"] },
+        "event_id": { "type": ["string", "integer", "null"] },
+        "document_code": { "type": ["string", "null"] },
         "total_pecas": { "type": "integer" },
         "gerado_por": { "type": "string", "description": "Preservado: 'segmentador-juridico'" },
         "timestamp": { "type": "string", "format": "date-time" },
@@ -49,6 +53,8 @@
           "document_type_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
           "pages_start": { "type": ["integer", "null"] },
           "pages_end": { "type": ["integer", "null"] },
+          "page_number_start": { "type": ["integer", "null"] },
+          "page_number_end": { "type": ["integer", "null"] },
           "pages_total": { "type": ["integer", "null"] },
           "title": { "type": "string" },
           "summary": { "type": "string" },
@@ -61,7 +67,10 @@
               "type": "object",
               "properties": {
                 "label": { "type": "string" },
-                "page": { "type": "integer", "minimum": 1 }
+                "page": { "type": "integer", "minimum": 1 },
+                "process_number": { "type": "string" },
+                "event": { "type": ["string", "integer"] },
+                "document_code": { "type": "string" }
               }
             }
           },
@@ -71,6 +80,11 @@
           "source_sha256": { "type": "string" },
           "process_group_id": { "type": "string" },
           "origin_piece_index": { "type": "integer" },
+          "process_number": { "type": "string" },
+          "processo_id": { "type": "string" },
+          "event": { "type": ["string", "integer", "null"] },
+          "event_id": { "type": ["string", "integer", "null"] },
+          "document_code": { "type": ["string", "null"] },
           "relevancia_estimada": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
           "confianca_classificacao": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
           "sinais_relevancia": { "type": "array", "items": { "type": "string" } },

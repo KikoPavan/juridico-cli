@@ -21,6 +21,10 @@
       ],
       "properties": {
         "processo_id": { "type": "string", "minLength": 1 },
+        "process_number": { "type": "string", "minLength": 1 },
+        "event": { "type": ["string", "integer", "null"] },
+        "event_id": { "type": ["string", "integer", "null"] },
+        "document_code": { "type": ["string", "null"] },
         "total_pecas": { "type": "integer", "minimum": 1 },
         "gerado_por": { "type": "string", "const": "segmentador-juridico" },
         "timestamp": { "type": "string", "format": "date-time" },
@@ -80,6 +84,8 @@
           },
           "pages_start": { "type": ["integer", "null"], "minimum": 1 },
           "pages_end": { "type": ["integer", "null"], "minimum": 1 },
+          "page_number_start": { "type": ["integer", "null"], "minimum": 1 },
+          "page_number_end": { "type": ["integer", "null"], "minimum": 1 },
           "pages_total": { "type": "integer", "minimum": 1 },
           "title": { "type": "string", "minLength": 1, "maxLength": 200 },
           "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
@@ -94,7 +100,10 @@
               "required": ["label", "page"],
               "properties": {
                 "label": { "type": "string", "minLength": 1 },
-                "page": { "type": "integer", "minimum": 1 }
+                "page": { "type": "integer", "minimum": 1 },
+                "process_number": { "type": "string", "minLength": 1 },
+                "event": { "type": ["string", "integer"] },
+                "document_code": { "type": "string", "minLength": 1 }
               }
             }
           },
@@ -104,6 +113,11 @@
           "source_sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
           "process_group_id": { "type": "string", "minLength": 1 },
           "origin_piece_index": { "type": "integer", "minimum": 0 },
+          "process_number": { "type": "string", "minLength": 1 },
+          "processo_id": { "type": "string", "minLength": 1 },
+          "event": { "type": ["string", "integer", "null"] },
+          "event_id": { "type": ["string", "integer", "null"] },
+          "document_code": { "type": ["string", "null"] },
           "relevancia_estimada": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
           "confianca_classificacao": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
           "sinais_relevancia": {

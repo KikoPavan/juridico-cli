@@ -18,7 +18,10 @@
       "required": ["label", "page"],
       "properties": {
         "label": { "type": "string" },
-        "page":  { "type": "integer", "minimum": 1 }
+        "page":  { "type": "integer", "minimum": 1 },
+        "process_number": { "type": "string" },
+        "event": { "type": ["string", "integer"] },
+        "document_code": { "type": "string" }
       },
       "additionalProperties": false
     }
@@ -125,6 +128,13 @@
       "minimum": 1,
       "description": "Página final no PDF de origem"
     },
+    "page_number_start": { "type": ["integer", "null"], "minimum": 1 },
+    "page_number_end": { "type": ["integer", "null"], "minimum": 1 },
+    "process_number": { "type": ["string", "null"] },
+    "processo_id": { "type": ["string", "null"] },
+    "event": { "type": ["string", "integer", "null"] },
+    "event_id": { "type": ["string", "integer", "null"] },
+    "document_code": { "type": ["string", "null"] },
     "source_file": {
       "type": "string",
       "description": "Nome do arquivo de origem"
@@ -195,6 +205,9 @@
       "pages_end":            { "type": "integer" },
       "process_group_id":     { "type": "string" },
       "origin_piece_index":   { "type": "integer" },
+      "process_number":       { "type": ["string", "null"] },
+      "event":                { "type": ["string", "integer", "null"] },
+      "document_code":        { "type": ["string", "null"] },
       "acao_curatorial":      { "type": "string", "enum": ["manter", "resumir", "remover", "revisar"] },
       "priority":             { "type": "integer", "minimum": 1, "maximum": 5 },
       "impacto_processual":   { "type": "string", "enum": ["nuclear", "relevante", "acessorio", "irrelevante"] },

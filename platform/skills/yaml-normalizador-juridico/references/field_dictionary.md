@@ -85,6 +85,27 @@ Para cada campo: definição, origem, tipo, valores válidos e política para nu
 - **Tipo:** `integer`
 - **Nulo:** Nunca.
 
+### `process_number`
+- **Definição:** Número do processo preservado no frontmatter final.
+- **Origem:** `process_number`, fallback `processo_id`, depois primeiro `judicial_locator` do texto.
+- **Tipo:** `string | null`
+- **Nulo:** Permitido apenas quando nenhuma fonte o fornece.
+
+### `event`
+- **Definição:** Evento processual da peça.
+- **Origem:** `event`, fallback `event_id`, depois primeiro `judicial_locator` do texto.
+- **Tipo:** `string | integer | null`
+- **Nulo:** Permitido apenas quando nenhuma fonte o fornece.
+
+### `document_code`
+- **Definição:** Código documental do evento.
+- **Origem:** Input direto, depois primeiro `judicial_locator` do texto.
+- **Tipo:** `string | null`
+- **Nulo:** Permitido apenas quando nenhuma fonte o fornece.
+
+`page_number_start` e `page_number_end` são aliases aceitos para preencher
+`pages_start` e `pages_end` somente quando os campos canônicos estão vazios.
+
 ---
 
 ## Campos de Decisão Curatorial

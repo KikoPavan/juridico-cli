@@ -12,9 +12,76 @@ import argparse
 import sys
 import os
 import copy
+import re
 from datetime import datetime, timezone
 
 from regras import aplicar_regras
+
+
+TIPOS_IMPACTO_PROTEGIDO = {
+    "peticao_inicial", "contestacao", "decisao", "decisao_interlocutoria",
+    "sentenca", "recurso",
+}
+_JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
+_JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+
+
+def _first_non_null(*values):
+    return next((value for value in values if value is not None and value != ""), None)
+
+
+def _locator_attrs(text: str) -> dict:
+    match = _JUDICIAL_LOCATOR_RE.search(text or "")
+    return dict(_JUDICIAL_ATTR_RE.findall(match.group(1))) if match else {}
+
+
+def canonicalizar_rastreabilidade(peca: dict, metadata: dict | None = None) -> dict:
+    """Preserva os campos judiciais e canonicaliza paginação/anchors."""
+    metadata = metadata or {}
+    peca["pages_start"] = _first_non_null(
+        peca.get("pages_start"), peca.get("page_number_start"),
+        peca.get("start_page"), peca.get("pagina_inicio"),
+    )
+    peca["pages_end"] = _first_non_null(
+        peca.get("pages_end"), peca.get("page_number_end"),
+        peca.get("end_page"), peca.get("pagina_fim"),
+    )
+    locator = _locator_attrs(peca.get("text", ""))
+    process_number = _first_non_null(
+        peca.get("process_number"), peca.get("processo_id"),
+        metadata.get("process_number"), metadata.get("processo_id"),
+        locator.get("process_number"),
+    )
+    event = _first_non_null(
+        peca.get("event"), peca.get("event_id"),
+        metadata.get("event"), metadata.get("event_id"), locator.get("event"),
+    )
+    document_code = _first_non_null(
+        peca.get("document_code"), metadata.get("document_code"),
+        locator.get("document_code"),
+    )
+    if process_number is not None:
+        peca["process_number"] = process_number
+    if event is not None:
+        peca["event"] = event
+    if document_code is not None:
+        peca["document_code"] = document_code
+
+    anchors = peca.get("anchors") or [{
+        "label": peca.get("document_type", "desconhecido"),
+        "page": peca.get("pages_start") or 1,
+    }]
+    for anchor in anchors:
+        if anchor.get("page") is None:
+            anchor["page"] = peca.get("pages_start") or 1
+        if process_number is not None:
+            anchor.setdefault("process_number", process_number)
+        if event is not None:
+            anchor.setdefault("event", event)
+        if document_code is not None:
+            anchor.setdefault("document_code", document_code)
+    peca["anchors"] = anchors
+    return peca
 
 
 def _timestamp() -> str:
@@ -23,8 +90,13 @@ def _timestamp() -> str:
 
 def calcular_impacto(peca: dict) -> str:
     """Determina impacto_processual a partir da peça, com fallback por relevancia_estimada."""
-    if peca.get("impacto_processual") in ("nuclear", "relevante", "acessorio", "irrelevante"):
-        return peca["impacto_processual"]
+    impacto = peca.get("impacto_processual")
+    if impacto in ("nuclear", "relevante", "acessorio"):
+        return impacto
+    if peca.get("document_type") in TIPOS_IMPACTO_PROTEGIDO:
+        return "relevante"
+    if impacto == "irrelevante":
+        return impacto
     rel = peca.get("relevancia_estimada", 0.0)
     if rel >= 0.85:
         return "nuclear"
@@ -94,8 +166,9 @@ class CuradorRelevancia:
             raise ValueError(f"Modo inválido: '{modo}'. Use 'padrao' ou 'sintetico'.")
         self.modo = modo
 
-    def _enrich_peca(self, peca: dict) -> dict:
+    def _enrich_peca(self, peca: dict, metadata: dict | None = None) -> dict:
         """Aplica curadoria a uma peça e retorna a peça enriquecida."""
+        peca = canonicalizar_rastreabilidade(copy.deepcopy(peca), metadata)
         ts = _timestamp()
         piece_id = peca.get("piece_id", "desconhecido")
 
@@ -166,7 +239,7 @@ class CuradorRelevancia:
         meta_entrada = entrada.get("metadata", {})
         pecas = entrada.get("pecas", [])
 
-        pecas_curadas = [self._enrich_peca(p) for p in pecas]
+        pecas_curadas = [self._enrich_peca(p, meta_entrada) for p in pecas]
 
         duracao = int((datetime.now(timezone.utc) - inicio).total_seconds() * 1000)
 

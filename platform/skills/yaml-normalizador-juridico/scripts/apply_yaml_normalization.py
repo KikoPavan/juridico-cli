@@ -45,6 +45,12 @@ SKILL_NAME = "yaml-normalizador-juridico"
 SKILL_VERSION = "1.1.0"
 DEFAULT_LANGUAGE = "pt-BR"
 FALLBACK_SKILL_KEY = "REVISAR_MANUAL"
+PROTECTED_IMPACT_TYPES = {
+    "peticao_inicial", "contestacao", "decisao", "decisao_interlocutoria",
+    "sentenca", "recurso",
+}
+JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
+JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
 
 ACAO_TO_STATUS = {
     "manter":   {"review_status": "approved",       "status": "ready"},
@@ -170,6 +176,63 @@ def normalize_parties(parties_raw: list | None) -> list:
     return result
 
 
+def _first_non_null(*values):
+    return next((value for value in values if value is not None and value != ""), None)
+
+
+def extract_locator_metadata(text: str) -> dict:
+    """Extrai identidade do primeiro judicial_locator sem modificar o corpo."""
+    match = JUDICIAL_LOCATOR_RE.search(text or "")
+    return dict(JUDICIAL_ATTR_RE.findall(match.group(1))) if match else {}
+
+
+def canonicalize_piece(piece: dict) -> dict:
+    """Canonicaliza aliases e enriquece rastreabilidade antes da validação."""
+    piece["pages_start"] = _first_non_null(
+        piece.get("pages_start"), piece.get("page_number_start"),
+        piece.get("start_page"), piece.get("pagina_inicio"),
+    )
+    piece["pages_end"] = _first_non_null(
+        piece.get("pages_end"), piece.get("page_number_end"),
+        piece.get("end_page"), piece.get("pagina_fim"),
+    )
+    locator = extract_locator_metadata(piece.get("text", ""))
+    process_number = _first_non_null(
+        piece.get("process_number"), piece.get("processo_id"),
+        locator.get("process_number"),
+    )
+    event = _first_non_null(piece.get("event"), piece.get("event_id"), locator.get("event"))
+    document_code = _first_non_null(piece.get("document_code"), locator.get("document_code"))
+    if process_number is not None:
+        piece["process_number"] = process_number
+    if event is not None:
+        piece["event"] = event
+    if document_code is not None:
+        piece["document_code"] = document_code
+
+    if (
+        piece.get("document_type") in PROTECTED_IMPACT_TYPES
+        and piece.get("impacto_processual") in (None, "irrelevante")
+    ):
+        piece["impacto_processual"] = "relevante"
+
+    anchors = piece.get("anchors") or [{
+        "label": piece.get("document_type", "desconhecido"),
+        "page": piece.get("pages_start") or 1,
+    }]
+    for anchor in anchors:
+        if anchor.get("page") is None:
+            anchor["page"] = piece.get("pages_start") or 1
+        if process_number is not None:
+            anchor.setdefault("process_number", process_number)
+        if event is not None:
+            anchor.setdefault("event", event)
+        if document_code is not None:
+            anchor.setdefault("document_code", document_code)
+    piece["anchors"] = anchors
+    return piece
+
+
 def build_tags(piece: dict, is_routable: bool) -> list:
     """Gera lista de tags automáticas conforme normalization_rules.md §9."""
     tags = []
@@ -231,6 +294,9 @@ def build_frontmatter_context(piece: dict, routing: dict, ts: str) -> dict:
         "pages_end": piece["pages_end"],
         "process_group_id": piece["process_group_id"],
         "origin_piece_index": piece["origin_piece_index"],
+        "process_number": piece.get("process_number"),
+        "event": piece.get("event"),
+        "document_code": piece.get("document_code"),
         # Decisão curatorial
         "acao_curatorial": acao,
         "priority": piece.get("prioridade", 3),
@@ -286,6 +352,9 @@ def render_frontmatter(ctx: dict, template_path: Path = None) -> str:
         "pages_end":          ctx["pages_end"],
         "process_group_id":   ctx["process_group_id"],
         "origin_piece_index": ctx["origin_piece_index"],
+        "process_number":     ctx.get("process_number"),
+        "event":              ctx.get("event"),
+        "document_code":      ctx.get("document_code"),
         # Seção: Curadoria
         "acao_curatorial":    ctx["acao_curatorial"],
         "priority":           ctx["priority"],
@@ -340,6 +409,8 @@ def process_piece(
 ) -> bool:
     """Processa uma peça e gera o arquivo .md. Retorna True em sucesso."""
     piece_id = piece.get("piece_id", "<desconhecido>")
+
+    canonicalize_piece(piece)
 
     # Validar campos obrigatórios
     missing = validate_required_fields(piece)

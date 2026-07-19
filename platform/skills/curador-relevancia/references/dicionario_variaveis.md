@@ -40,6 +40,11 @@
 | `texto_preview` | string\|null | ❌ | Trecho inicial da peça (até 500 chars) para contexto |
 | `data_documento` | string\|null | ❌ | Data do documento (ISO date: `YYYY-MM-DD`) |
 | `autor` | string\|null | ❌ | Autor ou subscritor identificado da peça |
+| `pages_start` / `pages_end` | integer\|null | ❌ | Paginação canônica; aliases `page_number_start` / `page_number_end` preenchem somente valores vazios |
+| `process_number` / `processo_id` | string\|null | ❌ | Identidade do processo preservada |
+| `event` / `event_id` | string\|integer\|null | ❌ | Evento processual preservado |
+| `document_code` | string\|null | ❌ | Código documental preservado |
+| `anchors` | array | ❌ | Âncoras preservadas e enriquecidas com identidade judicial disponível |
 
 #### Valores possíveis de `document_type`
 
@@ -110,6 +115,9 @@
 | `compressao_sugerida` | enum\|null | Tipo de compressão, se `acao=resumir` |
 | `encaminhamento` | string\|null | Skill `extr-*` destino sugerida |
 | `audit_trail` | object | Trilha de auditoria da decisão |
+| `pages_start` / `pages_end` | integer\|null | Paginação canônica preservada |
+| `process_number`, `event`, `document_code` | escalares\|null | Identidade judicial preservada |
+| `text`, `anchors` | string, array | Conteúdo e âncoras preservados sem perda |
 
 #### `acao_curatorial` — Valores e Significados
 
@@ -128,6 +136,10 @@
 | `relevante` | Influencia significativamente |
 | `acessorio` | Complementar; não altera mérito |
 | `irrelevante` | Sem impacto identificável |
+
+Para `peticao_inicial`, `contestacao`, `decisao`/`decisao_interlocutoria`,
+`sentenca` e `recurso`, o fallback mínimo é `relevante`; um valor `nuclear`
+existente nunca é rebaixado.
 
 #### `compressao_sugerida` — Valores
 

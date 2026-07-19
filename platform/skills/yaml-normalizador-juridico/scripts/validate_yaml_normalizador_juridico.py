@@ -196,6 +196,17 @@ def validate_frontmatter(fm: dict, valid_skill_keys: set, strict: bool) -> list[
     if pn is not None and not isinstance(pn, list):
         errors.append(f"parties_normalized deve ser lista, got: {type(pn).__name__}")
 
+    # 14. Metadados judiciais opcionais devem manter tipos escalares válidos
+    process_number = fm.get("process_number")
+    if process_number is not None and not isinstance(process_number, str):
+        errors.append("process_number deve ser string ou null")
+    event = fm.get("event")
+    if event is not None and not isinstance(event, (str, int)):
+        errors.append("event deve ser string, integer ou null")
+    document_code = fm.get("document_code")
+    if document_code is not None and not isinstance(document_code, str):
+        errors.append("document_code deve ser string ou null")
+
     return errors
 
 

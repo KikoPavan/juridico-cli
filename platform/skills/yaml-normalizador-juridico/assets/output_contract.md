@@ -45,6 +45,10 @@ curadas pelo `curador-relevancia`.
 | `parties_raw`     | array ou null   | Usar `[]` em `parties_normalized`    |
 | `court`           | string ou null  | Usar `null` no frontmatter           |
 | `judge`           | string ou null  | Usar `null` no frontmatter           |
+| `process_number` / `processo_id` | string ou null | Preservar como `process_number`; locator é fallback |
+| `event` / `event_id` | string ou integer ou null | Preservar como `event`; locator é fallback |
+| `document_code` | string ou null | Preservar; locator é fallback |
+| `page_number_start` / `page_number_end` | integer ou null | Preencher página canônica somente se vazia |
 
 ---
 
@@ -83,6 +87,9 @@ Exemplo: `proc-2024-0042__peca-001-peticao.md`
 | `pages_end`         | Input direto                  | integer   | Não           |
 | `process_group_id`  | Input direto                  | string    | Não           |
 | `origin_piece_index`| Input direto                  | integer   | Não           |
+| `process_number`    | Input, alias ou locator        | string    | Sim           |
+| `event`             | Input, alias ou locator        | string/int| Sim           |
+| `document_code`     | Input ou locator               | string    | Sim           |
 | `acao_curatorial`   | `acao_curatorial` do input    | string    | Não           |
 | `priority`          | `prioridade` do input         | string    | Não           |
 | `impacto_processual`| Input direto                  | string    | Não           |
@@ -123,6 +130,7 @@ Exemplo: `proc-2024-0042__peca-001-peticao.md`
 - O `audit_trail` do input é sempre preservado integralmente no corpo do artefato como
   bloco YAML comentado ou campo extra; a trilha da normalização é **acrescentada**, não substituída.
 - O texto da peça nunca é editado além de sanitização de whitespace excessivo.
+- Marcadores `[[judicial_locator: ...]]` presentes no texto são preservados literalmente.
 - `created_by_skill` é sempre `yaml-normalizador-juridico` — nunca alterável via input.
 - `skill_key` é sempre derivada do `routing_map.yaml` — nunca inventada.
 
