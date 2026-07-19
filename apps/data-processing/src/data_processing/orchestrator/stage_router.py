@@ -393,16 +393,6 @@ def _enrich_peca_with_provenance(peca: dict, source_file: str, source_path: str,
     peca["process_group_id"] = process_group_id
     peca["origin_piece_index"] = index
 
-    # Campos estruturais obrigatórios com fallback defensivo
-    # LLM pode gerar 'text' com nomes alternativos como 'text_content', 'conteudo', etc.
-    if "text" not in peca or not peca.get("text"):
-        for alt_key in ("text_content", "conteudo", "content", "full_text", "texto"):
-            if alt_key in peca and peca[alt_key]:
-                peca["text"] = peca[alt_key]
-                break
-        else:
-            peca["text"] = peca.get("text_excerpt", f"[Texto não extraído para {peca.get('piece_id', 'unknown')}]")
-
     _canonicalize_piece_traceability(
         peca,
         envelope_metadata=envelope_metadata or {},
@@ -412,8 +402,82 @@ def _enrich_peca_with_provenance(peca: dict, source_file: str, source_path: str,
     return peca
 
 
+def _materialize_piece(peca: dict, body: str, index: int) -> dict:
+    """Completa o contrato final usando exclusivamente o Markdown como texto fonte."""
+    peca = dict(peca)
+    peca["piece_id"] = peca.get("piece_id") or f"peca_{index + 1:03d}"
+    start = _first_non_null(peca.get("pages_start"), peca.get("page_number_start"))
+    end = _first_non_null(peca.get("pages_end"), peca.get("page_number_end"))
+    materialized_text = _slice_markdown_by_pages(body, start, end)
+    if not materialized_text:
+        raise ValueError(f"Não foi possível materializar texto para {peca['piece_id']}")
+    peca["text"] = materialized_text
+    peca["text_excerpt"] = (peca.get("text_excerpt") or materialized_text[:500]).strip()
+    peca["title"] = (peca.get("title") or peca["document_type"]).strip()[:200]
+    peca["summary"] = (peca.get("summary") or peca["text_excerpt"][:500]).strip()
+    peca["impacto_sentenca_proposto"] = peca.get("impacto_sentenca_proposto")
+    peca["observacoes"] = peca.get("observacoes")
+    peca["relevancia_estimada"] = peca.get("relevancia_estimada", 0.5)
+    if start is not None and end is not None:
+        peca["pages_total"] = int(end) - int(start) + 1
+    else:
+        peca["pages_total"] = 1
+    return peca
+
+
 _JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
 _JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+
+
+_SEGMENTATION_DECISION_SCHEMA = {
+    "type": "object",
+    "required": ["pecas"],
+    "additionalProperties": False,
+    "properties": {
+        "metadata": {"type": "object"},
+        "pecas": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["document_type", "document_type_confidence"],
+                "properties": {
+                    "piece_id": {"type": "string"},
+                    "piece_index": {"type": "integer"},
+                    "document_type": {"type": "string"},
+                    "document_type_confidence": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                    },
+                    "pages_start": {"type": "integer", "minimum": 1},
+                    "pages_end": {"type": "integer", "minimum": 1},
+                    "page_number_start": {"type": "integer", "minimum": 1},
+                    "page_number_end": {"type": "integer", "minimum": 1},
+                    "title": {"type": "string"},
+                    "text_excerpt": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "relevancia_estimada": {
+                        "type": "number", "minimum": 0, "maximum": 1,
+                    },
+                    "process_number": {"type": "string"},
+                    "event": {"type": ["string", "integer"]},
+                    "document_code": {"type": "string"},
+                    "anchors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["label", "page"],
+                            "properties": {
+                                "label": {"type": "string"},
+                                "page": {"type": "integer", "minimum": 1},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
 
 
 def _extract_judicial_locators(text: str) -> list[tuple[str, dict]]:
@@ -422,6 +486,106 @@ def _extract_judicial_locators(text: str) -> list[tuple[str, dict]]:
     for match in _JUDICIAL_LOCATOR_RE.finditer(text or ""):
         result.append((match.group(0), dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))))
     return result
+
+
+def _locator_groups(text: str) -> dict[tuple, list[tuple[str, dict]]]:
+    """Agrupa localizadores pela identidade judicial, sem usar página na chave."""
+    groups = {}
+    for locator in _extract_judicial_locators(text):
+        attrs = locator[1]
+        key = (
+            attrs.get("process_number"),
+            attrs.get("event"),
+            attrs.get("document_code"),
+        )
+        groups.setdefault(key, []).append(locator)
+    return groups
+
+
+def _page_bounds(locators: list[tuple[str, dict]]) -> tuple[int | None, int | None]:
+    pages = []
+    for _, attrs in locators:
+        try:
+            pages.append(int(attrs["page"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return (min(pages), max(pages)) if pages else (None, None)
+
+
+def _slice_markdown_by_pages(text: str, pages_start, pages_end) -> str:
+    """Recorta páginas inclusivas mantendo literalmente os locators do Markdown."""
+    if pages_start is None or pages_end is None:
+        return text.strip()
+    matches = list(_JUDICIAL_LOCATOR_RE.finditer(text))
+    selected = []
+    for index, match in enumerate(matches):
+        attrs = dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))
+        try:
+            page = int(attrs["page"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if int(pages_start) <= page <= int(pages_end):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+            selected.append(text[match.start():end])
+    return "".join(selected).strip()
+
+
+def _is_compact_segmentation(value) -> bool:
+    if not isinstance(value, dict) or not isinstance(value.get("pecas"), list):
+        return False
+    if not value["pecas"]:
+        return False
+    return all(
+        isinstance(piece, dict)
+        and bool(piece.get("document_type"))
+        and piece.get("document_type_confidence") in {"high", "medium", "low"}
+        for piece in value["pecas"]
+    )
+
+
+def _infer_single_piece_type(text: str, source_file: str, document_code: str | None) -> str:
+    evidence = " ".join((document_code or "", source_file, text[:1000])).lower()
+    hints = {
+        "peticao_inicial": ("inic1", "petição inicial", "peticao inicial"),
+        "contestacao": ("contes", "contestação", "contestacao"),
+        "sentenca": ("sentença", "sentenca"),
+        "decisao_interlocutoria": ("decisão interlocutória", "decisao interlocutoria"),
+        "procuracao": ("procuraç", "procurac"),
+    }
+    for document_type, tokens in hints.items():
+        if any(token in evidence for token in tokens):
+            return document_type
+    return "nao_classificado"
+
+
+def _single_piece_fallback(body: str, source_file: str) -> dict | None:
+    groups = _locator_groups(body)
+    if len(groups) != 1:
+        return None
+    (process_number, event, document_code), locators = next(iter(groups.items()))
+    pages_start, pages_end = _page_bounds(locators)
+    title_match = re.search(r"^#\s+(.+)$", body, re.MULTILINE)
+    title = title_match.group(1).strip() if title_match else Path(source_file).stem
+    return {
+        "metadata": {},
+        "pecas": [{
+            "piece_id": "peca_001",
+            "document_type": _infer_single_piece_type(body, source_file, document_code),
+            "document_type_confidence": "high" if title_match or document_code else "low",
+            "pages_start": pages_start,
+            "pages_end": pages_end,
+            "title": title,
+            "text_excerpt": body[:500].strip(),
+            "relevancia_estimada": 0.5,
+            "process_number": process_number,
+            "event": event,
+            "document_code": document_code,
+            "anchors": [
+                {"label": attrs.get("document_code") or title, "page": int(attrs["page"])}
+                for _, attrs in locators if attrs.get("page", "").isdigit()
+            ],
+        }],
+    }
 
 
 def _first_non_null(*values):
@@ -591,11 +755,11 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
         raise FileNotFoundError(f"Schema do segmentador não encontrado: {schema_ref}")
 
     with open(schema_ref, "r", encoding="utf-8") as sf:
-        schema_json = json.load(sf)
+        output_schema = json.load(sf)
 
-    # Pré-normalizar schema para compatibilidade com Gemini response_json_schema
-    # Converte type: ["X", "null"] → type: "X" (Gemini não suporta type arrays)
-    schema_json = _flatten_nullable_types(schema_json)
+    # O contrato do LLM contém apenas decisões compactas. O schema final é
+    # aplicado somente depois que Python materializa texto e proveniência.
+    decision_schema = _flatten_nullable_types(_SEGMENTATION_DECISION_SCHEMA)
 
     # Invocar LLM — com estratégia de resiliência
     client = shared_llm_mod.LLMClientFactory.create_client()
@@ -606,30 +770,22 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
 
     console.print("  [dim]Aguardando resposta do LLM (segmentação pode demorar)...[/dim]")
 
-    # Tentativa 1: generate_structured com schema
+    # Uma resposta incompatível (inclusive fallback genérico de extração do
+    # provider) nunca é promovida a Envelope de Processo.
     try:
-        envelope = client.generate_structured(messages, schema=schema_json)
+        envelope = client.generate_structured(messages, schema=decision_schema)
+        if not _is_compact_segmentation(envelope):
+            raise ValueError("Resposta incompatível com a segmentação compacta")
     except ValueError as exc:
-        # JSON corrompido — tentar fallback via generate_text + reparo manual
         console.print(
-            f"  [yellow]generate_structured falhou: {exc}[/yellow]\n"
-            f"  [yellow]Tentando fallback: generate_text + reparo JSON...[/yellow]"
+            f"  [yellow]Segmentação estruturada falhou: {exc}[/yellow]\n"
+            "  [yellow]Tentando fallback determinístico de peça única...[/yellow]"
         )
-        # Instruir explicitamente para JSON
-        repair_messages = [
-            {"role": "system", "content": (
-                "Retorne APENAS um objeto JSON válido, sem markdown, sem explicação. "
-                "O JSON deve ter exatamente a estrutura: "
-                '{"metadata": {"processo_id": "...", "total_pecas": N, "gerado_por": "segmentador-juridico", '
-                '"timestamp": "...", "source_file": "...", "total_pages": N, "schema_version": "1.1.0"}, '
-                '"pecas": [{"piece_id": "...", "document_type": "...", ...}]}'
-            )},
-            {"role": "user", "content": body},
-        ]
-        raw_response = client.generate_text(repair_messages)
-
-        # Tentar extrair JSON do texto bruto
-        envelope = _repair_json_from_text(raw_response)
+        envelope = _single_piece_fallback(body, source_file)
+        if envelope is None:
+            raise ValueError(
+                "Resposta do LLM incompatível e documento sem grupo judicial único"
+            ) from exc
 
     # =========================================================================
     # Enriquecimento obrigatório de proveniência (correção de handoff)
@@ -664,7 +820,8 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     if document_code is not None:
         metadata["document_code"] = document_code
 
-    pecas = envelope.get("pecas", [])
+    pecas = [_materialize_piece(piece, body, idx) for idx, piece in enumerate(envelope["pecas"])]
+    envelope["pecas"] = pecas
     for idx, peca in enumerate(pecas):
         _enrich_peca_with_provenance(
             peca=peca,
@@ -677,9 +834,35 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
             source_text=body,
         )
 
-    # Atualizar metadata com proveniência canônica
-    envelope["metadata"]["source_file"] = source_file
-    envelope["metadata"]["source_sha256"] = source_sha256
+    # Atualizar metadata com valores canônicos calculados localmente.
+    from datetime import datetime, timezone
+
+    locator_pages = _page_bounds(_extract_judicial_locators(body))
+    metadata["processo_id"] = str(_first_non_null(
+        metadata.get("processo_id"), process_number, process_group_id,
+    ))
+    metadata["total_pecas"] = len(pecas)
+    metadata["gerado_por"] = "segmentador-juridico"
+    metadata["timestamp"] = datetime.now(timezone.utc).isoformat()
+    metadata["source_file"] = source_file
+    metadata["total_pages"] = (
+        locator_pages[1] if locator_pages[1] is not None
+        else max((piece["pages_end"] or 1 for piece in pecas), default=1)
+    )
+    metadata["schema_version"] = "1.1.0"
+
+    import jsonschema
+
+    validation_errors = sorted(
+        jsonschema.Draft7Validator(output_schema).iter_errors(envelope),
+        key=lambda error: list(error.path),
+    )
+    if validation_errors:
+        details = "; ".join(
+            f"{'.'.join(map(str, error.path)) or '<root>'}: {error.message}"
+            for error in validation_errors[:5]
+        )
+        raise ValueError(f"Envelope do segmentador inválido: {details}")
 
     # Persistir envelope
     output_path.mkdir(parents=True, exist_ok=True)

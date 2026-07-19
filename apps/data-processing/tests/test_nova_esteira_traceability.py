@@ -2,11 +2,13 @@
 
 import copy
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
 import pytest
 import yaml
+from jsonschema import Draft7Validator
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -28,7 +30,12 @@ LOCATOR_PAGE_1 = (
 
 sys.path.insert(0, str(SRC_DIR))
 from data_processing.orchestrator.stage_router import (  # noqa: E402
+    _SEGMENTATION_DECISION_SCHEMA,
     _canonicalize_piece_traceability,
+    _is_compact_segmentation,
+    _single_piece_fallback,
+    _slice_markdown_by_pages,
+    run_segmentador_stage,
 )
 
 sys.path.insert(0, str(CURADOR_SCRIPTS))
@@ -104,6 +111,67 @@ def test_segmentador_canonicalizes_aliases_reinjects_locators_and_enriches_ancho
         "event": "1",
         "document_code": "INIC1",
     }]
+
+
+def test_compact_schema_excludes_full_text_and_rejects_extractor_shape():
+    item_properties = _SEGMENTATION_DECISION_SCHEMA["properties"]["pecas"]["items"][
+        "properties"
+    ]
+    assert "text" not in item_properties
+    assert "text_content" not in item_properties
+    assert not _is_compact_segmentation({
+        "peticao_identification": {},
+        "parties": [],
+        "fundamentos_legais": [],
+        "pedidos": [],
+    })
+
+
+def test_page_slice_and_single_piece_fallback_preserve_source_markdown():
+    source_text = FIXTURE.read_text(encoding="utf-8")
+
+    assert _slice_markdown_by_pages(source_text, 1, 15) == source_text.strip()
+    fallback = _single_piece_fallback(source_text, "Petição Inicial_evento_1.md")
+
+    assert fallback is not None
+    piece = fallback["pecas"][0]
+    assert piece["document_type"] == "peticao_inicial"
+    assert (piece["pages_start"], piece["pages_end"]) == (1, 15)
+    assert piece["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert piece["event"] == "1"
+    assert piece["document_code"] == "INIC1"
+
+
+def test_run_segmentador_stage_falls_back_and_writes_schema_valid_envelope(
+    tmp_path, monkeypatch,
+):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    source_text = FIXTURE.read_text(encoding="utf-8")
+    (input_dir / "Petição Inicial_evento_1.md").write_text(
+        source_text, encoding="utf-8"
+    )
+    monkeypatch.setenv("LLM_PROVIDER", "dummy")
+    monkeypatch.chdir(PROJECT_ROOT)
+
+    envelope_path = run_segmentador_stage(input_dir, output_dir)
+    envelope = json.loads(envelope_path.read_text(encoding="utf-8"))
+    schema = json.loads(
+        (PROJECT_ROOT / "platform/skills/segmentador-juridico/assets/output-schema.json")
+        .read_text(encoding="utf-8")
+    )
+
+    assert set(envelope) == {"metadata", "pecas"}
+    piece = envelope["pecas"][0]
+    assert piece["text"] == source_text.strip()
+    assert LOCATOR_PAGE_1 in piece["text"]
+    assert piece["process_number"] == "4000153-37.2026.8.26.0136/SP"
+    assert piece["event"] == "1"
+    assert piece["document_code"] == "INIC1"
+    assert (piece["pages_start"], piece["pages_end"]) == (1, 15)
+    assert {anchor["page"] for anchor in piece["anchors"]} == {1, 15}
+    assert not list(Draft7Validator(schema).iter_errors(envelope))
 
 
 def test_canonical_pages_and_existing_anchor_values_take_precedence():

@@ -87,12 +87,13 @@ de âncoras, contexto e posição no documento:
 - **Fim:** página anterior ao início da próxima peça (ou fim do documento)
 - **Sobreposição:** quando ambígua, marcar ambas as peças com `observacoes` explicativa
 
-### 4. Extração de Campos por Peça
+### 4. Descritores Compactos por Peça
 
-Para cada peça identificada, extrair todos os campos definidos em `assets/output-schema.json`.
-Inclusive: `text` (texto completo), `anchors` (array de `{label, page}`), campos de proveniência
-(`source_file`, `source_path`, `source_sha256`, `process_group_id`, `origin_piece_index`) e
-campos de análise (`relevancia_estimada`, `confianca_classificacao`, `sinais_relevancia`, `flags`).
+Para cada peça identificada, retornar somente decisões compactas: `piece_id` (ou índice lógico),
+`document_type`, `document_type_confidence`, limites de página canônicos ou aliases, `title` ou
+`text_excerpt`, `relevancia_estimada`, anchors compactos e `process_number`, `event` e
+`document_code` quando disponíveis. O runtime Python preenche texto integral, proveniência e
+demais campos obrigatórios a partir do Markdown original antes da validação final.
 
 ---
 
@@ -106,24 +107,15 @@ campos de análise (`relevancia_estimada`, `confianca_classificacao`, `sinais_re
 6. **Compatibilidade:** o JSON de saída (Envelope de Processo) deve validar contra `assets/output-schema.json`.
 7. **Foco:** segmentar e classificar. Não extrair campos jurídicos finais — isso é tarefa das `extr-*`.
 8. **Âncoras como objetos:** produzir `anchors` como array de `{label, page}`, nunca como array de strings.
-9. **Texto completo:** produzir `text` com o conteúdo integral da peça, não apenas `text_excerpt`.
+9. **Não copiar texto completo:** nunca produzir `text`, `text_content` ou outro campo com a íntegra
+   da peça; o modelo deve devolver apenas os descritores compactos usados para segmentação.
 
 ---
 
-## Saída: Envelope de Processo
+## Saída compacta do LLM
 
 ```json
 {
-  "metadata": {
-    "processo_id": "0001234-12.2025.8.26.0000",
-    "total_pecas": 4,
-    "gerado_por": "segmentador-juridico",
-    "timestamp": "2026-04-08T10:30:00Z",
-    "source_file": "processo_0001234.pdf",
-    "total_pages": 42,
-    "ocr_quality": "medium",
-    "schema_version": "1.1.0"
-  },
   "pecas": [
     {
       "piece_id": "peca_001",
@@ -131,57 +123,20 @@ campos de análise (`relevancia_estimada`, `confianca_classificacao`, `sinais_re
       "document_type_confidence": "high",
       "pages_start": 1,
       "pages_end": 18,
-      "pages_total": 18,
       "title": "Petição Inicial — Ação de Cobrança",
-      "summary": "Petição inicial de ação de cobrança...",
-      "impacto_sentenca_proposto": "Peça fundante da pretensão autoral.",
       "text_excerpt": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ...",
-      "text": "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO...\n[texto completo da peça]",
       "anchors": [
         { "label": "cabecalho", "page": 1 },
         { "label": "PETIÇÃO INICIAL", "page": 1 },
         { "label": "pede deferimento", "page": 18 }
       ],
-      "observacoes": null,
-      "source_file": "processo_0001234.pdf",
-      "source_path": "/data/processos/2025/sp/processo_0001234.pdf",
-      "source_sha256": "a3f5e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3",
-      "process_group_id": "proc-2025-0001",
-      "origin_piece_index": 0,
-      "relevancia_estimada": 0.98,
-      "confianca_classificacao": 0.99,
-      "sinais_relevancia": ["objeto_processual", "pedido_expresso", "valor_causa"],
-      "flags": { "prova_documental": false, "decisao_judicial": false },
-      "data_documento": "2024-08-15",
-      "autor": "Dr. Pedro Souza OAB/SP 654321"
+      "relevancia_estimada": 0.98
     }
   ]
 }
 ```
 
-Seguido de **resumo técnico em Markdown** (ver seção abaixo).
-
----
-
-## Resumo Técnico (Markdown — após o JSON)
-
-Após o JSON, sempre incluir bloco Markdown com:
-
-```markdown
-## Resumo Técnico de Segmentação
-
-### Lógica de Segmentação
-[Como as fronteiras foram detectadas neste documento]
-
-### Critérios de Classificação
-[Quais sinais determinaram cada tipo]
-
-### Regras de Fallback Aplicadas
-[Se houve OCR ruim, ambiguidade, peças sem sinal primário]
-
-### Limitações Identificadas
-[Páginas ilegíveis, peças sobrepostas, incertezas remanescentes]
-```
+Retorne somente o objeto JSON compacto, sem Markdown ou explicações adicionais.
 
 ---
 
