@@ -14,7 +14,42 @@ from google.genai.errors import APIError
 
 logger = logging.getLogger(__name__)
 
+# Limiares de risco de truncamento usados em generate_structured para decidir,
+# antes de tentar o fallback livre (schema embutido no prompt, sem
+# response_schema), se deve escalar direto para a extração por blocos. O
+# limiar de caracteres reaproveita o valor empírico já usado na detecção
+# reativa de truncamento (is_truncated) mais abaixo neste módulo; o limiar de
+# propriedades top-level distingue um pedido de schema quase completo (~25
+# propriedades no schema real de extr-peticao-processo) de um pedido já
+# reduzido (os blocos internos têm de 4 a 6 propriedades cada).
+_FALLBACK_MARKDOWN_CHARS_RISK_THRESHOLD = 12000
+_FALLBACK_TOP_PROPERTIES_RISK_THRESHOLD = 15
+
+# Limiares do preflight de compatibilidade com response_schema, avaliados sobre
+# o schema sanitizado ANTES de qualquer chamada ao Gemini (ver
+# generate_structured). Escolhidos a partir da medição real do schema completo
+# de extr-peticao-processo sanitizado (~34.5KB, 25 propriedades top-level, 370
+# nós — conhecido por rejeitar response_schema com 400 INVALID_ARGUMENT mesmo
+# após a correção dos branches anyOf required-only) comparado aos schemas por
+# bloco de _execute_extraction_in_blocks (no máximo ~6.8KB, 6 propriedades
+# top-level, 75 nós — conhecidos por serem aceitos). Os limiares ficam entre os
+# dois grupos, com margem para ambos os lados.
+_SCHEMA_PREFLIGHT_SIZE_BYTES_THRESHOLD = 10000
+_SCHEMA_PREFLIGHT_TOP_PROPERTIES_THRESHOLD = 10
+_SCHEMA_PREFLIGHT_NODE_COUNT_THRESHOLD = 120
+
 _local_resolver_module_cache = None
+
+
+def _count_schema_nodes(node):
+    """Conta recursivamente os nós de dicionário (objetos de schema) na árvore,
+    usado como sinal de complexidade estrutural no preflight de compatibilidade
+    com response_schema."""
+    if isinstance(node, dict):
+        return 1 + sum(_count_schema_nodes(v) for v in node.values())
+    if isinstance(node, list):
+        return sum(_count_schema_nodes(item) for item in node)
+    return 0
 
 
 def _load_local_resolver_mod():
@@ -45,6 +80,46 @@ class GeminiLLMClient(LLMClient):
         self.api_key = api_key
         self.model_name = model_name
         self.client = genai.Client(api_key=self.api_key)
+
+    @staticmethod
+    def _assess_response_schema_compatibility(sanitized_schema: Dict[str, Any]):
+        """Avalia, sem chamar a API, se o schema sanitizado é compatível com o
+        modo response_schema do Gemini. Retorna (is_compatible, reason): quando
+        is_compatible é False, reason descreve qual sinal de complexidade
+        excedeu o limiar (ver constantes _SCHEMA_PREFLIGHT_* no módulo).
+
+        Isso é um preflight determinístico, não uma verificação exaustiva de
+        todas as construções incompatíveis do dialeto de schema do Gemini: seu
+        objetivo é evitar repetir, de forma previsível, uma chamada que já se
+        sabe que falha para um schema com esse perfil de complexidade (o
+        schema completo de extr-peticao-processo), sem depender de um erro
+        400 da API para descobrir isso a cada execução.
+        """
+        schema_str = json.dumps(sanitized_schema)
+        size_bytes = len(schema_str.encode("utf-8"))
+        top_properties_count = len(sanitized_schema.get("properties", {}))
+        node_count = _count_schema_nodes(sanitized_schema)
+
+        reasons = []
+        if size_bytes > _SCHEMA_PREFLIGHT_SIZE_BYTES_THRESHOLD:
+            reasons.append(
+                f"tamanho do schema sanitizado ({size_bytes} bytes) acima do "
+                f"limiar ({_SCHEMA_PREFLIGHT_SIZE_BYTES_THRESHOLD} bytes)"
+            )
+        if top_properties_count > _SCHEMA_PREFLIGHT_TOP_PROPERTIES_THRESHOLD:
+            reasons.append(
+                f"quantidade de propriedades top-level ({top_properties_count}) "
+                f"acima do limiar ({_SCHEMA_PREFLIGHT_TOP_PROPERTIES_THRESHOLD})"
+            )
+        if node_count > _SCHEMA_PREFLIGHT_NODE_COUNT_THRESHOLD:
+            reasons.append(
+                f"quantidade de nós do schema ({node_count}) acima do limiar "
+                f"({_SCHEMA_PREFLIGHT_NODE_COUNT_THRESHOLD})"
+            )
+
+        if reasons:
+            return False, "; ".join(reasons)
+        return True, ""
 
     def generate_text(self, messages: List[Dict[str, str]], **kwargs) -> str:
         contents = self._format_messages(messages)
@@ -165,7 +240,23 @@ class GeminiLLMClient(LLMClient):
                 return False, "\n".join(error_details)
             return True, ""
 
-        # 6. Tentar chamada estruturada com o response_schema
+        # 6. Preflight de compatibilidade: decide, sem chamar a API, se o schema
+        # sanitizado é compatível com response_schema. Isso evita repetir uma
+        # chamada estruturada previsivelmente rejeitada com 400 INVALID_ARGUMENT
+        # (caso conhecido: o schema completo de extr-peticao-processo) — quando
+        # incompatível, pula direto para a extração por blocos, e o log deixa
+        # explícito que a decisão foi tomada em preflight, não por erro da API.
+        is_schema_compatible, incompatibility_reason = self._assess_response_schema_compatibility(normalized_schema)
+        if not is_schema_compatible:
+            logger.warning(
+                "Preflight de compatibilidade com response_schema: schema sanitizado "
+                f"considerado incompatível ({incompatibility_reason}). "
+                "Ativando Extração por Blocos diretamente, sem tentar a chamada "
+                "estruturada nem o fallback livre — decisão de preflight, não erro da API."
+            )
+            return self._execute_extraction_in_blocks(messages, schema, debug_dir, max_output_tokens_used, base_dir)
+
+        # 7. Tentar chamada estruturada com o response_schema
         try:
             logger.info("Tentando chamada estruturada inicial com response_schema...")
             response = self.client.models.generate_content(
@@ -203,6 +294,33 @@ class GeminiLLMClient(LLMClient):
                     f_err.write(f"{type(e).__name__}: {str(e)}")
             except Exception as file_err:
                 logger.warning(f"Falha ao salvar erro da chamada estruturada em {structured_call_error_path}: {file_err}")
+
+            # Avaliação de risco de truncamento: antes de gastar uma chamada cara e
+            # lenta no fallback livre, decide de forma determinística (a partir de
+            # sinais já disponíveis, sem chamar o Gemini) se o conteúdo de entrada
+            # e o tamanho do schema solicitado tornam o truncamento provável. Nesse
+            # caso, pula a tentativa livre (e seu retry de reparo) e ativa a
+            # extração por blocos diretamente, que já recorta o conteúdo e reduz o
+            # schema por bloco.
+            raw_markdown_for_risk = ""
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    raw_markdown_for_risk = msg.get("content", "")
+                    break
+
+            markdown_len = len(raw_markdown_for_risk)
+            is_high_truncation_risk = (
+                markdown_len > _FALLBACK_MARKDOWN_CHARS_RISK_THRESHOLD
+                or top_properties_count > _FALLBACK_TOP_PROPERTIES_RISK_THRESHOLD
+            )
+
+            if is_high_truncation_risk:
+                logger.warning(
+                    "Risco de truncamento alto detectado antes do fallback livre "
+                    f"(markdown: {markdown_len} chars, propriedades top-level: {top_properties_count}). "
+                    "Pulando a tentativa de fallback livre e ativando Extração por Blocos diretamente."
+                )
+                return self._execute_extraction_in_blocks(messages, schema, debug_dir, max_output_tokens_used, base_dir)
 
             reinforced_messages = copy.deepcopy(messages)
             system_instruction = (
@@ -830,8 +948,28 @@ class GeminiLLMClient(LLMClient):
                 # filtro de chaves aplicado a "properties"/"items" — sem isso,
                 # chaves não suportadas (ex.: pattern, minLength, maxLength) vazam
                 # para o Gemini de dentro dos branches de anyOf.
+                #
+                # Branches que, após a sanitização, só contêm "required" (sem
+                # type/properties/items/enum/format) são descartados: o Gemini
+                # rejeita com 400 INVALID_ARGUMENT nós de schema sem "type", e não
+                # há confirmação de que forçar type:"object" nesses branches seja
+                # aceito. A restrição "ao menos um destes campos" continua sendo
+                # aplicada depois, pela validação local contra o schema rico
+                # completo (_validate_offline), então descartá-la apenas do que é
+                # enviado ao Gemini não afeta a regra de negócio.
                 if "anyOf" in node and isinstance(node["anyOf"], list):
-                    node["anyOf"] = [_sanitize(sub) for sub in node["anyOf"]]
+                    sanitized_branches = [_sanitize(sub) for sub in node["anyOf"]]
+                    typed_branches = [
+                        branch for branch in sanitized_branches
+                        if not (
+                            isinstance(branch, dict)
+                            and set(branch.keys()) == {"required"}
+                        )
+                    ]
+                    if typed_branches:
+                        node["anyOf"] = typed_branches
+                    else:
+                        node.pop("anyOf", None)
 
                 # Se type não está definido e temos combinadores (anyOf, oneOf, allOf),
                 # tentamos extrair o tipo a partir de seus subschemas antes de deletá-los.

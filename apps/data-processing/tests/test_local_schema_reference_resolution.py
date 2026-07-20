@@ -91,6 +91,170 @@ def test_relative_ref_to_common_schema_is_resolved_locally():
     assert errors == []
 
 
+def test_internal_defs_ref_resolves_with_correct_schema_path():
+    schema = json.loads(PETICAO_SCHEMA_PATH.read_text(encoding="utf-8"))
+    assert "#/$defs/PeticaoIdentification" in json.dumps(schema)
+
+    validator = load_validator(schema, PETICAO_SCHEMA_PATH, SHARED_SCHEMAS_DIR)
+    payload = {
+        **VALID_PETICAO_PAYLOAD,
+        "peticao_identification": {
+            "value": "PETIÇÃO INICIAL",
+            "anchors": [
+                {"kind": "pagina", "page_marker": "1", "quote": "PETIÇÃO INICIAL"}
+            ],
+        },
+    }
+    errors = list(validator.iter_errors(payload))
+
+    assert errors == []
+
+
+def test_internal_defs_ref_resolves_even_with_shared_schemas_dir_as_schema_path():
+    """Reproduz o padrão de chamada real de gemini_client.py: `schema_path` é
+    passado como o diretório de schemas compartilhados, não o diretório real
+    do schema de extr-peticao-processo. Antes do fix, isso deixava o próprio
+    schema (e seu $id/base_uri) de fora do registry, e `#/$defs/...` internos
+    ficavam órfãos, causando SchemaReferenceError."""
+    schema = json.loads(PETICAO_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    validator = load_validator(schema, SHARED_SCHEMAS_DIR, SHARED_SCHEMAS_DIR)
+    payload = {
+        **VALID_PETICAO_PAYLOAD,
+        "peticao_identification": {
+            "value": "PETIÇÃO INICIAL",
+            "anchors": [
+                {"kind": "pagina", "page_marker": "1", "quote": "PETIÇÃO INICIAL"}
+            ],
+        },
+    }
+    errors = list(validator.iter_errors(payload))
+
+    assert errors == []
+
+
+def test_chained_ref_root_to_external_file_to_internal_fragment(tmp_path):
+    external_schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://juridico-cli.local/schemas/external_with_internal_frag.schema.json",
+        "$defs": {
+            "Nome": {"type": "string", "minLength": 1},
+        },
+        "type": "object",
+        "properties": {"nome": {"$ref": "#/$defs/Nome"}},
+        "required": ["nome"],
+    }
+    root_schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://juridico-cli.local/schemas/root_with_external_chain.schema.json",
+        "type": "object",
+        "properties": {
+            "pessoa": {"$ref": "external_with_internal_frag.schema.json"},
+        },
+        "required": ["pessoa"],
+    }
+
+    external_path = tmp_path / "external_with_internal_frag.schema.json"
+    external_path.write_text(json.dumps(external_schema), encoding="utf-8")
+    root_path = tmp_path / "root_with_external_chain.schema.json"
+    root_path.write_text(json.dumps(root_schema), encoding="utf-8")
+
+    validator = load_validator(root_schema, root_path, SHARED_SCHEMAS_DIR)
+
+    valid_errors = list(validator.iter_errors({"pessoa": {"nome": "Fulano"}}))
+    invalid_errors = list(validator.iter_errors({"pessoa": {"nome": ""}}))
+
+    assert valid_errors == []
+    assert len(invalid_errors) == 1
+
+
+def test_json_pointer_escaped_segments_resolve_correctly(tmp_path):
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://juridico-cli.local/schemas/escaped_pointer.schema.json",
+        "$defs": {
+            "a/b": {"type": "string"},
+            "c~d": {"type": "number"},
+        },
+        "type": "object",
+        "properties": {
+            "slash_key": {"$ref": "#/$defs/a~1b"},
+            "tilde_key": {"$ref": "#/$defs/c~0d"},
+        },
+    }
+    schema_path = tmp_path / "escaped_pointer.schema.json"
+    schema_path.write_text(json.dumps(schema), encoding="utf-8")
+
+    validator = load_validator(schema, schema_path, SHARED_SCHEMAS_DIR)
+
+    errors = list(validator.iter_errors({"slash_key": "texto", "tilde_key": 1}))
+
+    assert errors == []
+
+
+def test_missing_internal_fragment_raises_controlled_schema_reference_error(tmp_path):
+    broken_schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://juridico-cli.local/schemas/broken_internal.schema.json",
+        "$defs": {"X": {"type": "string"}},
+        "type": "object",
+        "properties": {"y": {"$ref": "#/$defs/NaoExiste"}},
+    }
+    schema_path = tmp_path / "broken_internal.schema.json"
+    schema_path.write_text(json.dumps(broken_schema), encoding="utf-8")
+
+    with pytest.raises(SchemaReferenceError, match="#/\\$defs/NaoExiste"):
+        load_validator(broken_schema, schema_path, SHARED_SCHEMAS_DIR)
+
+
+def test_equivalent_structure_to_real_extr_peticao_processo_schema(tmp_path):
+    """Estrutura equivalente ao schema real (multiplos $defs, $ref interno
+    e $ref relativo para defs/common.schema.json combinados), sem depender
+    do arquivo real do skill."""
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://juridico-cli.local/schemas/equivalent_peticao.schema.json",
+        "$defs": {
+            "AnchoredString": {
+                "type": "object",
+                "properties": {
+                    "value": {"$ref": "defs/common.schema.json#/$defs/NonEmptyString"},
+                    "anchors": {
+                        "type": "array",
+                        "items": {"$ref": "defs/common.schema.json#/$defs/Anchor"},
+                        "minItems": 1,
+                    },
+                },
+                "required": ["value", "anchors"],
+            },
+            "PeticaoIdentification": {"$ref": "#/$defs/AnchoredString"},
+        },
+        "type": "object",
+        "properties": {
+            "document_type": {"const": "peticao_equivalente"},
+            "peticao_identification": {"$ref": "#/$defs/PeticaoIdentification"},
+        },
+        "required": ["document_type"],
+    }
+    schema_path = tmp_path / "equivalent_peticao.schema.json"
+    schema_path.write_text(json.dumps(schema), encoding="utf-8")
+
+    validator = load_validator(schema, schema_path, SHARED_SCHEMAS_DIR)
+    payload = {
+        "document_type": "peticao_equivalente",
+        "peticao_identification": {
+            "value": "PETIÇÃO INICIAL",
+            "anchors": [
+                {"kind": "pagina", "page_marker": "1", "quote": "PETIÇÃO INICIAL"}
+            ],
+        },
+    }
+
+    errors = list(validator.iter_errors(payload))
+
+    assert errors == []
+
+
 def test_absolute_juridico_cli_local_uri_maps_to_same_local_file(tmp_path):
     common_id = "https://juridico-cli.local/schemas/defs/common.schema.json"
     absolute_schema = {

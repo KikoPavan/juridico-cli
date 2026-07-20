@@ -30,6 +30,10 @@ spec_gemini.loader.exec_module(gemini_client_mod)
 
 GeminiLLMClient = gemini_client_mod.GeminiLLMClient
 
+SHARED_SCHEMAS_DIR = ROOT_DIR / "packages" / "shared-schemas"
+sys.path.insert(0, str(SHARED_SCHEMAS_DIR))
+from local_resolver import load_validator  # noqa: E402
+
 
 SCHEMA_PATH = ROOT_DIR / "platform" / "skills" / "extr-peticao-processo" / "assets" / "peticao_processo.schema.json"
 
@@ -151,33 +155,30 @@ def test_gemini_live_schema():
 
 
 def test_gemini_fallback_logic_and_blocks():
-    """Valida a esteira de fallback, detecção de truncamento, salvamento de logs e auto-correção de formato de anchors.
+    """Valida a esteira de blocos e a auto-correção de formato de anchors para o
+    schema completo de extr-peticao-processo.
+
+    O schema completo tem 25 propriedades top-level, 34.5KB e 370 nós — acima
+    dos limiares de preflight de compatibilidade com response_schema
+    (_SCHEMA_PREFLIGHT_*, ver gemini-response-schema-preflight). Por isso, o
+    sistema nunca tenta a chamada estruturada inicial nem o fallback livre para
+    esse schema: escala direto para a extração por blocos. A cobertura do
+    caminho de fallback livre para schemas compatíveis está em
+    test_gemini_fallback_low_risk_uses_free_form_path.
     """
     import os
     import tempfile
     import json
     from unittest.mock import MagicMock, patch
-    
+
     schema = load_json(SCHEMA_PATH)
     client = GeminiLLMClient(api_key="mock")
-    
-    # 1. Testar que se a chamada estruturada falhar e o fallback retornar JSON truncado,
-    # ele ativa a extração por blocos.
+
+    # Como o preflight decide pular a chamada estruturada inicial para esse
+    # schema, a primeira chamada real a generate_content já é a do Bloco A.
     # Vamos mockar o self.client.models.generate_content para:
-    # 1ª chamada (estruturada completa): falha com exceção
-    # 2ª chamada (fallback simples completo): retorna JSON truncado malformado, finish_reason = "MAX_TOKENS"
-    # 3ª a 7ª chamada (blocos A, B, C, D, E): retornam JSONs parciais válidos
-    
-    mock_response_1 = MagicMock()
-    mock_response_1.text = "Incompatibilidade de schema"
-    
-    mock_response_2 = MagicMock()
-    mock_response_2.text = '{"document_type": "peticao_processo", "process_number": {"value": "' # truncado
-    mock_candidate_2 = MagicMock()
-    mock_candidate_2.finish_reason = "MAX_TOKENS"
-    mock_response_2.candidates = [mock_candidate_2]
-    mock_response_2.usage_metadata = MagicMock(prompt_token_count=100, candidates_token_count=8192, total_token_count=8292)
-    
+    # 1ª a 9ª chamada (blocos A, B, C, D, E1-E5): retornam JSONs parciais válidos
+
     # Retornos para os blocos A, B, C, D, E
     # Bloco A: ["document_type", "peticao_identification", "process_number", "parties", "representations", "valor_da_causa"]
     mock_block_A = MagicMock()
@@ -281,31 +282,18 @@ def test_gemini_fallback_logic_and_blocks():
         "riscos_ou_pontos_de_atencao": []
     })
     
-    # Mockando a resposta do retry falho de compactação
-    mock_response_retry_failed = MagicMock()
-    mock_response_retry_failed.text = '{"document_type": "peticao_processo", '  # JSON quebrado de novo
-    mock_candidate_retry = MagicMock()
-    mock_candidate_retry.finish_reason = "MAX_TOKENS"
-    mock_response_retry_failed.candidates = [mock_candidate_retry]
-    mock_response_retry_failed.usage_metadata = MagicMock(prompt_token_count=100, candidates_token_count=8192, total_token_count=8292)
-
-    # Mockando generate_content sequencialmente
-    # 1ª chamada estruturada inteira falha
-    # 2ª chamada fallback simples inteira retorna truncado
-    # 3ª chamada retry do fallback com prompt de reparo compactado (retorna truncado de novo)
-    # 4ª chamada estruturada bloco A
-    # 5ª chamada estruturada bloco B
-    # 6ª chamada estruturada bloco C
-    # 7ª chamada estruturada bloco D
-    # 8ª chamada estruturada bloco E1
-    # 9ª chamada estruturada bloco E2
-    # 10ª chamada estruturada bloco E3
-    # 11ª chamada estruturada bloco E4
-    # 12ª chamada estruturada bloco E5
+    # Mockando generate_content sequencialmente: só os 9 blocos, sem chamada
+    # estruturada inicial nem fallback livre (pulados pelo preflight).
+    # 1ª chamada estruturada bloco A
+    # 2ª chamada estruturada bloco B
+    # 3ª chamada estruturada bloco C
+    # 4ª chamada estruturada bloco D
+    # 5ª chamada estruturada bloco E1
+    # 6ª chamada estruturada bloco E2
+    # 7ª chamada estruturada bloco E3
+    # 8ª chamada estruturada bloco E4
+    # 9ª chamada estruturada bloco E5
     mock_generate = MagicMock(side_effect=[
-        Exception("Schema 400 rejection"),    # chamada 1
-        mock_response_2,                       # chamada 2 (fallback simples)
-        mock_response_retry_failed,            # chamada 3 (retry do fallback falho)
         mock_block_A,                          # bloco A
         mock_block_B,                          # bloco B
         mock_block_C,                          # bloco C
@@ -316,16 +304,16 @@ def test_gemini_fallback_logic_and_blocks():
         mock_block_E4,                         # bloco E4
         mock_block_E5                          # bloco E5
     ])
-    
+
     with patch.object(client.client.models, 'generate_content', mock_generate):
-        # Executa a chamada structured que deve disparar toda a esteira de fallback e blocos
+        # Executa a chamada structured que deve escalar direto para os blocos
         result = client.generate_structured([{"role": "user", "content": "teste"}], schema)
-        
+
         # 1. Verifica se retornou consolidado válido
         assert isinstance(result, dict)
         assert result.get("document_type") == "peticao_processo"
         assert result["process_number"]["value"] == "0001234-56.2026.8.26.0100"
-        
+
         # 2. Verifica se a âncora do Bloco B que continha a chave 'fonte' foi adequadamente corrigida!
         fatos = result.get("fatos", [])
         assert len(fatos) == 1
@@ -338,20 +326,10 @@ def test_gemini_fallback_logic_and_blocks():
         assert anchor["kind"] == "pagina"
         assert anchor["page_marker"] == "3"
         assert anchor["quote"] == "O autor firmou contrato..."
-        
-        # 3. Verifica se os arquivos de debug de erro e resposta bruta do fallback simples foram salvos
-        debug_dir = ROOT_DIR / "var" / "artifacts" / "gemini-debug"
-        assert (debug_dir / "fallback_raw_response.txt").exists()
-        assert (debug_dir / "fallback_parse_error.txt").exists()
-        
-        # Lendo os arquivos de debug para confirmar seu conteúdo
-        with open(debug_dir / "fallback_raw_response.txt", encoding="utf-8") as f_raw:
-            raw_content = f_raw.read()
-            assert raw_content == '{"document_type": "peticao_processo", "process_number": {"value": "'
-            
-        with open(debug_dir / "fallback_parse_error.txt", encoding="utf-8") as f_err:
-            err_content = f_err.read()
-            assert "JSONDecodeError" in err_content
+
+        # 3. Verifica que nem a chamada estruturada inicial nem o fallback livre
+        # foram feitos: apenas as 9 chamadas de bloco.
+        assert mock_generate.call_count == 9
 
         # 4. Verifica que as chaves do Bloco E estão presentes e não são None
         for campo in ["pedidos", "pedidos_individualizados", "tutela_urgencia", "provas_requeridas", "riscos_ou_pontos_de_atencao"]:
@@ -367,6 +345,100 @@ def test_gemini_fallback_logic_and_blocks():
         assert len(result["provas_requeridas"]) == 1
         assert result["provas_requeridas"][0]["tipo_prova"] == "pericial"
         assert isinstance(result["riscos_ou_pontos_de_atencao"], list)
+
+
+def test_gemini_fallback_low_risk_uses_free_form_path():
+    """Para um schema pequeno (poucas propriedades top-level) e um Markdown de
+    entrada curto — abaixo dos limiares de risco de truncamento —, a falha da
+    chamada estruturada deve continuar caindo no fallback livre existente
+    (schema embutido no prompt, sem response_schema), em vez de escalar direto
+    para a extração por blocos."""
+    from unittest.mock import MagicMock, patch
+
+    client = GeminiLLMClient(api_key="mock")
+
+    small_schema = {
+        "type": "object",
+        "required": ["document_type"],
+        "properties": {
+            "document_type": {"type": "string", "enum": ["peticao_processo"]},
+            "valor_da_causa": {"type": "string"},
+        },
+    }
+
+    mock_free_form_response = MagicMock()
+    mock_free_form_response.text = json.dumps({
+        "document_type": "peticao_processo",
+        "valor_da_causa": "R$ 1.000,00",
+    })
+    mock_free_form_response.candidates = [MagicMock(finish_reason="STOP")]
+    mock_free_form_response.usage_metadata = MagicMock(
+        prompt_token_count=50, candidates_token_count=20, total_token_count=70
+    )
+
+    mock_generate = MagicMock(side_effect=[
+        Exception("Schema 400 rejection"),  # chamada estruturada inicial falha
+        mock_free_form_response,            # fallback livre (sem response_schema) sucede
+    ])
+
+    with patch.object(client.client.models, "generate_content", mock_generate):
+        result = client.generate_structured(
+            [{"role": "user", "content": "petição curta"}], small_schema
+        )
+
+        assert result == {
+            "document_type": "peticao_processo",
+            "valor_da_causa": "R$ 1.000,00",
+        }
+        # Só duas chamadas: a estruturada (que falhou) e o fallback livre que
+        # sucedeu — nenhuma chamada de bloco foi feita.
+        assert mock_generate.call_count == 2
+
+
+def test_gemini_fallback_escalation_is_deterministic_across_runs():
+    """A decisão de preflight de pular a chamada estruturada inicial para um
+    schema de alto risco (grande/complexo) depende apenas do schema sanitizado
+    em si, então deve ser a mesma em execuções independentes com a mesma
+    entrada — sem depender de qualquer resposta do Gemini, e sem nunca chamar
+    generate_content com o schema completo."""
+    import json as json_mod
+    from unittest.mock import MagicMock, patch
+
+    schema = load_json(SCHEMA_PATH)  # schema real: 25 propriedades top-level, alto risco
+
+    def _make_block_mock():
+        mock_resp = MagicMock()
+        mock_resp.text = json_mod.dumps({"document_type": "peticao_processo"})
+        return mock_resp
+
+    call_counts = []
+    for _ in range(2):
+        client = GeminiLLMClient(api_key="mock")
+        mock_generate = MagicMock(side_effect=lambda *a, **kw: _make_block_mock())
+
+        with patch.object(client.client.models, "generate_content", mock_generate):
+            # Os blocos mockados só retornam "document_type"; a extração final
+            # pode terminar com ressalvas (_failed_blocks) — irrelevante para o
+            # que este teste verifica: quais chamadas foram feitas ao Gemini,
+            # não se a extração final é válida.
+            client.generate_structured([{"role": "user", "content": "teste"}], schema)
+
+            # Nenhuma chamada usa o schema completo (a chamada estruturada
+            # inicial nunca acontece: o preflight já decidiu ir para blocos) —
+            # todas as chamadas feitas são chamadas de bloco, com no máximo 6
+            # propriedades top-level cada.
+            for call in mock_generate.call_args_list:
+                config = call.kwargs.get("config")
+                assert config is not None
+                block_schema = getattr(config, "response_json_schema", None)
+                assert block_schema is not None
+                assert len(block_schema.get("properties", {})) <= 6
+
+            call_counts.append(mock_generate.call_count)
+
+    # A mesma quantidade de chamadas (uma por bloco, nenhuma chamada
+    # estruturada de schema completo) ocorre em ambas as execuções.
+    assert call_counts[0] == call_counts[1]
 
 
 def test_gemini_fallback_e1_e2_heuristic():
@@ -716,5 +788,219 @@ def test_gemini_block_page_cutting():
         assert "Texto da página um" not in call_e1_contents
         assert "Texto da página dois" not in call_e1_contents
         assert "Texto da página três" not in call_e1_contents
+
+
+def test_assess_response_schema_compatibility_small_schema_is_compatible():
+    """Um schema pequeno (poucas propriedades, poucos bytes, poucos nós) é
+    considerado compatível com response_schema pelo preflight."""
+    small_schema = {
+        "type": "object",
+        "required": ["document_type"],
+        "properties": {
+            "document_type": {"type": "string", "enum": ["peticao_processo"]},
+            "valor_da_causa": {"type": "string"},
+        },
+    }
+
+    is_compatible, reason = GeminiLLMClient._assess_response_schema_compatibility(small_schema)
+
+    assert is_compatible is True
+    assert reason == ""
+
+
+def test_assess_response_schema_compatibility_real_full_schema_is_incompatible():
+    """O schema sanitizado completo de extr-peticao-processo (25 propriedades
+    top-level, ~34.5KB, ~370 nós) excede os limiares de preflight e é
+    considerado incompatível com response_schema, com um motivo explicando
+    qual sinal de complexidade foi excedido."""
+    schema = load_json(SCHEMA_PATH)
+    client = GeminiLLMClient(api_key="ficticia")
+    sanitized = client._normalize_schema(schema)
+
+    is_compatible, reason = GeminiLLMClient._assess_response_schema_compatibility(sanitized)
+
+    assert is_compatible is False
+    assert "propriedades top-level" in reason
+
+
+def test_gemini_preflight_incompatible_schema_never_attempts_structured_or_free_form_call():
+    """Para o schema completo (incompatível pelo preflight), nem a chamada
+    estruturada inicial nem o fallback livre devem ser tentados: a primeira
+    chamada real ao Gemini já deve ser a de um bloco (schema reduzido, <= 6
+    propriedades top-level), e nenhum arquivo de erro da chamada estruturada
+    deve ser criado, já que nenhuma chamada incompatível foi enviada."""
+    import json as json_mod
+    from unittest.mock import MagicMock, patch
+
+    schema = load_json(SCHEMA_PATH)
+    client = GeminiLLMClient(api_key="mock")
+
+    mock_block_response = MagicMock()
+    mock_block_response.text = json_mod.dumps({"document_type": "peticao_processo"})
+    mock_generate = MagicMock(side_effect=lambda *a, **kw: mock_block_response)
+
+    debug_dir = ROOT_DIR / "var" / "artifacts" / "gemini-debug"
+    structured_error_path = debug_dir / "structured_call_error.txt"
+    if structured_error_path.exists():
+        structured_error_path.unlink()
+
+    with patch.object(client.client.models, "generate_content", mock_generate):
+        client.generate_structured([{"role": "user", "content": "teste"}], schema)
+
+        assert mock_generate.call_count > 0
+        first_call_config = mock_generate.call_args_list[0].kwargs["config"]
+        first_call_schema = getattr(first_call_config, "response_json_schema", None)
+        assert first_call_schema is not None
+        assert len(first_call_schema.get("properties", {})) <= 6
+
+        # Nenhuma tentativa incompatível foi feita, então nenhum arquivo de erro
+        # da chamada estruturada foi criado neste teste.
+        assert not structured_error_path.exists()
+
+
+def test_gemini_sanitizer_drops_required_only_anyof_branch():
+    """Um anyOf cujos branches só têm 'required' (sem type/properties/items/enum/format)
+    deve ser removido inteiramente do schema sanitizado: o Gemini rejeita nós de
+    schema sem 'type' com 400 INVALID_ARGUMENT, e a restrição continua sendo
+    aplicada depois pela validação local contra o schema rico completo."""
+    client = GeminiLLMClient(api_key="ficticia")
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "campo_a": {"type": "string"},
+            "campo_b": {"type": "string"},
+        },
+        "anyOf": [
+            {"required": ["campo_a"]},
+            {"required": ["campo_b"]},
+        ],
+    }
+
+    sanitized = client._normalize_schema(schema)
+
+    assert "anyOf" not in sanitized
+
+
+def test_gemini_sanitizer_keeps_typed_anyof_branch_mixed():
+    """Em um combinador misto (um branch tipado, um branch só com 'required'),
+    o branch tipado deve ser preservado e o branch 'required'-only removido."""
+    client = GeminiLLMClient(api_key="ficticia")
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "valor": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"required": ["campo_a"]},
+                ]
+            },
+        },
+    }
+
+    sanitized = client._normalize_schema(schema)
+
+    valor_anyof = sanitized["properties"]["valor"]["anyOf"]
+    assert valor_anyof == [{"type": "string"}]
+
+
+def test_local_validation_still_enforces_dropped_anyof_constraint():
+    """A sanitização remove o anyOf 'ao menos um destes campos' apenas do schema
+    enviado ao Gemini. A validação local pós-geração (a mesma usada por
+    _validate_offline em generate_structured e por DataExtractorApp.run_extraction)
+    continua aplicando essa restrição contra o schema rico completo (não
+    sanitizado), então uma resposta que a viola ainda é rejeitada antes da
+    persistência."""
+    schema = load_json(SCHEMA_PATH)
+    validator = load_validator(schema, SCHEMA_PATH, SHARED_SCHEMAS_DIR)
+
+    # Satisfaz o "required" de nível raiz (document_type), mas nenhum dos campos
+    # do anyOf ("pedidos", "pedidos_individualizados", "fatos", "fundamentos",
+    # "valor_da_causa", "parties").
+    payload_missing_all_anyof_fields = {"document_type": "peticao_processo"}
+
+    errors = list(validator.iter_errors(payload_missing_all_anyof_fields))
+    assert errors, "Resposta sem nenhum campo do anyOf deveria falhar na validação local"
+
+    # Confirma que ao menos um dos campos do anyOf já é suficiente para passar.
+    payload_with_one_anyof_field = {
+        "document_type": "peticao_processo",
+        "valor_da_causa": {
+            "value": "R$ 1.000,00",
+            "anchors": [
+                {"kind": "pagina", "page_marker": "1", "quote": "Valor da causa: R$ 1.000,00"}
+            ],
+        },
+    }
+    errors_ok = list(validator.iter_errors(payload_with_one_anyof_field))
+    assert not errors_ok
+
+
+def test_gemini_sanitizer_real_schema_root_has_no_required_only_anyof():
+    """Regressão do caso real (processo 4000153-37.2026.8.26.0136/SP): o schema
+    canônico de extr-peticao-processo declara, no nó raiz, um anyOf 'ao menos um
+    destes campos' cujos branches são todos {"required": [...]} sem type. Após a
+    correção, esse anyOf não deve mais chegar ao schema enviado ao Gemini."""
+    schema = load_json(SCHEMA_PATH)
+    client = GeminiLLMClient(api_key="ficticia")
+
+    sanitized = client._normalize_schema(schema)
+
+    assert "anyOf" not in sanitized
+    # O schema canônico em si não foi alterado por essa correção.
+    assert "anyOf" in schema
+    assert all(set(branch.keys()) == {"required"} for branch in schema["anyOf"])
+
+
+def test_gemini_block_mode_result_validates_against_full_local_schema():
+    """O resultado consolidado da extração por blocos (acionada pelo preflight
+    para o schema completo, sem nenhuma chamada 400) continua sendo validável
+    localmente contra o schema rico completo antes de qualquer persistência —
+    o preflight muda apenas qual chamada é feita ao Gemini, não a validação
+    final."""
+    import json as json_mod
+    from unittest.mock import MagicMock, patch
+
+    schema = load_json(SCHEMA_PATH)
+    client = GeminiLLMClient(api_key="mock")
+
+    def _payload_for(properties_requested):
+        payload = {"document_type": "peticao_processo"}
+        if "pedidos" in properties_requested:
+            payload["pedidos"] = [{
+                "text": "Pedido de procedência.",
+                "anchors": [{"kind": "pagina", "page_marker": "1", "quote": "Pedido de procedência."}],
+            }]
+        if "pedidos_individualizados" in properties_requested:
+            payload["pedidos_individualizados"] = [{
+                "tipo": "procedencia_principal",
+                "descricao_interpretativa": "Declarar procedente o pedido.",
+                "trecho_literal": "Pedido de procedência.",
+                "anchors": [{"kind": "pagina", "page_marker": "1", "quote": "Pedido de procedência."}],
+            }]
+        if "valor_da_causa" in properties_requested:
+            payload["valor_da_causa"] = {
+                "value": "R$ 1.000,00",
+                "anchors": [{"kind": "pagina", "page_marker": "1", "quote": "Valor da causa: R$ 1.000,00"}],
+            }
+        return payload
+
+    def _side_effect(*args, **kwargs):
+        config = kwargs.get("config")
+        block_schema = getattr(config, "response_json_schema", None) or {}
+        properties_requested = set(block_schema.get("properties", {}).keys())
+        mock_resp = MagicMock()
+        mock_resp.text = json_mod.dumps(_payload_for(properties_requested))
+        return mock_resp
+
+    mock_generate = MagicMock(side_effect=_side_effect)
+
+    with patch.object(client.client.models, "generate_content", mock_generate):
+        result = client.generate_structured([{"role": "user", "content": "teste"}], schema)
+
+    validator = load_validator(schema, SCHEMA_PATH, SHARED_SCHEMAS_DIR)
+    errors = list(validator.iter_errors(result))
+    assert not errors, f"Resultado do modo por blocos deveria ser válido: {errors}"
 
 

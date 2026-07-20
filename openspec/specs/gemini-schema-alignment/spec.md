@@ -43,3 +43,27 @@ O sanitizador de schema em [GeminiLLMClient._normalize_schema](file:///home/kiko
 - **WHEN** um subschema dentro de `anyOf` contém apenas chaves permitidas (ex.: `type`, `enum`, `format`)
 - **THEN** o schema sanitizado final preserva essas chaves no subschema de dentro de `anyOf`
 
+### Requirement: Drop Required-Only Combinator Branches Without Type
+O sanitizador de schema em [GeminiLLMClient._normalize_schema](file:///home/kiko/devops/juridico-cli/packages/shared-llm/gemini_client.py#L699) MUST remover, do schema enviado ao Gemini, qualquer branch de `anyOf`, `oneOf` ou `allOf` que, após a sanitização recursiva, contenha apenas a chave `required` (sem `type`, `properties`, `items`, `enum` ou `format`). Se todos os branches de um combinador forem removidos por esse motivo, a chave do combinador MUST ser removida do nó pai. O schema canônico da skill (ex.: `platform/skills/extr-peticao-processo/assets/peticao_processo.schema.json`) NÃO MUST ser alterado para viabilizar isso.
+
+Esta correção elimina a construção de schema que se sabia causar `400 INVALID_ARGUMENT` isoladamente, mas não garante, por si só, que a chamada estruturada inicial para o schema completo real seja aceita pela API (o teste operacional confirmou complexidade/incompatibilidade adicional não identificada). Para o schema completo, a capability `gemini-response-schema-preflight` evita que essa chamada seja sequer tentada.
+
+#### Scenario: Required-only anyOf branch is dropped
+- **WHEN** um nó sanitizado contém `"anyOf": [{"required": ["campo_a"]}, {"required": ["campo_b"]}]`, sem que nenhum branch tenha `type`, `properties`, `items`, `enum` ou `format`
+- **THEN** o schema sanitizado final enviado ao Gemini não contém a chave `anyOf` nesse nó
+
+#### Scenario: Mixed anyOf keeps typed branches and drops required-only branches
+- **WHEN** um nó sanitizado contém `"anyOf": [{"type": "string"}, {"required": ["campo_a"]}]`
+- **THEN** o schema sanitizado final preserva `{"type": "string"}` no `anyOf` e remove o branch `{"required": ["campo_a"]}`
+
+#### Scenario: Sanitized real schema no longer contains the known-bad construct
+- **WHEN** o schema canônico de `extr-peticao-processo`, cujo nó raiz continha o `anyOf` `required`-only descrito no design desta mudança, é sanitizado por `_normalize_schema`
+- **THEN** o schema sanitizado resultante não contém mais esse `anyOf` no nó raiz
+
+### Requirement: Rich Schema Still Enforces the Dropped Constraint
+Quando um combinador `required`-only é removido do schema enviado ao Gemini, a validação local pós-geração MUST continuar aplicando essa mesma restrição contra o schema rico completo antes de qualquer persistência.
+
+#### Scenario: Response violating the dropped anyOf fails local validation
+- **WHEN** a resposta do Gemini para um schema cujo `anyOf` `required`-only foi removido não satisfaz nenhum dos `required` originais desse `anyOf`
+- **THEN** `_validate_offline` (ou a validação equivalente em `DataExtractorApp.run_extraction`) rejeita a resposta como inválida contra o schema rico completo, e nenhum resultado é persistido
+

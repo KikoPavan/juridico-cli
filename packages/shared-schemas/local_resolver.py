@@ -101,8 +101,6 @@ def load_validator(
         registry = registry.combine(build_local_registry(shared_schemas_dir))
 
     base_uri = schema.get("$id") or schema_dir.resolve().as_uri() + "/"
-    resolver = registry.resolver(base_uri=base_uri)
-    _ensure_refs_resolvable(schema, resolver)
 
     # jsonschema deriva a URI-base de resolução do próprio $id do schema
     # (vazio se ausente). Schemas montados em memória sem $id (ex.: fatias
@@ -110,6 +108,20 @@ def load_validator(
     # acima para que o $ref relativo resolva contra o mesmo registry
     # durante a validação real, não só na checagem antecipada.
     effective_schema = schema if "$id" in schema else {**schema, "$id": base_uri}
+
+    # O documento efetivamente validado é registrado sob seu próprio
+    # base_uri, sobrepondo qualquer versão lida do disco em build_local_registry.
+    # Sem isso, um $ref interno (`#/$defs/...`) só resolve por coincidência,
+    # quando `schema_path` aponta para o diretório real do arquivo em disco
+    # que contém um documento idêntico — se o chamador passar um
+    # `schema_path` diferente (ex.: um diretório compartilhado qualquer),
+    # o base_uri nunca é registrado e a referência interna fica órfã.
+    registry = registry.with_resource(
+        base_uri, ref_jsonschema.DRAFT202012.create_resource(effective_schema)
+    )
+
+    resolver = registry.resolver(base_uri=base_uri)
+    _ensure_refs_resolvable(effective_schema, resolver)
 
     validator_class = jsonschema.validators.validator_for(effective_schema)
     validator_class.check_schema(effective_schema)
