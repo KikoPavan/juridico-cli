@@ -119,7 +119,7 @@ Exemplo: `proc-2024-0042__peca-001-peticao.md`
 | `acao_curatorial` | `review_status`   | `status`       | Gera arquivo? |
 |-------------------|-------------------|----------------|---------------|
 | `manter`          | `approved`        | `ready`        | ✅ Sim         |
-| `comprimir`       | `approved`        | `ready`        | ✅ Sim         |
+| `resumir`         | `approved`        | `ready`        | ✅ Sim         |
 | `revisar`         | `pending_review`  | `needs_review` | ✅ Sim         |
 | `remover`         | —                 | —              | ❌ Não         |
 

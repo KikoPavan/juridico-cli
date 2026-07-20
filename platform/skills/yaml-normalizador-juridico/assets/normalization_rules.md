@@ -95,7 +95,7 @@ Derivado de `parties_raw` (campo opcional do input). Se ausente → `[]`.
 | `acao_curatorial` | `review_status`   | `status`       |
 |-------------------|-------------------|----------------|
 | `manter`          | `approved`        | `ready`        |
-| `comprimir`       | `approved`        | `ready`        |
+| `resumir`         | `approved`        | `ready`        |
 | `revisar`         | `pending_review`  | `needs_review` |
 | `remover`         | N/A               | N/A            |
 | valor desconhecido| `pending_review`  | `needs_review` |

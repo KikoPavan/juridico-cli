@@ -150,16 +150,18 @@ existente nunca é rebaixado.
 | `metadado_apenas` | Preservar apenas metadados estruturais |
 | `null` | Sem compressão (ação não é `resumir`) |
 
-#### `encaminhamento` — Skills destino
+#### `encaminhamento` — Skill de destino
 
-| Valor | Skill | Peças típicas |
-|-------|-------|---------------|
-| `extr-pedidos` | Extrator de pedidos | peticao_inicial, contestacao, recurso |
-| `extr-partes` | Extrator de partes | procuracao, peticao_inicial |
-| `extr-decisao` | Extrator de decisões | sentenca, acordao, laudo_pericial |
-| `extr-prova` | Extrator de prova | documento_prova, contrato |
-| `extr-prazos` | Extrator de prazos | certidao, intimacao, despacho |
-| `null` | Sem encaminhamento | remover, revisar sem tipo |
+O valor de `encaminhamento` é resolvido exclusivamente pelo mapa canônico:
+
+`platform/skills/yaml-normalizador-juridico/assets/routing_map.yaml`
+
+Regras:
+
+- tipos com extrator registrado recebem o respectivo `skill_key`;
+- tipos mapeados para `REVISAR_MANUAL` recebem `encaminhamento: null`;
+- peças com `acao_curatorial: remover` recebem `encaminhamento: null`;
+- nenhuma skill `extr-*` pode ser inventada ou inferida fora do mapa canônico.
 
 `capa_processo` é peça administrativa: por padrão recebe `acao_curatorial: remover`,
 `impacto_processual: irrelevante`, prioridade 5 e `encaminhamento: null`. Se houver
