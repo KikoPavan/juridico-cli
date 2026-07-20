@@ -2,19 +2,25 @@
 """Validate a JSON output file against the contestacao_processo schema."""
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
 
-try:
-    import jsonschema
-    from jsonschema import RefResolver
-except ImportError:
-    print("ERROR: jsonschema not installed. Run: uv add jsonschema", file=sys.stderr)
-    sys.exit(2)
-
 ASSET_SCHEMA = Path(__file__).parent.parent / "assets" / "contestacao_processo.schema.json"
 SCHEMAS_DIR = Path(__file__).resolve().parents[4] / "packages" / "shared-schemas"
+
+
+def _load_local_resolver_mod():
+    """Carrega packages/shared-schemas/local_resolver.py — a mesma resolução
+    local e centralizada de $ref (sem acesso à rede) usada pelo pipeline de
+    extração real, evitando reimplementar aqui um mapeamento próprio de
+    $id/$ref (ver spec local-schema-reference-resolution)."""
+    module_path = SCHEMAS_DIR / "local_resolver.py"
+    spec = importlib.util.spec_from_file_location("local_resolver_mod", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_json(path: Path) -> dict:
@@ -25,8 +31,8 @@ def load_json(path: Path) -> dict:
 def validate(input_path: Path, schema_path: Path) -> bool:
     schema = load_json(schema_path)
     data = load_json(input_path)
-    resolver = RefResolver(base_uri=SCHEMAS_DIR.as_uri() + "/", referrer=schema)
-    validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+    local_resolver_mod = _load_local_resolver_mod()
+    validator = local_resolver_mod.load_validator(schema, schema_path, SCHEMAS_DIR)
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
     if not errors:
         print(f"OK  {input_path} — valid against {schema_path.name}")

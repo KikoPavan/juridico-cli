@@ -1,9 +1,5 @@
-# peticao-block-fallback-robustness Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by syncing change fix-extr-peticao-processo-blocks-e1-e2. Update Purpose after archive.
-
-## Requirements
 ### Requirement: No Premature Truncation in E1/E2 Blocks
 O fallback por blocos de `extr-peticao-processo`, agora exposto como `PeticaoBlockStrategy` e selecionado explicitamente por `bundle_id="extr-peticao-processo"` através do mecanismo de seleção de estratégias, SHALL completar as chamadas dos blocos `E1` (`pedidos`) e `E2` (`pedidos_individualizados`) sem retornar JSON truncado, para o caso real `Petição Inicial_evento_1.md` (processo `4000153-37.2026.8.26.0136/SP`).
 

@@ -85,7 +85,7 @@ def real_case_result():
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": raw_text},
     ]
-    return client.generate_structured(messages, schema=schema)
+    return client.generate_structured(messages, schema=schema, bundle_id=dispatch_result["bundle_id"])
 
 
 def test_extraction_has_no_failed_blocks(real_case_result):

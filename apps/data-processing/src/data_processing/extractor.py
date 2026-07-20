@@ -169,7 +169,7 @@ class DataExtractorApp:
         effective_model = model or getattr(client, 'model_name', 'unknown')
         self.log(f"Usando provider: {provider or 'gemini'} | model: {effective_model}", run_id)
         self.log(f"Enviando dados para processamento...", run_id)
-        response = client.generate_structured(messages, schema=schema_json)
+        response = client.generate_structured(messages, schema=schema_json, bundle_id=bundle_id)
 
         payload = deepcopy(response)
         failed_blocks = payload.pop("_failed_blocks", []) if isinstance(payload, dict) else []

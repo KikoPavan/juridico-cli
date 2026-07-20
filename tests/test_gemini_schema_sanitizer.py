@@ -135,15 +135,15 @@ def test_gemini_live_schema():
     }
     
     try:
-        res_min = client.generate_structured([{"role": "user", "content": "retorne o document_type como peticao_processo"}], minimal_schema)
+        res_min = client.generate_structured([{"role": "user", "content": "retorne o document_type como peticao_processo"}], minimal_schema, bundle_id="extr-peticao-processo")
         assert res_min.get("document_type") == "peticao_processo"
         print("Live: Schema mínimo passou!")
     except Exception as exc:
         pytest.fail(f"Erro na conexão com schema mínimo: {exc}")
-        
+
     # 2. Testar o schema completo sanitizado
     try:
-        res_full = client.generate_structured([{"role": "user", "content": "retorne um JSON vazio ou com dados mínimos coerentes"}], schema)
+        res_full = client.generate_structured([{"role": "user", "content": "retorne um JSON vazio ou com dados mínimos coerentes"}], schema, bundle_id="extr-peticao-processo")
         print("Live: Schema completo sanitizado passou com sucesso!")
         assert isinstance(res_full, dict)
     except Exception as exc:
@@ -307,7 +307,7 @@ def test_gemini_fallback_logic_and_blocks():
 
     with patch.object(client.client.models, 'generate_content', mock_generate):
         # Executa a chamada structured que deve escalar direto para os blocos
-        result = client.generate_structured([{"role": "user", "content": "teste"}], schema)
+        result = client.generate_structured([{"role": "user", "content": "teste"}], schema, bundle_id="extr-peticao-processo")
 
         # 1. Verifica se retornou consolidado válido
         assert isinstance(result, dict)
@@ -421,7 +421,7 @@ def test_gemini_fallback_escalation_is_deterministic_across_runs():
             # pode terminar com ressalvas (_failed_blocks) — irrelevante para o
             # que este teste verifica: quais chamadas foram feitas ao Gemini,
             # não se a extração final é válida.
-            client.generate_structured([{"role": "user", "content": "teste"}], schema)
+            client.generate_structured([{"role": "user", "content": "teste"}], schema, bundle_id="extr-peticao-processo")
 
             # Nenhuma chamada usa o schema completo (a chamada estruturada
             # inicial nunca acontece: o preflight já decidiu ir para blocos) —
@@ -579,7 +579,7 @@ def test_gemini_fallback_e1_e2_heuristic():
     
     with patch.object(client.client.models, 'generate_content', mock_generate):
         messages = [{"role": "user", "content": mock_md}]
-        result = client.generate_structured(messages, schema)
+        result = client.generate_structured(messages, schema, bundle_id="extr-peticao-processo")
         
         # 1. Deve conter a chave privada dos blocos falhos
         assert "_failed_blocks" in result
@@ -845,7 +845,7 @@ def test_gemini_preflight_incompatible_schema_never_attempts_structured_or_free_
         structured_error_path.unlink()
 
     with patch.object(client.client.models, "generate_content", mock_generate):
-        client.generate_structured([{"role": "user", "content": "teste"}], schema)
+        client.generate_structured([{"role": "user", "content": "teste"}], schema, bundle_id="extr-peticao-processo")
 
         assert mock_generate.call_count > 0
         first_call_config = mock_generate.call_args_list[0].kwargs["config"]
@@ -997,7 +997,7 @@ def test_gemini_block_mode_result_validates_against_full_local_schema():
     mock_generate = MagicMock(side_effect=_side_effect)
 
     with patch.object(client.client.models, "generate_content", mock_generate):
-        result = client.generate_structured([{"role": "user", "content": "teste"}], schema)
+        result = client.generate_structured([{"role": "user", "content": "teste"}], schema, bundle_id="extr-peticao-processo")
 
     validator = load_validator(schema, SCHEMA_PATH, SHARED_SCHEMAS_DIR)
     errors = list(validator.iter_errors(result))

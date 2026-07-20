@@ -33,7 +33,7 @@ class _FakeClient:
     def __init__(self, calls: list[str]):
         self.calls = calls
 
-    def generate_structured(self, messages, *, schema):
+    def generate_structured(self, messages, *, schema, **kwargs):
         self.calls.append(messages[-1]["content"])
         return {"accepted": True}
 

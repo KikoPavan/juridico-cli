@@ -45,8 +45,8 @@ class FakeLLMClient:
         self.response = response
         self.calls: list[dict] = []
 
-    def generate_structured(self, messages, *, schema):
-        self.calls.append({"messages": messages, "schema": schema})
+    def generate_structured(self, messages, *, schema, **kwargs):
+        self.calls.append({"messages": messages, "schema": schema, **kwargs})
         return self.response
 
 
