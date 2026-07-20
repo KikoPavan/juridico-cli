@@ -43,7 +43,7 @@ from data_processing.orchestrator.stage_router import (  # noqa: E402
 )
 
 sys.path.insert(0, str(CURADOR_SCRIPTS))
-from curar import CuradorRelevancia  # noqa: E402
+from curar import CuradorRelevancia, mapear_encaminhamento  # noqa: E402
 
 _normalizer_spec = importlib.util.spec_from_file_location(
     "yaml_normalizador_apply", NORMALIZADOR_SCRIPT
@@ -461,6 +461,109 @@ def test_normalizer_safely_handles_removed_and_exceptional_process_cover(tmp_pat
     assert frontmatter["skill_key"] == "REVISAR_MANUAL"
     assert frontmatter["review_status"] == "unroutable"
     assert not frontmatter["skill_key"].startswith("extr-")
+
+
+ROUTING_MAP_PATH = (
+    PROJECT_ROOT
+    / "platform"
+    / "skills"
+    / "yaml-normalizador-juridico"
+    / "assets"
+    / "routing_map.yaml"
+)
+SKILL_REGISTRY_PATH = (
+    PROJECT_ROOT / "platform" / "skill-runtime" / "skill_registry.yaml"
+)
+
+REGISTERED_ROUTES = {
+    "peticao_inicial": "extr-peticao-processo",
+    "contestacao": "extr-contestacao-processo",
+    "decisao": "extr-decisao-processo",
+    "decisao_interlocutoria": "extr-decisao-processo",
+    "sentenca": "extr-decisao-processo",
+    "despacho": "extr-decisao-processo",
+    "mandato": "extr-mandato-processo",
+    "procuracao": "extr-procuracao",
+    "cabecalho_processo": "extr-cabecalho-processo",
+    "contrato_social": "extr-contrato-social",
+    "escritura_imovel": "extr-escritura-imovel",
+    "escritura_hipotecaria": "extr-escritura-hipotecaria",
+}
+UNROUTABLE_TYPES = {
+    "contrato",
+    "escritura",
+    "recurso",
+    "laudo_pericial",
+    "nota_fiscal",
+    "boleto",
+    "citacao",
+    "intimacao",
+    "nao_classificado",
+    "capa_processo",
+}
+
+
+def test_routing_map_only_references_registered_skills_or_manual_review():
+    routing_config = yaml.safe_load(ROUTING_MAP_PATH.read_text(encoding="utf-8"))
+    registry = yaml.safe_load(SKILL_REGISTRY_PATH.read_text(encoding="utf-8"))
+    registered = set(registry["skills"])
+    destinations = {
+        entry["skill_key"] for entry in routing_config["routing"].values()
+    }
+    destinations.add(routing_config["fallback"]["skill_key"])
+
+    assert destinations <= registered | {"REVISAR_MANUAL"}
+
+
+@pytest.mark.parametrize(
+    ("document_type", "expected_skill_key"), REGISTERED_ROUTES.items()
+)
+def test_curator_and_normalizer_share_registered_routes(
+    document_type, expected_skill_key
+):
+    routing = normalizer.load_routing_map(ROUTING_MAP_PATH)
+
+    assert mapear_encaminhamento(document_type, "manter") == expected_skill_key
+    assert normalizer.resolve_skill_key(document_type, routing) == (
+        expected_skill_key,
+        True,
+    )
+
+
+@pytest.mark.parametrize("document_type", sorted(UNROUTABLE_TYPES))
+def test_curator_and_normalizer_share_manual_review_routes(document_type):
+    routing = normalizer.load_routing_map(ROUTING_MAP_PATH)
+
+    assert mapear_encaminhamento(document_type, "manter") is None
+    assert normalizer.resolve_skill_key(document_type, routing) == (
+        "REVISAR_MANUAL",
+        False,
+    )
+
+
+@pytest.mark.parametrize("document_type", sorted(UNROUTABLE_TYPES))
+@pytest.mark.parametrize("acao_curatorial", ["manter", "resumir"])
+def test_unroutable_types_always_need_review(document_type, acao_curatorial):
+    routing = normalizer.load_routing_map(ROUTING_MAP_PATH)
+    piece = _base_piece(document_type=document_type)
+    piece["acao_curatorial"] = acao_curatorial
+
+    context = normalizer.build_frontmatter_context(
+        piece, routing, "2026-07-20T12:00:00-03:00"
+    )
+
+    assert context["skill_key"] == "REVISAR_MANUAL"
+    assert context["review_status"] == "unroutable"
+    assert context["status"] == "needs_review"
+
+
+def test_manual_review_routes_declare_unroutable_metadata():
+    routing_config = yaml.safe_load(ROUTING_MAP_PATH.read_text(encoding="utf-8"))
+
+    for document_type in UNROUTABLE_TYPES:
+        entry = routing_config["routing"][document_type]
+        assert entry["skill_key"] == "REVISAR_MANUAL"
+        assert entry["review_status"] == "unroutable"
 
 
 def test_pipeline_fixture_preserves_frontmatter_and_locator(tmp_path):

@@ -22,20 +22,27 @@ routing:
     deprecated: false
 
   recurso:
-    skill_key: extr-recurso-processo
+    skill_key: REVISAR_MANUAL
     description: "Recurso de qualquer natureza (apelação, agravo, embargos)"
     deprecated: false
+    review_status: unroutable
 
   # --- Decisões e provimentos ---
+  decisao:
+    skill_key: extr-decisao-processo
+    description: "Decisão judicial sem subtipo mais específico"
+    deprecated: false
+
   decisao_interlocutoria:
     skill_key: extr-decisao-processo
     description: "Decisão interlocutória do juízo"
     deprecated: false
 
   sentenca:
-    skill_key: extr-sentenca-processo
+    skill_key: extr-decisao-processo
     description: "Sentença de mérito ou terminativa"
     deprecated: false
+    notes: "Roteada para extr-decisao-processo enquanto não houver extrator específico registrado"
 
   despacho:
     skill_key: extr-decisao-processo
@@ -69,36 +76,63 @@ routing:
 
   # --- Documentos técnicos ---
   laudo_pericial:
-    skill_key: extr-laudo-pericial
+    skill_key: REVISAR_MANUAL
     description: "Laudo de perícia técnica ou médica"
     deprecated: false
+    review_status: unroutable
 
   # --- Documentos financeiros ---
   contrato:
-    skill_key: extr-contrato-processo
-    description: "Contratos juntados como prova documental"
+    skill_key: REVISAR_MANUAL
+    description: "Contrato genérico sem subtipo seguro para extração"
+    deprecated: false
+    review_status: unroutable
+
+  contrato_social:
+    skill_key: extr-contrato-social
+    description: "Contrato social e alterações societárias"
+    deprecated: false
+
+  escritura:
+    skill_key: REVISAR_MANUAL
+    description: "Escritura genérica sem subtipo seguro para extração"
+    deprecated: false
+    review_status: unroutable
+
+  escritura_imovel:
+    skill_key: extr-escritura-imovel
+    description: "Escritura pública relativa a imóvel"
+    deprecated: false
+
+  escritura_hipotecaria:
+    skill_key: extr-escritura-hipotecaria
+    description: "Escritura pública de constituição ou registro de hipoteca"
     deprecated: false
 
   nota_fiscal:
-    skill_key: extr-documento-financeiro
+    skill_key: REVISAR_MANUAL
     description: "Nota fiscal ou documento fiscal"
     deprecated: false
+    review_status: unroutable
 
   boleto:
-    skill_key: extr-documento-financeiro
+    skill_key: REVISAR_MANUAL
     description: "Boleto bancário ou comprovante de pagamento"
     deprecated: false
+    review_status: unroutable
 
   # --- Atos de comunicação ---
   citacao:
-    skill_key: extr-ato-comunicacao
+    skill_key: REVISAR_MANUAL
     description: "Mandado de citação"
     deprecated: false
+    review_status: unroutable
 
   intimacao:
-    skill_key: extr-ato-comunicacao
+    skill_key: REVISAR_MANUAL
     description: "Mandado ou carta de intimação"
     deprecated: false
+    review_status: unroutable
 
   # --- Fallback ---
   nao_classificado:

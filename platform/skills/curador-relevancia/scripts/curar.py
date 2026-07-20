@@ -14,6 +14,10 @@ import os
 import copy
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+
+import yaml
 
 from regras import aplicar_regras
 
@@ -22,12 +26,40 @@ TIPOS_IMPACTO_PROTEGIDO = {
     "peticao_inicial", "contestacao", "decisao", "decisao_interlocutoria",
     "sentenca", "recurso",
 }
-TIPOS_COM_EXTRATOR = {
-    "peticao_inicial", "contestacao", "sentenca", "decisao", "decisao_interlocutoria",
-    "despacho", "laudo_pericial", "procuracao", "mandato", "recurso", "contrato",
-}
+REVISAR_MANUAL = "REVISAR_MANUAL"
+ROUTING_MAP_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "yaml-normalizador-juridico"
+    / "assets"
+    / "routing_map.yaml"
+)
 _JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
 _JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+
+
+@lru_cache(maxsize=1)
+def carregar_rotas() -> dict[str, str]:
+    """Carrega o mapa canônico compartilhado com o normalizador."""
+    with ROUTING_MAP_PATH.open(encoding="utf-8") as routing_file:
+        raw = yaml.safe_load(routing_file) or {}
+
+    routing = {
+        document_type: entry.get("skill_key", REVISAR_MANUAL)
+        for document_type, entry in raw.get("routing", {}).items()
+        if not entry.get("deprecated", False)
+    }
+    routing["__fallback__"] = raw.get("fallback", {}).get(
+        "skill_key", REVISAR_MANUAL
+    )
+    return routing
+
+
+def _tipos_com_extrator() -> set[str]:
+    return {
+        document_type
+        for document_type, skill_key in carregar_rotas().items()
+        if document_type != "__fallback__" and skill_key != REVISAR_MANUAL
+    }
 
 
 def _first_non_null(*values):
@@ -99,8 +131,15 @@ def calcular_impacto(peca: dict) -> str:
         and not peca.get("impacto_sentenca_confirmado", False)
     ):
         return "irrelevante"
+    impacto = peca.get("impacto_processual")
+    if peca.get("document_type") in TIPOS_IMPACTO_PROTEGIDO:
+        return (
+            impacto
+            if impacto in ("nuclear", "relevante", "acessorio")
+            else "relevante"
+        )
     if (
-        peca.get("document_type") not in TIPOS_COM_EXTRATOR
+        peca.get("document_type") not in _tipos_com_extrator()
         and not peca.get("impacto_sentenca_confirmado", False)
     ):
         return (
@@ -108,11 +147,8 @@ def calcular_impacto(peca: dict) -> str:
             if peca.get("impacto_processual") == "irrelevante"
             else "acessorio"
         )
-    impacto = peca.get("impacto_processual")
     if impacto in ("nuclear", "relevante", "acessorio"):
         return impacto
-    if peca.get("document_type") in TIPOS_IMPACTO_PROTEGIDO:
-        return "relevante"
     if impacto == "irrelevante":
         return impacto
     rel = peca.get("relevancia_estimada", 0.0)
@@ -144,23 +180,12 @@ def calcular_prioridade(acao: str, impacto: str, confirmado: bool) -> int:
 
 
 def mapear_encaminhamento(document_type: str | None, acao: str) -> str | None:
-    """Sugere skill extr-* destino com base no tipo documental."""
+    """Resolve o destino pelo mapa canônico compartilhado com o normalizador."""
     if acao in ("remover",) or document_type == "capa_processo":
         return None
-    mapa = {
-        "peticao_inicial":        "extr-peticao-processo",
-        "contestacao":            "extr-contestacao-processo",
-        "sentenca":               "extr-decisao-processo",
-        "decisao":                "extr-decisao-processo",
-        "decisao_interlocutoria": "extr-decisao-processo",
-        "despacho":               "extr-decisao-processo",
-        "laudo_pericial":         "extr-laudo-pericial",
-        "procuracao":             "extr-procuracao",
-        "mandato":                "extr-mandato-processo",
-        "recurso":                "extr-recurso-processo",
-        "contrato":               "extr-contrato-social",
-    }
-    return mapa.get(document_type or "", None)
+    routing = carregar_rotas()
+    skill_key = routing.get(document_type or "", routing["__fallback__"])
+    return None if skill_key == REVISAR_MANUAL else skill_key
 
 
 def _build_audit_entry_curator(acao: str, regra: str, gatilhos: list,
