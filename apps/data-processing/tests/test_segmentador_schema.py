@@ -1,5 +1,6 @@
 """Tests for the segmentador-juridico output schema and its registry reference."""
 
+import copy
 import json
 import subprocess
 import sys
@@ -27,6 +28,24 @@ def test_example_output_validates_against_schema():
 def test_validate_output_script_passes_on_example():
     result = subprocess.run(
         [sys.executable, str(VALIDATOR_PATH), str(EXAMPLE_PATH)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_schema_and_manual_validator_accept_process_cover(tmp_path):
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    example = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
+    process_cover = copy.deepcopy(example)
+    process_cover["pecas"][0]["document_type"] = "capa_processo"
+
+    assert not list(jsonschema.Draft7Validator(schema).iter_errors(process_cover))
+
+    output_path = tmp_path / "envelope_capa.json"
+    output_path.write_text(json.dumps(process_cover), encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, str(VALIDATOR_PATH), str(output_path)],
         capture_output=True,
         text=True,
     )

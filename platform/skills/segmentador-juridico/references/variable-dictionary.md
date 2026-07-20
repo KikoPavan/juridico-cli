@@ -39,6 +39,11 @@
 | `page_number_start` | integer \| null | ❌ | Alias aceito; preenche `pages_start` somente quando o campo canônico está vazio |
 | `page_number_end` | integer \| null | ❌ | Alias aceito; preenche `pages_end` somente quando o campo canônico está vazio |
 
+Em documentos agregados, `pages_start` e `pages_end` representam a página física na ordem dos
+`judicial_locator`. O atributo interno `page` pode reiniciar em cada evento. Após materializar, a
+esteira reconcilia limites e identidade com os marcadores efetivamente contidos na peça e registra
+ajustes no `audit_trail`.
+
 ### 2.3. Conteúdo
 
 | Campo | Tipo | Obrig. | Descrição |
@@ -109,6 +114,7 @@
 | `termo` | Termo | Termo processual |
 | `anexo` | Anexo / Documento | Documento anexado sem tipo específico |
 | `comprovante` | Comprovante | Comprovante (pagamento, entrega etc.) |
+| `capa_processo` | Capa do Processo | Folha inicial administrativa de autuação/identificação; não é peça jurídica profunda |
 | `nao_classificado` | Não Classificado | Tipo não determinável — sempre com `observacoes` |
 
 ---
@@ -151,6 +157,9 @@ Cada âncora é um **objeto** com `label` e `page`:
 | `process_number` | string | Processo associado, quando disponível |
 | `event` | string \| integer | Evento associado, quando disponível |
 | `document_code` | string | Código documental associado, quando disponível |
+
+`metadata.document_code` e `metadata.event` só representam o documento inteiro quando houver
+consenso. Em processo agregado, permanecem nulos; os valores específicos ficam em cada peça.
 
 ---
 

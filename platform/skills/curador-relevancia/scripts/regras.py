@@ -4,6 +4,8 @@ regras.py — Motor de regras de negócio do Curador de Relevância
 Projeto: juridico-cli / skill: curador-relevancia
 
 Catálogo de regras:
+  R00 — Capa processual administrativa → remover
+  R00B — Tipo sem extrator reconhecido → revisar
   R01 — Nuclear com sentença confirmada → manter
   R02 — Tipo documental protegido → manter
   R03 — Fallback: baixa confiança → revisar
@@ -56,6 +58,11 @@ TIPOS_REMOVIVEIS = {
     "despacho",
     "certidao",
     "intimacao",
+}
+
+TIPOS_COM_EXTRATOR = {
+    "peticao_inicial", "contestacao", "sentenca", "decisao", "decisao_interlocutoria",
+    "despacho", "laudo_pericial", "procuracao", "mandato", "recurso", "contrato",
 }
 
 
@@ -122,6 +129,29 @@ def r01_nuclear_confirmado(p: dict) -> dict | None:
             "manter", "R01_nuclear_sentenca_confirmado",
             ["impacto_sentenca_confirmado=true"],
             f"Impacto na sentença confirmado; tipo={_tipo(p)} preservado obrigatoriamente.",
+        )
+    return None
+
+
+def r00_capa_processo_administrativa(p: dict) -> dict | None:
+    if _tipo(p) == "capa_processo":
+        return _resultado(
+            "remover", "R00_capa_processo_administrativa",
+            ["document_type=capa_processo", "peca_administrativa"],
+            "Capa processual administrativa sem conteúdo útil à sentença; remoção rastreada.",
+        )
+    return None
+
+
+def r00b_tipo_sem_extrator(p: dict) -> dict | None:
+    tipo = _tipo(p)
+    if tipo not in TIPOS_COM_EXTRATOR:
+        return _resultado(
+            "revisar", "R00B_tipo_sem_extrator",
+            [f"document_type={tipo}", "encaminhamento_extrator=null"],
+            f"Tipo {tipo or 'nulo'} sem extrator reconhecido; encaminhado à revisão segura.",
+            override=True,
+            override_motivo="Ausência de rota extr-* reconhecida",
         )
     return None
 
@@ -315,6 +345,8 @@ def r14_sintetico_fallback(p: dict) -> dict:
 
 REGRAS_UNIVERSAIS = [
     r01_nuclear_confirmado,
+    r00_capa_processo_administrativa,
+    r00b_tipo_sem_extrator,
     r04_prova_documental,
     r05_representacao_processual,
     r02_tipo_protegido,

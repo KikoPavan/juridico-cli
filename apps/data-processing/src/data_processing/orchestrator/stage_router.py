@@ -402,16 +402,61 @@ def _enrich_peca_with_provenance(peca: dict, source_file: str, source_path: str,
     return peca
 
 
-def _materialize_piece(peca: dict, body: str, index: int) -> dict:
+def _materialize_piece(
+    peca: dict,
+    body: str,
+    index: int,
+    *,
+    next_piece: dict | None = None,
+    all_pieces: list[dict] | None = None,
+    locators: list[dict] | None = None,
+) -> dict:
     """Completa o contrato final usando exclusivamente o Markdown como texto fonte."""
     peca = dict(peca)
+    proposed = {
+        "pages_start": _first_non_null(
+            peca.get("pages_start"), peca.get("page_number_start")
+        ),
+        "pages_end": _first_non_null(
+            peca.get("pages_end"), peca.get("page_number_end")
+        ),
+        "event": _first_non_null(peca.get("event"), peca.get("event_id")),
+        "document_code": peca.get("document_code"),
+    }
     peca["piece_id"] = peca.get("piece_id") or f"peca_{index + 1:03d}"
-    start = _first_non_null(peca.get("pages_start"), peca.get("page_number_start"))
-    end = _first_non_null(peca.get("pages_end"), peca.get("page_number_end"))
-    materialized_text = _slice_markdown_by_pages(body, start, end)
+    locator_index = locators if locators is not None else _index_judicial_locators(body)
+    materialized_text, start, end = _resolve_piece_text(
+        peca,
+        body,
+        locator_index,
+        index=index,
+        next_piece=next_piece,
+        all_pieces=all_pieces or [peca],
+    )
     if not materialized_text:
-        raise ValueError(f"Não foi possível materializar texto para {peca['piece_id']}")
+        available = [
+            {
+                "physical_page": locator.get("physical_page"),
+                "page": locator.get("page"),
+                "process_number": locator["attrs"].get("process_number"),
+                "event": locator["attrs"].get("event"),
+                "document_code": locator["attrs"].get("document_code"),
+            }
+            for locator in locator_index
+        ]
+        raise ValueError(
+            "Não foi possível materializar peça: "
+            f"piece_id={peca['piece_id']!r}, "
+            f"document_type={peca.get('document_type')!r}, "
+            f"pages_start={peca.get('pages_start')!r}, "
+            f"pages_end={peca.get('pages_end')!r}, "
+            f"anchors={peca.get('anchors') or []!r}, "
+            f"locators_disponiveis={available!r}"
+        )
+    peca["pages_start"] = start
+    peca["pages_end"] = end
     peca["text"] = materialized_text
+    _reconcile_piece_from_materialized_locators(peca, proposed)
     peca["text_excerpt"] = (peca.get("text_excerpt") or materialized_text[:500]).strip()
     peca["title"] = (peca.get("title") or peca["document_type"]).strip()[:200]
     peca["summary"] = (peca.get("summary") or peca["text_excerpt"][:500]).strip()
@@ -486,6 +531,299 @@ def _extract_judicial_locators(text: str) -> list[tuple[str, dict]]:
     for match in _JUDICIAL_LOCATOR_RE.finditer(text or ""):
         result.append((match.group(0), dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))))
     return result
+
+
+def _index_judicial_locators(text: str) -> list[dict]:
+    """Indexa locators por posição, página local e página física ordinal."""
+    matches = list(_JUDICIAL_LOCATOR_RE.finditer(text or ""))
+    parsed_pages = []
+    for match in matches:
+        attrs = dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))
+        try:
+            parsed_pages.append(int(attrs["page"]))
+        except (KeyError, TypeError, ValueError):
+            parsed_pages.append(None)
+    uses_global_page_numbers = bool(parsed_pages) and all(
+        current is not None and previous is not None and current > previous
+        for previous, current in zip(parsed_pages, parsed_pages[1:])
+    )
+    result = []
+    for index, match in enumerate(matches):
+        attrs = dict(_JUDICIAL_ATTR_RE.findall(match.group(1)))
+        try:
+            page = int(attrs["page"])
+        except (KeyError, TypeError, ValueError):
+            page = None
+        result.append({
+            "literal": match.group(0),
+            "attrs": attrs,
+            "page": page,
+            "physical_page": page if uses_global_page_numbers and page is not None else index + 1,
+            "start": match.start(),
+            "end": match.end(),
+            "segment_end": (
+                matches[index + 1].start() if index + 1 < len(matches) else len(text)
+            ),
+        })
+    return result
+
+
+def _trusted_locator_values(locators: list[tuple[str, dict]], field: str) -> list[str]:
+    """Retorna valores substantivos, ignorando separadores e tokens vazios."""
+    values = []
+    for _, attrs in locators:
+        value = attrs.get(field)
+        if not value or (
+            field == "document_code" and attrs.get("kind") == "event_separator"
+        ):
+            continue
+        value = value.strip()
+        if field == "document_code" and not re.search(r"[A-Z0-9]", value):
+            continue
+        values.append(value)
+    return values
+
+
+def _consensus_locator_value(
+    locators: list[tuple[str, dict]], field: str,
+) -> str | None:
+    values = _trusted_locator_values(locators, field)
+    unique = list(dict.fromkeys(values))
+    return unique[0] if len(unique) == 1 else None
+
+
+def _is_trusted_document_code(value) -> bool:
+    if not isinstance(value, str):
+        return False
+    value = value.strip()
+    return bool(value and re.fullmatch(r"[A-Z0-9][A-Z0-9 _.-]*", value))
+
+
+def _reconcile_piece_from_materialized_locators(peca: dict, proposed: dict) -> None:
+    """Reconcilia identidade local e registra divergências da decisão compacta."""
+    locators = _extract_judicial_locators(peca.get("text", ""))
+    if not locators:
+        return
+
+    process_number = _consensus_locator_value(locators, "process_number")
+    event = _consensus_locator_value(locators, "event")
+    document_code = _consensus_locator_value(locators, "document_code")
+    if document_code is None and _is_trusted_document_code(proposed.get("document_code")):
+        document_code = proposed["document_code"].strip()
+    applied = {
+        "pages_start": peca.get("pages_start"),
+        "pages_end": peca.get("pages_end"),
+        "event": event,
+        "document_code": document_code,
+    }
+    if process_number is not None:
+        peca["process_number"] = process_number
+    if event is not None:
+        peca["event"] = event
+    else:
+        peca.pop("event", None)
+        peca.pop("event_id", None)
+    if document_code is not None:
+        peca["document_code"] = document_code
+    else:
+        peca.pop("document_code", None)
+
+    physical_start = int(peca.get("pages_start") or 1)
+    local_pages = []
+    for _, attrs in locators:
+        try:
+            local_pages.append(int(attrs["page"]))
+        except (KeyError, TypeError, ValueError):
+            local_pages.append(None)
+    uses_local_anchor_pages = (
+        bool(local_pages)
+        and local_pages[0] == peca.get("pages_start")
+        and local_pages[-1] == peca.get("pages_end")
+        and all(
+            current is not None and previous is not None and current > previous
+            for previous, current in zip(local_pages, local_pages[1:])
+        )
+    )
+    peca["anchors"] = [
+        {
+            "label": attrs.get("document_code") or attrs.get("event") or "judicial_locator",
+            "page": local_pages[offset] if uses_local_anchor_pages else physical_start + offset,
+            **({"process_number": attrs["process_number"]} if attrs.get("process_number") else {}),
+            **({"event": attrs["event"]} if attrs.get("event") else {}),
+            **({"document_code": attrs["document_code"]} if attrs.get("document_code") else {}),
+        }
+        for offset, (_, attrs) in enumerate(locators)
+    ]
+
+    changes = {
+        key: {"proposed": proposed.get(key), "applied": applied.get(key)}
+        for key in applied
+        if (
+            proposed.get(key) != applied.get(key)
+            and str(proposed.get(key)) != str(applied.get(key))
+        )
+    }
+    if changes:
+        from datetime import datetime, timezone
+
+        audit_trail = peca.get("audit_trail") or []
+        audit_trail.append({
+            "stage": "segmentador-juridico",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action": "traceability_reconciled_from_materialized_locators",
+            "notes": changes,
+        })
+        peca["audit_trail"] = audit_trail
+
+
+def _piece_identity(piece: dict) -> dict:
+    anchors = piece.get("anchors") or []
+    first_anchor = anchors[0] if anchors else {}
+    return {
+        "process_number": _first_non_null(
+            piece.get("process_number"), piece.get("processo_id"),
+            first_anchor.get("process_number"), first_anchor.get("processo_id"),
+        ),
+        "event": _first_non_null(
+            piece.get("event"), piece.get("event_id"),
+            first_anchor.get("event"), first_anchor.get("event_id"),
+        ),
+        "document_code": _first_non_null(
+            piece.get("document_code"), first_anchor.get("document_code"),
+        ),
+    }
+
+
+def _locator_matches_piece(locator: dict, piece: dict) -> bool:
+    identity = _piece_identity(piece)
+    comparable = [
+        key for key, value in identity.items()
+        if value is not None and locator["attrs"].get(key) is not None
+    ]
+    return not comparable or all(
+        str(locator["attrs"][key]) == str(identity[key]) for key in comparable
+    )
+
+
+def _page_interval(
+    body: str,
+    locators: list[dict],
+    piece: dict,
+    start_page,
+    end_page,
+) -> str:
+    try:
+        start_page = int(start_page)
+        end_page = int(end_page)
+    except (TypeError, ValueError):
+        return ""
+    if start_page > end_page:
+        return ""
+
+    selected = [
+        locator for locator in locators
+        if start_page <= locator["physical_page"] <= end_page
+    ]
+    if not selected:
+        return ""
+    selected_pages = [locator["physical_page"] for locator in selected]
+    if selected_pages[0] != start_page or selected_pages[-1] != end_page:
+        return ""
+    return body[selected[0]["start"]:selected[-1]["segment_end"]].strip()
+
+
+def _piece_start_page(piece: dict | None):
+    if not piece:
+        return None
+    anchors = piece.get("anchors") or []
+    anchor_pages = [anchor.get("page") for anchor in anchors if anchor.get("page") is not None]
+    return _first_non_null(
+        piece.get("pages_start"),
+        piece.get("page_number_start"),
+        min(anchor_pages) if anchor_pages else None,
+    )
+
+
+def _contiguous_locator_groups(locators: list[dict]) -> list[list[dict]]:
+    groups = []
+    for locator in locators:
+        attrs = locator["attrs"]
+        identity = (
+            attrs.get("process_number"), attrs.get("event"), attrs.get("document_code"),
+        )
+        if not any(identity):
+            if groups:
+                groups[-1].append(locator)
+            continue
+        previous_identity = groups[-1][0]["identity"] if groups else None
+        if not groups or identity != previous_identity:
+            groups.append([])
+        locator = dict(locator)
+        locator["identity"] = identity
+        groups[-1].append(locator)
+    return groups
+
+
+def _resolve_piece_text(
+    piece: dict,
+    body: str,
+    locators: list[dict],
+    *,
+    index: int,
+    next_piece: dict | None,
+    all_pieces: list[dict],
+) -> tuple[str, int | None, int | None]:
+    canonical_start = piece.get("pages_start")
+    canonical_end = piece.get("pages_end")
+    text = _page_interval(body, locators, piece, canonical_start, canonical_end)
+    if text:
+        return text, int(canonical_start), int(canonical_end)
+
+    alias_start = piece.get("page_number_start")
+    alias_end = piece.get("page_number_end")
+    text = _page_interval(body, locators, piece, alias_start, alias_end)
+    if text:
+        return text, int(alias_start), int(alias_end)
+
+    anchor_pages = [
+        anchor.get("page") for anchor in piece.get("anchors") or []
+        if anchor.get("page") is not None
+    ]
+    if anchor_pages:
+        text = _page_interval(body, locators, piece, min(anchor_pages), max(anchor_pages))
+        if text:
+            return text, int(min(anchor_pages)), int(max(anchor_pages))
+
+    current_start = _piece_start_page(piece)
+    next_start = _piece_start_page(next_piece)
+    if current_start is not None and next_start is not None:
+        starts = [
+            locator for locator in locators
+            if locator["physical_page"] == int(current_start)
+        ]
+        next_starts = [
+            locator for locator in locators
+            if locator["physical_page"] == int(next_start)
+            and locator["start"] > (starts[0]["start"] if starts else -1)
+        ]
+        if starts and next_starts:
+            text = body[starts[0]["start"]:next_starts[0]["start"]].strip()
+            pages = [
+                locator["physical_page"] for locator in locators
+                if starts[0]["start"] <= locator["start"] < next_starts[0]["start"]
+            ]
+            if text and pages:
+                return text, min(pages), max(pages)
+
+    groups = _contiguous_locator_groups(locators)
+    if len(groups) >= len(all_pieces) and index < len(groups) and groups[index]:
+        group = groups[index]
+        text = body[group[0]["start"]:group[-1]["segment_end"]].strip()
+        pages = [locator["physical_page"] for locator in group]
+        if text and pages:
+            return text, min(pages), max(pages)
+
+    return "", None, None
 
 
 def _locator_groups(text: str) -> dict[tuple, list[tuple[str, dict]]]:
@@ -625,26 +963,37 @@ def _canonicalize_piece_traceability(
     )
 
     piece_locators = _extract_judicial_locators(peca.get("text", ""))
-    source_locators = [
-        locator
-        for locator in _extract_judicial_locators(source_text)
-        if _locator_is_in_piece(locator[1], peca["pages_start"], peca["pages_end"])
-    ]
-    locator_attrs = (piece_locators or source_locators or [("", {})])[0][1]
+    source_locators = []
+    if not piece_locators:
+        source_locators = [
+            (locator["literal"], locator["attrs"])
+            for locator in _index_judicial_locators(source_text)
+            if (
+                peca["pages_start"] is None
+                or peca["pages_end"] is None
+                or int(peca["pages_start"])
+                <= locator["physical_page"]
+                <= int(peca["pages_end"])
+            )
+        ]
+    active_locators = piece_locators or source_locators
+    locator_attrs = (active_locators or [("", {})])[0][1]
+    locator_process = _consensus_locator_value(active_locators, "process_number")
+    locator_event = _consensus_locator_value(active_locators, "event")
+    locator_document_code = _consensus_locator_value(active_locators, "document_code")
 
     process_number = _first_non_null(
-        peca.get("process_number"), peca.get("processo_id"),
+        locator_process, peca.get("process_number"), peca.get("processo_id"),
         metadata.get("process_number"), metadata.get("processo_id"),
         locator_attrs.get("process_number"),
     )
     event = _first_non_null(
-        peca.get("event"), peca.get("event_id"),
+        locator_event, peca.get("event"), peca.get("event_id"),
         metadata.get("event"), metadata.get("event_id"),
         locator_attrs.get("event"),
     )
     document_code = _first_non_null(
-        peca.get("document_code"), metadata.get("document_code"),
-        locator_attrs.get("document_code"),
+        locator_document_code, peca.get("document_code"), metadata.get("document_code"),
     )
     if process_number is not None:
         peca["process_number"] = process_number
@@ -677,7 +1026,21 @@ def _canonicalize_piece_traceability(
     return peca
 
 
-def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
+def _write_json_atomic(path: Path, value: dict) -> None:
+    import json
+
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    with open(temporary_path, "w", encoding="utf-8") as file:
+        json.dump(value, file, ensure_ascii=False, indent=2)
+    temporary_path.replace(path)
+
+
+def run_segmentador_stage(
+    input_md_path: Path,
+    output_path: Path,
+    *,
+    llm_client=None,
+) -> Path:
     """
     Etapa segmentador-juridico da nova esteira.
 
@@ -762,7 +1125,7 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     decision_schema = _flatten_nullable_types(_SEGMENTATION_DECISION_SCHEMA)
 
     # Invocar LLM — com estratégia de resiliência
-    client = shared_llm_mod.LLMClientFactory.create_client()
+    client = llm_client or shared_llm_mod.LLMClientFactory.create_client()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": body},
@@ -787,6 +1150,12 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
                 "Resposta do LLM incompatível e documento sem grupo judicial único"
             ) from exc
 
+    # Persistir a decisão compacta antes de qualquer enriquecimento ou recorte.
+    # Este artefato é diagnóstico e deliberadamente não usa o schema final.
+    output_path.mkdir(parents=True, exist_ok=True)
+    debug_envelope_file = output_path / "envelope_segmentacao_debug.json"
+    _write_json_atomic(debug_envelope_file, envelope)
+
     # =========================================================================
     # Enriquecimento obrigatório de proveniência (correção de handoff)
     # =========================================================================
@@ -798,7 +1167,8 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     if "metadata" not in envelope:
         envelope["metadata"] = {}
     metadata = envelope["metadata"]
-    source_locator_attrs = (_extract_judicial_locators(body) or [("", {})])[0][1]
+    source_locators = _extract_judicial_locators(body)
+    source_locator_attrs = (source_locators or [("", {})])[0][1]
     process_number = _first_non_null(
         frontmatter.get("process_number"), frontmatter.get("processo_id"),
         metadata.get("process_number"), metadata.get("processo_id"),
@@ -806,21 +1176,30 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     )
     event = _first_non_null(
         frontmatter.get("event"), frontmatter.get("event_id"),
-        metadata.get("event"), metadata.get("event_id"),
-        source_locator_attrs.get("event"),
+        _consensus_locator_value(source_locators, "event"),
     )
     document_code = _first_non_null(
-        frontmatter.get("document_code"), metadata.get("document_code"),
-        source_locator_attrs.get("document_code"),
+        frontmatter.get("document_code"),
+        _consensus_locator_value(source_locators, "document_code"),
     )
     if process_number is not None:
         metadata["process_number"] = process_number
-    if event is not None:
-        metadata["event"] = event
-    if document_code is not None:
-        metadata["document_code"] = document_code
+    metadata["event"] = event
+    metadata["document_code"] = document_code
 
-    pecas = [_materialize_piece(piece, body, idx) for idx, piece in enumerate(envelope["pecas"])]
+    compact_pieces = envelope["pecas"]
+    locator_index = _index_judicial_locators(body)
+    pecas = [
+        _materialize_piece(
+            piece,
+            body,
+            idx,
+            next_piece=(compact_pieces[idx + 1] if idx + 1 < len(compact_pieces) else None),
+            all_pieces=compact_pieces,
+            locators=locator_index,
+        )
+        for idx, piece in enumerate(compact_pieces)
+    ]
     envelope["pecas"] = pecas
     for idx, peca in enumerate(pecas):
         _enrich_peca_with_provenance(
@@ -837,7 +1216,7 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     # Atualizar metadata com valores canônicos calculados localmente.
     from datetime import datetime, timezone
 
-    locator_pages = _page_bounds(_extract_judicial_locators(body))
+    locator_pages = _page_bounds(source_locators)
     metadata["processo_id"] = str(_first_non_null(
         metadata.get("processo_id"), process_number, process_group_id,
     ))
@@ -845,9 +1224,14 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
     metadata["gerado_por"] = "segmentador-juridico"
     metadata["timestamp"] = datetime.now(timezone.utc).isoformat()
     metadata["source_file"] = source_file
-    metadata["total_pages"] = (
-        locator_pages[1] if locator_pages[1] is not None
-        else max((piece["pages_end"] or 1 for piece in pecas), default=1)
+    total_page_candidates = [
+        frontmatter.get("total_pages"),
+        len(locator_index) or None,
+        locator_pages[1],
+        max((piece.get("pages_end") or 1 for piece in pecas), default=1),
+    ]
+    metadata["total_pages"] = max(
+        int(value) for value in total_page_candidates if value is not None
     )
     metadata["schema_version"] = "1.1.0"
 
@@ -865,10 +1249,8 @@ def run_segmentador_stage(input_md_path: Path, output_path: Path) -> Path:
         raise ValueError(f"Envelope do segmentador inválido: {details}")
 
     # Persistir envelope
-    output_path.mkdir(parents=True, exist_ok=True)
     envelope_file = output_path / "envelope_segmentacao.json"
-    with open(envelope_file, "w", encoding="utf-8") as f:
-        json.dump(envelope, f, ensure_ascii=False, indent=2)
+    _write_json_atomic(envelope_file, envelope)
 
     total_pecas = len(envelope.get("pecas", []))
     console.print(f"  [green]Segmentação concluída[/green] {envelope_file} ({total_pecas} peças)")

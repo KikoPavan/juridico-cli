@@ -161,6 +161,16 @@ existente nunca é rebaixado.
 | `extr-prazos` | Extrator de prazos | certidao, intimacao, despacho |
 | `null` | Sem encaminhamento | remover, revisar sem tipo |
 
+`capa_processo` é peça administrativa: por padrão recebe `acao_curatorial: remover`,
+`impacto_processual: irrelevante`, prioridade 5 e `encaminhamento: null`. Se houver
+`impacto_sentenca_confirmado: true`, a proteção de preservação prevalece, mas o tipo continua
+sem encaminhamento para extrator profundo.
+
+Tipos sem rota `extr-*` reconhecida, inclusive `nao_classificado`, recebem revisão segura,
+impacto no máximo `acessorio` quando não há impacto confirmado e `encaminhamento: null`.
+Um `document_code` como `PED HABILIT1` é preservado para auditoria, mas não cria subtipo nem
+extrator implicitamente.
+
 ### `audit_trail`
 
 | Campo | Tipo | Descrição |

@@ -22,6 +22,12 @@ Para cada campo: definição, origem, tipo, valores válidos e política para nu
 - **Nulo:** Nunca. Campo obrigatório.
 
 ### `skill_key`
+
+`capa_processo` usa `REVISAR_MANUAL` como defesa não roteável caso alcance o normalizador
+com ação diferente de `remover`; esse tipo nunca declara uma skill `extr-*`.
+
+Qualquer `document_type` sem entrada roteável usa a mesma defesa: `skill_key: REVISAR_MANUAL`,
+`review_status: unroutable` e `status: needs_review`, independentemente da ação curatorial.
 - **Definição:** Chave da skill `extr-*` responsável pela extração profunda desta peça.
 - **Origem:** Derivado de `document_type` via `assets/routing_map.yaml`.
 - **Tipo:** `string`

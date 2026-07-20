@@ -22,6 +22,10 @@ TIPOS_IMPACTO_PROTEGIDO = {
     "peticao_inicial", "contestacao", "decisao", "decisao_interlocutoria",
     "sentenca", "recurso",
 }
+TIPOS_COM_EXTRATOR = {
+    "peticao_inicial", "contestacao", "sentenca", "decisao", "decisao_interlocutoria",
+    "despacho", "laudo_pericial", "procuracao", "mandato", "recurso", "contrato",
+}
 _JUDICIAL_LOCATOR_RE = re.compile(r"\[\[judicial_locator:\s*(.*?)\]\]")
 _JUDICIAL_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
 
@@ -90,6 +94,20 @@ def _timestamp() -> str:
 
 def calcular_impacto(peca: dict) -> str:
     """Determina impacto_processual a partir da peça, com fallback por relevancia_estimada."""
+    if (
+        peca.get("document_type") == "capa_processo"
+        and not peca.get("impacto_sentenca_confirmado", False)
+    ):
+        return "irrelevante"
+    if (
+        peca.get("document_type") not in TIPOS_COM_EXTRATOR
+        and not peca.get("impacto_sentenca_confirmado", False)
+    ):
+        return (
+            "irrelevante"
+            if peca.get("impacto_processual") == "irrelevante"
+            else "acessorio"
+        )
     impacto = peca.get("impacto_processual")
     if impacto in ("nuclear", "relevante", "acessorio"):
         return impacto
@@ -127,12 +145,13 @@ def calcular_prioridade(acao: str, impacto: str, confirmado: bool) -> int:
 
 def mapear_encaminhamento(document_type: str | None, acao: str) -> str | None:
     """Sugere skill extr-* destino com base no tipo documental."""
-    if acao in ("remover",):
+    if acao in ("remover",) or document_type == "capa_processo":
         return None
     mapa = {
         "peticao_inicial":        "extr-peticao-processo",
         "contestacao":            "extr-contestacao-processo",
         "sentenca":               "extr-decisao-processo",
+        "decisao":                "extr-decisao-processo",
         "decisao_interlocutoria": "extr-decisao-processo",
         "despacho":               "extr-decisao-processo",
         "laudo_pericial":         "extr-laudo-pericial",

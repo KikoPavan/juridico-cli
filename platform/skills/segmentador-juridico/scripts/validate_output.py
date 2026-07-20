@@ -86,7 +86,7 @@ def validate_manual(data: dict) -> list[str]:
         "escritura", "laudo_pericial", "parecer", "recurso", "agravo", "apelacao",
         "embargos_declaracao", "impugnacao", "memoriais", "certidao", "ata",
         "oficio", "intimacao", "citacao", "mandado", "termo", "anexo",
-        "comprovante", "nao_classificado"
+        "comprovante", "capa_processo", "nao_classificado"
     }
     valid_confidence = {"high", "medium", "low"}
     seen_ids = set()

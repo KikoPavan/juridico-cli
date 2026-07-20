@@ -132,6 +132,12 @@ Schema: `assets/schema_saida.json`
 3. **Incerteza → `revisar`** — confiança < 0.6 ou tipo null obrigam marcação como `revisar`.
 4. **Texto original intocável** — a skill classifica relevância, nunca altera conteúdo.
 5. **audit_trail como array** — cada skill acrescenta uma `AuditEntry` ao array.
+6. **Capa administrativa** — `capa_processo` sem impacto de sentença confirmado recebe
+   `remover`, impacto `irrelevante`, prioridade 5 e `encaminhamento: null`; a decisão permanece
+   registrada no envelope e nunca aciona uma skill `extr-*`.
+7. **Tipo sem extrator** — peças `nao_classificado` ou sem rota `extr-*` reconhecida recebem
+   revisão segura, impacto no máximo acessório e `encaminhamento: null`; relevância estimada alta
+   não as promove automaticamente a nuclear.
 
 ### Modo `padrao`
 

@@ -58,6 +58,7 @@ classificadas, rastreáveis e prontas para curadoria.
 Varrer o documento em busca de sinais primários (alta confiança) e secundários (suporte):
 
 **Sinais Primários:**
+- Folha inicial de autuação/capa com identificação do processo e sem conteúdo postulatório
 - Cabeçalhos formais: `PETIÇÃO INICIAL`, `CONTESTAÇÃO`, `RÉPLICA`, `SENTENÇA`, `DESPACHO`
 - Fórmulas de endereçamento: `EXCELENTÍSSIMO`, `MERITÍSSIMO`, `MM. JUIZ`
 - Termos de encerramento: `Nesses termos, pede deferimento`, `Publique-se. Intime-se.`
@@ -109,6 +110,13 @@ demais campos obrigatórios a partir do Markdown original antes da validação f
 8. **Âncoras como objetos:** produzir `anchors` como array de `{label, page}`, nunca como array de strings.
 9. **Não copiar texto completo:** nunca produzir `text`, `text_content` ou outro campo com a íntegra
    da peça; o modelo deve devolver apenas os descritores compactos usados para segmentação.
+10. **Capa processual:** classificar folha inicial meramente administrativa como `capa_processo`;
+    não convertê-la em peça postulatória nem assumir que seguirá para extrator jurídico profundo.
+11. **Paginação física:** `pages_start/pages_end` referem-se à ordem física dos
+    `judicial_locator`; o atributo `page` pode reiniciar dentro de cada evento e não deve ampliar
+    o recorte para ocorrências posteriores.
+12. **Identidade local:** `event` e `document_code` de cada peça vêm prioritariamente dos
+    localizadores materializados; valores globais exigem consenso no documento agregado.
 
 ---
 
@@ -147,6 +155,7 @@ Retorne somente o objeto JSON compacto, sem Markdown ou explicações adicionais
 | OCR com >30% de ruído em uma página | Usar sinais estruturais; registrar em `observacoes` |
 | Peça sem título explícito | Inferir título a partir do tipo + partes identificadas |
 | Documento com apenas 1 peça | Retornar array com 1 elemento; não omitir JSON |
+| Capa/folha inicial seguida de peças | Criar `capa_processo` própria e delimitar separadamente das peças jurídicas |
 | Peças aninhadas | Criar peça filha com `piece_id` sufixado (`_a`, `_b`) |
 | Tipo ambíguo | Usar o de maior confiança; registrar alternativa em `observacoes` |
 | Sem marcadores de página | Estimar páginas por densidade textual; `ocr_quality: unknown` |

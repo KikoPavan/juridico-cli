@@ -67,7 +67,8 @@
             "examples": [
               "peticao_inicial", "contestacao", "sentenca", "acordao",
               "despacho", "laudo_pericial", "procuracao", "certidao",
-              "recurso", "contrato", "decisao_interlocutoria", "nao_classificado"
+              "recurso", "contrato", "decisao_interlocutoria", "capa_processo",
+              "nao_classificado"
             ]
           },
           "document_type_confidence": {

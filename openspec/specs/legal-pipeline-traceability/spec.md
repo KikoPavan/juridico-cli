@@ -60,12 +60,24 @@ O projeto SHALL possuir teste automatizado focado na nova esteira, usando a fixt
 
 ### Requirement: Segmentação deriva rastreabilidade dos localizadores de origem
 
-Quando o Markdown de entrada contiver `judicial_locator`, o `segmentador-juridico` MUST usar os localizadores correspondentes a cada peça para preencher valores ausentes de `process_number`, `event`, `document_code`, `pages_start`, `pages_end` e `anchors`. O menor e o maior número de página do grupo MUST definir o intervalo na ausência de valores canônicos explícitos, e os marcadores originais MUST permanecer no texto materializado.
+Quando o Markdown de entrada contiver `judicial_locator`, o `segmentador-juridico` MUST usar prioritariamente os localizadores efetivamente materializados em cada peça para preencher ou reconciliar `process_number`, `event`, `document_code`, `pages_start`, `pages_end` e `anchors`. O menor e o maior número de página da sequência contígua da peça MUST definir o intervalo real quando conflitarem com descritores do LLM. Os marcadores originais MUST permanecer no texto, localizadores de separação ou `event_separator` entre limites válidos MUST NOT impedir a materialização, e qualquer alteração dos valores propostos MUST registrar em auditoria os valores anteriores, os valores aplicados e o motivo. Em documentos com múltiplas peças, a associação MUST considerar os limites e anchors da peça atual e o início da próxima peça, sem atribuir texto inexistente ou de outra peça. Metadados globais MUST NOT sobrescrever identidade específica comprovada pelos localizadores internos da peça.
 
 #### Scenario: Grupo do evento fornece identidade e intervalo
-- **WHEN** o Markdown contém localizadores do processo `4000153-37.2026.8.26.0136/SP`, evento `1`, código `INIC1`, entre as páginas 1 e 15
-- **THEN** a peça materializada contém o mesmo processo, evento e código, `pages_start: 1`, `pages_end: 15`, anchors correspondentes e os localizadores no texto
+- **WHEN** o texto materializado contém somente localizadores do evento `1`, código `INIC1`, entre as páginas 4 e 15
+- **THEN** a peça contém esse evento e código, `pages_start: 4`, `pages_end: 15`, anchors correspondentes e os localizadores originais
 
 #### Scenario: Metadado explícito não é apagado por localizador parcial
 - **WHEN** uma peça possui valor canônico explícito e seu `judicial_locator` omite esse atributo
 - **THEN** o enriquecimento preserva o valor explícito e usa o localizador somente para campos ausentes
+
+#### Scenario: Documento multipiece preserva localizadores da terceira peça
+- **WHEN** um Markdown contém vários grupos de `judicial_locator`, uma página separadora e uma segmentação compacta com pelo menos três peças
+- **THEN** a terceira peça é materializada com os localizadores pertencentes ao seu intervalo em ordem, sem a página separadora impedir o processamento
+
+#### Scenario: Limite proposto é reconciliado e auditado
+- **WHEN** o LLM propõe um intervalo ou código diferente da sequência de localizadores inequivocamente associada à peça
+- **THEN** o envelope usa a evidência dos localizadores e registra o ajuste com valores propostos e aplicados
+
+#### Scenario: Metadado global não contamina peça
+- **WHEN** o documento agregado não possui código global confiável e a peça contém localizadores com `document_code: PED HABILIT1`
+- **THEN** a peça preserva `PED HABILIT1` sem receber código de outra peça nem fragmento global

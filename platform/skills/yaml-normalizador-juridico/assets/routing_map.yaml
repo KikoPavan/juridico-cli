@@ -61,10 +61,11 @@ routing:
     deprecated: false
 
   capa_processo:
-    skill_key: extr-cabecalho-processo
-    description: "Variante de nomenclatura para cabeçalho/capa"
+    skill_key: REVISAR_MANUAL
+    description: "Capa administrativa sem extração jurídica profunda"
     deprecated: false
-    notes: "Alias de cabecalho_processo"
+    review_status: unroutable
+    notes: "Normalmente removida pelo curador; fallback defensivo para revisão manual"
 
   # --- Documentos técnicos ---
   laudo_pericial:
