@@ -2,7 +2,11 @@ import os
 import sys
 import json
 import argparse
+from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
+
+from jsonschema import ValidationError, validators
 
 from .validation.output_checks import check_document_has_content
 
@@ -54,30 +58,48 @@ class DataExtractorApp:
             lf.write(log_line)
         print(message)
 
-    def run_extraction(self, bundle_id: str, input_filename: str):
+    def run_extraction(
+        self,
+        bundle_id: str,
+        input_filename: str,
+        *,
+        input_path: str | os.PathLike[str] | None = None,
+    ):
         # Gerar ID da run
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log(f"=== INICIANDO EXTRAÇÃO V1.1: {run_id} ===", run_id)
         
-        # Tenta ler preferencialmente da pasta md-frontmatter-yaml, com fallbacks
-        input_path_fm = os.path.join(self.dirs["input_md_frontmatter"], input_filename)
-        input_path_clean = os.path.join(self.dirs["input_clean"], input_filename)
-        input_path_fm_legacy = os.path.join(self.dirs["input_processed_fm_legacy"], input_filename)
-        
-        if os.path.exists(input_path_fm):
-            input_path = input_path_fm
-            self.log(f"Entrada enriquecida localizada em md-frontmatter-yaml: {input_path}", run_id)
-        elif os.path.exists(input_path_clean):
-            input_path = input_path_clean
-            self.log(f"Entrada com frontmatter não localizada. Usando fallback limpo: {input_path}", run_id)
-        elif os.path.exists(input_path_fm_legacy):
-            input_path = input_path_fm_legacy
-            self.log(f"[FALLBACK LEGADO] Entrada localizada em processed_fm (remover em migração futura): {input_path}", run_id)
+        if input_path is not None:
+            resolved_input_path = Path(input_path)
+            if not resolved_input_path.is_file():
+                message = f"Caminho de entrada explícito não encontrado: {resolved_input_path}"
+                self.log(f"[ERRO] {message}", run_id)
+                raise FileNotFoundError(message)
+            self.log(f"Entrada explícita localizada: {resolved_input_path}", run_id)
         else:
-            self.log(f"[ERRO] Arquivo não encontrado em md-frontmatter-yaml, processed nem processed_fm: {input_filename}", run_id)
-            sys.exit(1)
+            # Compatibilidade legada: busca por nome nos diretórios históricos.
+            input_path_fm = Path(self.dirs["input_md_frontmatter"]) / input_filename
+            input_path_clean = Path(self.dirs["input_clean"]) / input_filename
+            input_path_fm_legacy = Path(self.dirs["input_processed_fm_legacy"]) / input_filename
+
+            if input_path_fm.exists():
+                resolved_input_path = input_path_fm
+                self.log(f"Entrada enriquecida localizada em md-frontmatter-yaml: {resolved_input_path}", run_id)
+            elif input_path_clean.exists():
+                resolved_input_path = input_path_clean
+                self.log(f"Entrada com frontmatter não localizada. Usando fallback limpo: {resolved_input_path}", run_id)
+            elif input_path_fm_legacy.exists():
+                resolved_input_path = input_path_fm_legacy
+                self.log(f"[FALLBACK LEGADO] Entrada localizada em processed_fm (remover em migração futura): {resolved_input_path}", run_id)
+            else:
+                message = (
+                    "Arquivo não encontrado em md-frontmatter-yaml, processed nem "
+                    f"processed_fm: {input_filename}"
+                )
+                self.log(f"[ERRO] {message}", run_id)
+                raise FileNotFoundError(message)
             
-        with open(input_path, "r", encoding="utf-8") as f:
+        with resolved_input_path.open("r", encoding="utf-8") as f:
             raw_text = f.read()
 
         if not check_document_has_content(raw_text):
@@ -96,14 +118,14 @@ class DataExtractorApp:
                 except Exception as e:
                     self.log(f"[AVISO] Falha ao fazer parser do frontmatter: {e}", run_id)
                     
-        self.log(f"Lido de: {input_path} | Metadados: {frontmatter}", run_id)
+        self.log(f"Lido de: {resolved_input_path} | Metadados: {frontmatter}", run_id)
 
         # 2. Despachar via runtime canônico
         try:
             dispatch_result = self.dispatcher.dispatch(bundle_id)
         except ValueError as e:
             self.log(f"[ERRO] {e}", run_id)
-            sys.exit(1)
+            raise
 
         skill_config = dispatch_result["skill_config"]
         system_prompt = dispatch_result["system_prompt"]
@@ -140,18 +162,36 @@ class DataExtractorApp:
         self.log(f"Usando provider: {provider or 'gemini'} | model: {effective_model}", run_id)
         self.log(f"Enviando dados para processamento...", run_id)
         response = client.generate_structured(messages, schema=schema_json)
-        
-        failed_blocks = response.pop("_failed_blocks", []) if isinstance(response, dict) else []
+
+        payload = deepcopy(response)
+        failed_blocks = payload.pop("_failed_blocks", []) if isinstance(payload, dict) else []
+
+        validator_class = validators.validator_for(schema_json)
+        validator_class.check_schema(schema_json)
+        validation_errors = sorted(
+            validator_class(schema_json).iter_errors(payload),
+            key=lambda error: tuple(str(part) for part in error.absolute_path),
+        )
+        if validation_errors:
+            details = "; ".join(_format_validation_error(error) for error in validation_errors)
+            message = f"Resposta inválida para o schema da skill {bundle_id}: {details}"
+            self.log(f"[ERRO] {message}", run_id)
+            raise ValueError(message)
         
         # 5. Output Final — salva em var/output/extracted/
         out_filename = f"result_{bundle_id}_{input_filename.split('.')[0]}.json"
         out_path = os.path.join(self.dirs["extracted"], out_filename)
         
         with open(out_path, "w", encoding="utf-8") as outf:
-            json.dump(response, outf, indent=2, ensure_ascii=False)
+            json.dump(payload, outf, indent=2, ensure_ascii=False)
             
         if failed_blocks:
             self.log(f"⚠️ Extração concluída com ressalvas! Blocos que falharam: {', '.join(failed_blocks)}. Resultado em: {out_path}", run_id)
         else:
             self.log(f"Extração concluída com sucesso! Resultado em: {out_path}", run_id)
         return out_path
+
+
+def _format_validation_error(error: ValidationError) -> str:
+    path = ".".join(str(part) for part in error.absolute_path) or "<root>"
+    return f"{path}: {error.message}"

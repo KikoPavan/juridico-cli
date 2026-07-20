@@ -153,8 +153,8 @@ def run_analyze_stage(input_path: Path, output_path: Path) -> None:
 def run_collect_stage(collector: CollectorName, config_path: Path, staging_dir: Path | None = None) -> None:
     """
     Dispatch to the new DataExtractorApp (V1.1 Gemini engine) dynamically.
-    Reads the config and dispatches each file to the correct bundle based on
-    the skill_key found in the file's frontmatter (or resolved from routing.map).
+    Reads normalized Markdown and dispatches approved files using only the
+    explicit, registered extr-* skill_key found in frontmatter.
     collector: "cad_obr" | "proc"
     config_path: path to the collector's config.yaml (from project root)
     staging_dir: optional override for staging directory (default: var/staging)
@@ -166,16 +166,6 @@ def run_collect_stage(collector: CollectorName, config_path: Path, staging_dir: 
 
     if not isinstance(config, dict):
         raise ValueError(f"Config do collector deve ser um dict: {config_path}")
-
-    # Build mapping: document_type -> skill_key from routing.map
-    # Normaliza underscores → hyphens para bater com skill_registry.yaml
-    routing_map = {}
-    routing = config.get("routing", {})
-    doc_type_map = routing.get("map", {})
-    for doc_type, cfg in doc_type_map.items():
-        if isinstance(cfg, dict) and "skill_key" in cfg:
-            raw_key = cfg["skill_key"]
-            routing_map[doc_type] = raw_key.replace("_", "-")
 
     console.print(f"[bold]Iniciando Extração Gemini (DataExtractor)[/bold] collector: {collector}")
 
@@ -201,29 +191,53 @@ def run_collect_stage(collector: CollectorName, config_path: Path, staging_dir: 
             parts = raw_text.split("---", 2)
             if len(parts) >= 3:
                 import yaml as _yaml
-                frontmatter = _yaml.safe_load(parts[1]) or {}
+                try:
+                    frontmatter = _yaml.safe_load(parts[1]) or {}
+                except _yaml.YAMLError as exc:
+                    console.print(
+                        f"  [yellow]SKIP[/yellow] {md_file.name}: "
+                        f"frontmatter inválido ({exc})"
+                    )
+                    continue
 
-        document_type = frontmatter.get("document_type")
-        skill_key = frontmatter.get("skill_key")
-
-        # Resolve skill_key from routing map if not in frontmatter
-        if not skill_key and document_type:
-            skill_key = routing_map.get(document_type)
-        if not skill_key and document_type:
-            # Fallback: use document_type as skill_key directly (normaliza _ → -)
-            skill_key = document_type.replace("_", "-")
-
-        if not skill_key:
-            console.print(f"  [red]SKIP[/red] {md_file.name}: sem skill_key ou document_type no frontmatter")
+        if not isinstance(frontmatter, dict):
+            console.print(f"  [yellow]SKIP[/yellow] {md_file.name}: frontmatter inválido")
             continue
 
-        # Evitar duplicar prefixo extr- se já presente
-        if skill_key.startswith("extr-"):
-            bundle_id = skill_key
-        else:
-            bundle_id = f"extr-{skill_key}"
-        console.print(f"  [cyan]Extraindo[/cyan] {md_file.name} → bundle: {bundle_id}")
-        app_engine.run_extraction(bundle_id=bundle_id, input_filename=md_file.name)
+        status = frontmatter.get("status")
+        review_status = frontmatter.get("review_status")
+        skill_key = frontmatter.get("skill_key")
+
+        if status != "ready":
+            console.print(
+                f"  [yellow]SKIP[/yellow] {md_file.name}: status={status!r}, esperado 'ready'"
+            )
+            continue
+        if review_status != "approved":
+            console.print(
+                f"  [yellow]SKIP[/yellow] {md_file.name}: "
+                f"review_status={review_status!r}, esperado 'approved'"
+            )
+            continue
+        if skill_key == "REVISAR_MANUAL":
+            console.print(f"  [yellow]SKIP[/yellow] {md_file.name}: revisão manual")
+            continue
+        if not isinstance(skill_key, str) or not skill_key.startswith("extr-"):
+            console.print(
+                f"  [yellow]SKIP[/yellow] {md_file.name}: "
+                f"skill_key explícito extr-* ausente ou inválido"
+            )
+            continue
+
+        console.print(f"  [cyan]Extraindo[/cyan] {md_file.name} → bundle: {skill_key}")
+        try:
+            app_engine.run_extraction(
+                bundle_id=skill_key,
+                input_filename=md_file.name,
+                input_path=md_file,
+            )
+        except (ValueError, FileNotFoundError) as exc:
+            console.print(f"  [red]REJECTED[/red] {md_file.name}: {exc}")
 
 
 # ===========================================================================
