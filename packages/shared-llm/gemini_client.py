@@ -14,6 +14,28 @@ from google.genai.errors import APIError
 
 logger = logging.getLogger(__name__)
 
+_local_resolver_module_cache = None
+
+
+def _load_local_resolver_mod():
+    """Carrega packages/shared-schemas/local_resolver.py (resolução local e
+    centralizada de $ref de schema, sem acesso à rede). Não é um pacote
+    Python importável (nome com hífen, sem __init__.py), por isso usa
+    carregamento dinâmico por caminho, com cache no módulo."""
+    global _local_resolver_module_cache
+    if _local_resolver_module_cache is not None:
+        return _local_resolver_module_cache
+    import importlib.util
+
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    module_path = os.path.join(base, "packages", "shared-schemas", "local_resolver.py")
+    spec = importlib.util.spec_from_file_location("local_resolver_mod", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    _local_resolver_module_cache = module
+    return module
+
+
 class GeminiLLMClient(LLMClient):
     """
     Integração real via google-genai SDK.
@@ -40,8 +62,6 @@ class GeminiLLMClient(LLMClient):
         import os
         import copy
         import json
-        import jsonschema
-        from jsonschema import RefResolver
         from pathlib import Path
 
         # 1. Definir base_dir
@@ -129,20 +149,12 @@ class GeminiLLMClient(LLMClient):
         contents = self._format_messages(messages)
 
         def _validate_offline(json_obj, target_schema):
-            common_path = os.path.join(base_dir, 'packages', 'shared-schemas', 'defs', 'common.schema.json')
-            common_schema_dict = {}
-            if os.path.exists(common_path):
-                with open(common_path, 'r', encoding='utf-8') as f_common:
-                    common_schema_dict = json.load(f_common)
-
-            store = {
-                target_schema.get("$id", "https://juridico-cli.local/schemas/peticao_processo.schema.json"): target_schema,
-                common_schema_dict.get("$id", "https://juridico-cli.local/schemas/defs/common.schema.json"): common_schema_dict
-            }
-
+            local_resolver_mod = _load_local_resolver_mod()
             shared_schemas_dir = Path(base_dir) / "packages" / "shared-schemas"
-            resolver = RefResolver(base_uri=shared_schemas_dir.as_uri() + "/", referrer=target_schema, store=store)
-            validator = jsonschema.Draft202012Validator(target_schema, resolver=resolver)
+            try:
+                validator = local_resolver_mod.load_validator(target_schema, shared_schemas_dir, shared_schemas_dir)
+            except local_resolver_mod.SchemaReferenceError as ref_err:
+                return False, str(ref_err)
 
             errors = sorted(validator.iter_errors(json_obj), key=lambda err_item: list(err_item.path))
             if errors:
@@ -335,8 +347,6 @@ class GeminiLLMClient(LLMClient):
     def _execute_extraction_in_blocks(self, messages: List[Dict[str, str]], schema: Dict[str, Any], debug_dir: str, max_tokens: int, base_dir: str) -> Any:
         import json
         import copy
-        import jsonschema
-        from jsonschema import RefResolver
         from pathlib import Path
 
         logger.info("=== INICIANDO EXTRAÇÃO POR BLOCOS (ESTRATÉGIA DE ROBUSTEZ N:1) ===")
@@ -546,20 +556,9 @@ class GeminiLLMClient(LLMClient):
                     logger.error(f"❌ Falha crítica ao extrair o Bloco {block_name}: {fallback_exc}. Retornando valores padrão.")
                     partial_json = {}
 
-            common_path = os.path.join(base_dir, 'packages', 'shared-schemas', 'defs', 'common.schema.json')
-            common_schema_dict = {}
-            if os.path.exists(common_path):
-                with open(common_path, 'r', encoding='utf-8') as f_common:
-                    common_schema_dict = json.load(f_common)
-
-            store = {
-                partial_schema.get("$id", f"https://juridico-cli.local/schemas/peticao_processo_{block_name}.schema.json"): partial_schema,
-                common_schema_dict.get("$id", "https://juridico-cli.local/schemas/defs/common.schema.json"): common_schema_dict
-            }
-
+            local_resolver_mod = _load_local_resolver_mod()
             shared_schemas_dir = Path(base_dir) / "packages" / "shared-schemas"
-            resolver = RefResolver(base_uri=shared_schemas_dir.as_uri() + "/", referrer=partial_schema, store=store)
-            validator = jsonschema.Draft202012Validator(partial_schema, resolver=resolver)
+            validator = local_resolver_mod.load_validator(partial_schema, shared_schemas_dir, shared_schemas_dir)
 
             # Rastreamento de falhas de validação
             has_validation_failed = False
@@ -690,12 +689,9 @@ class GeminiLLMClient(LLMClient):
 
         logger.info("Validando JSON consolidado final contra o schema rico completo...")
 
-        store_final = {
-            schema.get("$id", "https://juridico-cli.local/schemas/peticao_processo.schema.json"): schema,
-            common_schema_dict.get("$id", "https://juridico-cli.local/schemas/defs/common.schema.json"): common_schema_dict
-        }
-        resolver_final = RefResolver(base_uri=shared_schemas_dir.as_uri() + "/", referrer=schema, store=store_final)
-        validator_final = jsonschema.Draft202012Validator(schema, resolver=resolver_final)
+        local_resolver_mod = _load_local_resolver_mod()
+        shared_schemas_dir_final = Path(base_dir) / "packages" / "shared-schemas"
+        validator_final = local_resolver_mod.load_validator(schema, shared_schemas_dir_final, shared_schemas_dir_final)
 
         errors_final = sorted(validator_final.iter_errors(consolidated_json), key=lambda e: list(e.path))
         if errors_final:

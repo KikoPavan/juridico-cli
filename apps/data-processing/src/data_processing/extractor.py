@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
-from jsonschema import ValidationError, validators
+from jsonschema import ValidationError
 
 from .validation.output_checks import check_document_has_content
 
@@ -21,6 +21,14 @@ def load_module_from_path(module_name, file_path):
 # Instanciar provedores agnósticos sem acoplamento a pipelines/ ou legacy
 client_mod = load_module_from_path('client_mod', os.path.join(os.getcwd(), 'packages', 'shared-llm', 'client.py'))
 LLMClientFactory = client_mod.LLMClientFactory
+
+# Resolução local e centralizada de $ref de schema (sem acesso à rede)
+local_resolver_mod = load_module_from_path(
+    'local_resolver_mod', os.path.join(os.getcwd(), 'packages', 'shared-schemas', 'local_resolver.py')
+)
+load_validator = local_resolver_mod.load_validator
+SchemaReferenceError = local_resolver_mod.SchemaReferenceError
+SHARED_SCHEMAS_DIR = Path(os.getcwd()) / 'packages' / 'shared-schemas'
 
 class DataExtractorApp:
     """
@@ -166,10 +174,15 @@ class DataExtractorApp:
         payload = deepcopy(response)
         failed_blocks = payload.pop("_failed_blocks", []) if isinstance(payload, dict) else []
 
-        validator_class = validators.validator_for(schema_json)
-        validator_class.check_schema(schema_json)
+        try:
+            validator = load_validator(schema_json, Path(schema_path), SHARED_SCHEMAS_DIR)
+        except SchemaReferenceError as e:
+            message = f"Referência de schema não resolvível para a skill {bundle_id}: {e}"
+            self.log(f"[ERRO] {message}", run_id)
+            raise
+
         validation_errors = sorted(
-            validator_class(schema_json).iter_errors(payload),
+            validator.iter_errors(payload),
             key=lambda error: tuple(str(part) for part in error.absolute_path),
         )
         if validation_errors:
