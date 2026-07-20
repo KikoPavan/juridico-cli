@@ -127,6 +127,8 @@ Se o `document_type` não constar no `routing_map.yaml`:
 - Nunca inventada, nunca interpolada fora do mapa.
 - Se múltiplos `document_type` mapearem para a mesma `skill_key`: comportamento normal.
 - Se `document_type = "nao_classificado"`: sempre `REVISAR_MANUAL`.
+- Toda rota ausente ou `REVISAR_MANUAL` força `review_status: unroutable` e
+  `status: needs_review`, mesmo quando a ação recebida for `manter` ou `resumir`.
 
 ---
 
