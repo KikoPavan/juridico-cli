@@ -43,6 +43,7 @@ gemini_client_mod = _load_module_from_path(
 GeminiLLMClient = gemini_client_mod.GeminiLLMClient
 PeticaoBlockStrategy = block_strategies_mod.PeticaoBlockStrategy
 ContestacaoBlockStrategy = block_strategies_mod.ContestacaoBlockStrategy
+DecisaoBlockStrategy = block_strategies_mod.DecisaoBlockStrategy
 BlockExtractionStrategyUnavailableError = block_strategies_mod.BlockExtractionStrategyUnavailableError
 resolve_block_strategy = block_strategies_mod.resolve_block_strategy
 sanitize_anchor_page_marker = block_strategies_mod.sanitize_anchor_page_marker
@@ -55,6 +56,9 @@ CONTESTACAO_SCHEMA_PATH = (
     ROOT_DIR / "platform" / "skills" / "extr-contestacao-processo" / "assets" / "contestacao_processo.schema.json"
 )
 PETICAO_SCHEMA_PATH = ROOT_DIR / "platform" / "skills" / "extr-peticao-processo" / "assets" / "peticao_processo.schema.json"
+DECISAO_SCHEMA_PATH = (
+    ROOT_DIR / "platform" / "skills" / "extr-decisao-processo" / "assets" / "decisao_processo.schema.json"
+)
 
 PETICAO_ONLY_FIELDS = {
     "peticao_identification", "valor_da_causa", "fatos", "fatos_cronologicos",
@@ -94,6 +98,10 @@ def test_bundle_id_extr_peticao_resolves_peticao_strategy():
 
 def test_bundle_id_extr_contestacao_resolves_contestacao_strategy():
     assert resolve_block_strategy("extr-contestacao-processo") is ContestacaoBlockStrategy
+
+
+def test_bundle_id_extr_decisao_resolves_decisao_strategy():
+    assert resolve_block_strategy("extr-decisao-processo") is DecisaoBlockStrategy
 
 
 def test_unregistered_bundle_id_raises_without_using_peticao_strategy():
@@ -313,3 +321,216 @@ def test_page_marker_bracket_value_from_llm_is_sanitized_in_consolidation(tmp_pa
     assert '"page_marker": "[]"' not in json.dumps(result)
     assert result["process_number"]["anchors"][0]["page_marker"] != "[]"
     assert result["process_number"]["anchors"][0]["page_marker"] == "1"
+
+
+# ---------------------------------------------------------------------------
+# DecisaoBlockStrategy: schema estrito, locators reais e fallback local
+# ---------------------------------------------------------------------------
+
+DECISAO_ALLOWED_FIELDS = {
+    "document_type",
+    "process_number",
+    "decision_type",
+    "decision_date",
+    "decisor",
+    "relatorio",
+    "fundamentacao",
+    "dispositivo",
+    "outcome",
+    "determinacoes",
+    "anchors",
+}
+DECISAO_BLOCK_FIELDS = [
+    {"document_type", "process_number", "decision_type", "decision_date", "decisor", "anchors"},
+    {"document_type", "relatorio"},
+    {"document_type", "fundamentacao"},
+    {"document_type", "dispositivo", "outcome"},
+    {"document_type", "determinacoes"},
+]
+DECISAO_LOCATOR_1 = (
+    '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", '
+    'event="32", document_code="DESPADEC1", page="1"]]'
+)
+DECISAO_LOCATOR_2 = (
+    '[[judicial_locator: process_number="4000153-37.2026.8.26.0136/SP", '
+    'event="32", document_code="DESPADEC1", page="2"]]'
+)
+DECISAO_MARKDOWN = f"""{DECISAO_LOCATOR_1}
+PROCESSO 4000153-37.2026.8.26.0136/SP
+DESPACHO
+# RELATÓRIO
+AUTOR: JURACI PIRES PAVAN. RÉU: BANCO DO BRASIL SA. Documento do evento 18.
+# FUNDAMENTAÇÃO
+A tutela exige probabilidade do direito e perigo de dano.
+{DECISAO_LOCATOR_2}
+# DISPOSITIVO
+DEFIRO a tutela de urgência requerida.
+INTIME-SE a parte ré no prazo de 15 dias.
+"""
+
+
+def _decision_payload(properties_requested, marker=DECISAO_LOCATOR_1):
+    payload = {"document_type": "decisao_processo"}
+    if "process_number" in properties_requested:
+        payload["process_number"] = {
+            "value": "4000153-37.2026.8.26.0136/SP",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "4000153-37.2026.8.26.0136/SP"}],
+        }
+    if "decision_type" in properties_requested:
+        payload["decision_type"] = {
+            "value": "despacho",
+            "value_raw": "DESPACHO",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "DESPACHO"}],
+        }
+    if "decision_date" in properties_requested:
+        payload["decision_date"] = {
+            "value": "2026-04-27",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "27/04/2026"}],
+        }
+    if "decisor" in properties_requested:
+        payload["decisor"] = {
+            "name": "MARCOS ROGÉRIO SANCHES CRUZ GERALDO",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "MARCOS ROGÉRIO"}],
+        }
+    if "anchors" in properties_requested:
+        payload["anchors"] = [{"kind": "pagina", "page_marker": marker, "quote": "DESPACHO"}]
+    if "relatorio" in properties_requested:
+        payload["relatorio"] = [{
+            "text": "AUTOR: JURACI PIRES PAVAN. RÉU: BANCO DO BRASIL SA. Documento do evento 18.",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "AUTOR: JURACI PIRES PAVAN"}],
+        }]
+    if "fundamentacao" in properties_requested:
+        payload["fundamentacao"] = [{
+            "text": "A tutela exige probabilidade do direito e perigo de dano.",
+            "anchors": [{"kind": "pagina", "page_marker": marker, "quote": "probabilidade do direito"}],
+        }]
+    if "dispositivo" in properties_requested:
+        payload["dispositivo"] = [{
+            "text": "DEFIRO a tutela de urgência requerida.",
+            "anchors": [{"kind": "pagina", "page_marker": DECISAO_LOCATOR_2, "quote": "DEFIRO a tutela"}],
+        }]
+    if "outcome" in properties_requested:
+        payload["outcome"] = {
+            "value": "deferiu",
+            "value_raw": "DEFIRO",
+            "anchors": [{"kind": "pagina", "page_marker": DECISAO_LOCATOR_2, "quote": "DEFIRO"}],
+        }
+    if "determinacoes" in properties_requested:
+        payload["determinacoes"] = [{
+            "text": "INTIME-SE a parte ré no prazo de 15 dias.",
+            "anchors": [{"kind": "pagina", "page_marker": DECISAO_LOCATOR_2, "quote": "INTIME-SE"}],
+        }]
+    return payload
+
+
+def _mock_generate_content_for_decisao(*args, **kwargs):
+    config = kwargs["config"]
+    block_schema = getattr(config, "response_json_schema", None) or {}
+    properties_requested = set(block_schema.get("properties", {}))
+    response = MagicMock()
+    response.text = json.dumps(_decision_payload(properties_requested), ensure_ascii=False)
+    return response
+
+
+def _run_decisao(tmp_path, generate_content=_mock_generate_content_for_decisao, schema=None, markdown=DECISAO_MARKDOWN):
+    schema = schema or load_json(DECISAO_SCHEMA_PATH)
+    client = GeminiLLMClient(api_key="mock")
+    mock_generate = MagicMock(side_effect=generate_content)
+    messages = [{"role": "user", "content": markdown}]
+    with patch.object(client.client.models, "generate_content", mock_generate):
+        result = client._dispatch_block_extraction(
+            "extr-decisao-processo", messages, schema, str(tmp_path), 2000, str(ROOT_DIR)
+        )
+    return result, mock_generate
+
+
+def test_decisao_uses_five_schema_derived_blocks_and_only_allowed_fields(tmp_path):
+    result, mock_generate = _run_decisao(tmp_path)
+
+    assert mock_generate.call_count == 5
+    requested = []
+    for call in mock_generate.call_args_list:
+        normalized_schema = call.kwargs["config"].response_json_schema
+        requested.append(set(normalized_schema["properties"]))
+    assert requested == DECISAO_BLOCK_FIELDS
+    assert set(result) <= DECISAO_ALLOWED_FIELDS
+    assert not (set(result) & PETICAO_ONLY_FIELDS)
+    assert not (set(result) & CONTESTACAO_ONLY_FIELDS)
+    assert "AUTOR:" in result["relatorio"][0]["text"]
+    assert "Documento do evento 18" in result["relatorio"][0]["text"]
+    assert "prazo de 15 dias" in result["determinacoes"][0]["text"]
+
+
+def test_decisao_preserves_real_judicial_locator_and_validates_schema(tmp_path):
+    schema = load_json(DECISAO_SCHEMA_PATH)
+    result, _ = _run_decisao(tmp_path, schema=schema)
+
+    markers = [anchor["page_marker"] for anchor in DecisaoBlockStrategy._iter_anchors(result)]
+    assert DECISAO_LOCATOR_1 in markers
+    assert DECISAO_LOCATOR_2 in markers
+    assert "[]" not in markers
+    validator = load_validator(schema, DECISAO_SCHEMA_PATH, SHARED_SCHEMAS_DIR)
+    assert list(validator.iter_errors(result)) == []
+
+
+def test_decisao_invalid_marker_rejects_block_and_uses_local_fallback(tmp_path, caplog):
+    def _invalid_marker(*args, **kwargs):
+        requested = set(kwargs["config"].response_json_schema.get("properties", {}))
+        response = MagicMock()
+        response.text = json.dumps(_decision_payload(requested, marker="[]"), ensure_ascii=False)
+        return response
+
+    result, _ = _run_decisao(tmp_path, generate_content=_invalid_marker)
+
+    markers = [anchor["page_marker"] for anchor in DecisaoBlockStrategy._iter_anchors(result)]
+    assert markers
+    assert set(markers) <= {DECISAO_LOCATOR_1, DECISAO_LOCATOR_2}
+    assert "fallback local determinístico" in caplog.text
+    assert "Bloco IDENTIFICACAO" in caplog.text
+
+
+def test_decisao_fallback_without_marker_does_not_fabricate_anchor(tmp_path):
+    def _always_fail(*args, **kwargs):
+        raise RuntimeError("falha Gemini simulada")
+
+    markdown = "DESPACHO\n# FUNDAMENTAÇÃO\nTexto literal sem qualquer marcador de página."
+    result, mock_generate = _run_decisao(tmp_path, generate_content=_always_fail, markdown=markdown)
+
+    assert mock_generate.call_count == 5
+    assert list(DecisaoBlockStrategy._iter_anchors(result)) == []
+    assert result.get("fundamentacao") == []
+    assert "process_number" not in result
+
+
+def test_decisao_invalid_consolidation_raises_before_return(tmp_path):
+    schema = load_json(DECISAO_SCHEMA_PATH)
+    schema["minProperties"] = 100
+
+    def _always_fail(*args, **kwargs):
+        raise RuntimeError("falha Gemini simulada")
+
+    with pytest.raises(ValueError, match="schema completo"):
+        _run_decisao(
+            tmp_path,
+            generate_content=_always_fail,
+            schema=schema,
+            markdown=f"{DECISAO_LOCATOR_1}\nDESPACHO sem comando decisório explícito.",
+        )
+
+
+def test_decisao_result_passes_official_validate_output_script(tmp_path):
+    result, _ = _run_decisao(tmp_path)
+    result_path = tmp_path / "resultado_decisao.json"
+    result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    validate_script = (
+        ROOT_DIR / "platform" / "skills" / "extr-decisao-processo" / "scripts" / "validate_output.py"
+    )
+
+    proc = subprocess.run(
+        [sys.executable, str(validate_script), "--input", str(result_path)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "OK" in proc.stdout

@@ -2,19 +2,21 @@
 """Validate a JSON output file against the decisao_processo schema."""
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
 
-try:
-    import jsonschema
-    from jsonschema import RefResolver
-except ImportError:
-    print("ERROR: jsonschema not installed. Run: uv add jsonschema", file=sys.stderr)
-    sys.exit(2)
-
 ASSET_SCHEMA = Path(__file__).parent.parent / "assets" / "decisao_processo.schema.json"
 SCHEMAS_DIR = Path(__file__).resolve().parents[4] / "packages" / "shared-schemas"
+
+
+def load_local_resolver():
+    module_path = SCHEMAS_DIR / "local_resolver.py"
+    spec = importlib.util.spec_from_file_location("decisao_local_resolver", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_json(path: Path) -> dict:
@@ -25,8 +27,7 @@ def load_json(path: Path) -> dict:
 def validate(input_path: Path, schema_path: Path) -> bool:
     schema = load_json(schema_path)
     data = load_json(input_path)
-    resolver = RefResolver(base_uri=SCHEMAS_DIR.as_uri() + "/", referrer=schema)
-    validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+    validator = load_local_resolver().load_validator(schema, schema_path, SCHEMAS_DIR)
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
     if not errors:
         print(f"OK  {input_path} — valid against {schema_path.name}")

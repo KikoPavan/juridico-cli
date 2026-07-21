@@ -856,9 +856,428 @@ class ContestacaoBlockStrategy:
         return items
 
 
+class DecisaoBlockStrategy:
+    """Extração por blocos exclusiva de ``extr-decisao-processo``.
+
+    Os blocos e fallbacks abaixo usam somente propriedades do schema canônico
+    de decisão. Falhas do Gemini degradam diretamente para parsing local
+    literal; não há uma segunda chamada livre ao modelo.
+    """
+
+    _BLOCKS: Dict[str, List[str]] = {
+        "IDENTIFICACAO": [
+            "document_type",
+            "process_number",
+            "decision_type",
+            "decision_date",
+            "decisor",
+            "anchors",
+        ],
+        "RELATORIO": ["document_type", "relatorio"],
+        "FUNDAMENTACAO": ["document_type", "fundamentacao"],
+        "CONCLUSAO": ["document_type", "dispositivo", "outcome"],
+        "CUMPRIMENTO": ["document_type", "determinacoes"],
+    }
+
+    _BLOCK_FOCUS = {
+        "IDENTIFICACAO": (
+            "Extract only explicit identification: process number, decision type, "
+            "decision date, judge/deciding body, and general anchors. Do not infer missing data."
+        ),
+        "RELATORIO": (
+            "Extract only literal report passages. Mentions of parties and documentary "
+            "references may remain inside those literal passages; never create extra root fields."
+        ),
+        "FUNDAMENTACAO": (
+            "Extract only literal reasoning passages. Do not summarize, complete, or invent legal grounds."
+        ),
+        "CONCLUSAO": (
+            "Extract only literal dispositive items and an explicit outcome. Each dispositive item "
+            "must have its own documentary anchor. Omit ambiguous outcomes."
+        ),
+        "CUMPRIMENTO": (
+            "Extract only explicit orders such as notices, deadlines, obligations, writs, expert work, "
+            "or remittals as literal determinacoes. Do not infer an unstated order or deadline."
+        ),
+    }
+
+    _LOCATOR_RE = re.compile(r'\[\[judicial_locator:[^\]\n]+\]\]', re.IGNORECASE)
+    _PRIMARY_PAGE_RE = re.compile(r'\[\[Pág\.\s*\d+\]\]', re.IGNORECASE)
+    _LEGACY_PAGE_RE = re.compile(r'<!--\s*page\s*\d+(?::\s*[^>]*)?-->', re.IGNORECASE)
+    _FOLHA_RE = re.compile(r'\bfls?\.\s*\d+\b', re.IGNORECASE)
+    _LOCATOR_PAGE_RE = re.compile(r'\bpage="([^"]+)"', re.IGNORECASE)
+    _NUMBERED_PAGE_RE = re.compile(r'(\d+)')
+
+    _SECTION_HEADINGS = {
+        "RELATORIO": re.compile(r'^(?:#{1,6}\s*)?RELAT[ÓO]RIO\b.*$', re.IGNORECASE | re.MULTILINE),
+        "FUNDAMENTACAO": re.compile(
+            r'^(?:#{1,6}\s*)?(?:FUNDAMENTA[ÇC][ÃA]O|FUNDAMENTOS?)\b.*$',
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "CONCLUSAO": re.compile(
+            r'^(?:#{1,6}\s*)?(?:DISPOSITIVO|DECIDO|CONCLUS[ÃA]O)\b.*$',
+            re.IGNORECASE | re.MULTILINE,
+        ),
+    }
+    _OUTCOME_RE = re.compile(
+        r'\b(?:DEFIRO|INDEFIRO|JULGO\s+(?:PARCIALMENTE\s+)?(?:PROCEDENTE|IMPROCEDENTE)|'
+        r'EXTINGO|HOMOLOGO|NEGO\s+SEGUIMENTO|DOU\s+PROVIMENTO|NEGO\s+PROVIMENTO)\b',
+        re.IGNORECASE,
+    )
+    _ORDER_RE = re.compile(
+        r'\b(?:INTIME-SE|INTIMEM-SE|CITE-SE|CITEM-SE|EXPEÇA-SE|EXPEÇAM-SE|OFICIE-SE|'
+        r'REMETA-SE|NOMEIO|DETERMINO|PRAZO\s+DE|NO\s+PRAZO\s+DE)\b',
+        re.IGNORECASE,
+    )
+    _PROCESS_RE = re.compile(r'\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}(?:/\w{2})?\b')
+    _DATE_RE = re.compile(r'\b(\d{2})/(\d{2})/(\d{4})\b')
+    _TYPE_RE = re.compile(r'\b(DECIS[ÃA]O(?:\s+INTERLOCUT[ÓO]RIA)?|SENTEN[ÇC]A|DESPACHO)\b', re.IGNORECASE)
+    _DECISOR_RE = re.compile(
+        r'^(?:#{1,6}\s*)?(?:JUIZ(?:A)?(?:\s+DE\s+DIREITO)?|DESEMBARGADOR(?:A)?|MINISTRO(?:A)?|RELATOR(?:A)?)'
+        r'\s*[:\-]?\s*(.+)$',
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+    def execute(
+        self,
+        client,
+        messages: List[Dict[str, str]],
+        schema: Dict[str, Any],
+        debug_dir: str,
+        max_tokens: int,
+        base_dir: str,
+    ) -> Any:
+        logger.info("=== INICIANDO EXTRAÇÃO POR BLOCOS (extr-decisao-processo) ===")
+        raw_markdown = _extract_raw_markdown(messages)
+        allowed_properties = set(schema.get("properties", {}))
+        consolidated_json: Dict[str, Any] = {
+            "document_type": schema.get("properties", {})
+            .get("document_type", {})
+            .get("const", "decisao_processo")
+        }
+        failed_blocks: List[str] = []
+
+        local_resolver_mod = _load_local_resolver_mod()
+        shared_schemas_dir = Path(base_dir) / "packages" / "shared-schemas"
+
+        for block_name, fields in self._BLOCKS.items():
+            logger.info("--- Processando Bloco %s: %s ---", block_name, fields[1:])
+            partial_schema = self._build_partial_schema(schema, fields)
+            normalized_partial = client._normalize_schema(partial_schema)
+            partial_json: Any = None
+            failure_reason = ""
+
+            block_messages = copy.deepcopy(messages)
+            instruction = (
+                "\n\nDECISION BLOCK EXTRACTION:\n"
+                f"- {self._BLOCK_FOCUS[block_name]}\n"
+                f"- Output only these root properties: {', '.join(fields)}.\n"
+                "- Output document_type exactly as decisao_processo.\n"
+                "- Every anchor must use a real page marker present in the Markdown. Prefer the exact "
+                "[[judicial_locator: ...]] marker when available. Never output [], an empty marker, or a guessed page.\n"
+                "- Return one raw JSON object and no markdown fence."
+            )
+            if block_messages and block_messages[-1].get("role") == "user":
+                block_messages[-1]["content"] += instruction
+            else:
+                block_messages.append({"role": "user", "content": instruction})
+
+            try:
+                response = client.client.models.generate_content(
+                    model=client.model_name,
+                    contents=client._format_messages(block_messages),
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_json_schema=normalized_partial,
+                        temperature=0.0,
+                        max_output_tokens=max(max_tokens, 16384),
+                        thinking_config=types.ThinkingConfig(thinking_budget=4096),
+                    ),
+                )
+                partial_json = json.loads(response.text or "")
+                if not isinstance(partial_json, dict):
+                    raise ValueError("a resposta do bloco não é um objeto JSON")
+
+                validator = local_resolver_mod.load_validator(
+                    partial_schema, shared_schemas_dir, shared_schemas_dir
+                )
+                validation_errors = list(validator.iter_errors(partial_json))
+                if validation_errors:
+                    details = "; ".join(error.message for error in validation_errors)
+                    raise ValueError(f"subschema inválido: {details}")
+                marker_error = self._validate_anchor_markers(partial_json, raw_markdown)
+                if marker_error:
+                    raise ValueError(marker_error)
+            except Exception as exc:
+                failure_reason = str(exc)
+                failed_blocks.append(block_name)
+                logger.warning(
+                    "Bloco %s usou fallback local determinístico: %s",
+                    block_name,
+                    failure_reason,
+                )
+                partial_json = self._deterministic_fallback(block_name, raw_markdown)
+                fallback_validator = local_resolver_mod.load_validator(
+                    partial_schema, shared_schemas_dir, shared_schemas_dir
+                )
+                fallback_errors = list(fallback_validator.iter_errors(partial_json))
+                if fallback_errors:
+                    details = "; ".join(error.message for error in fallback_errors)
+                    raise ValueError(
+                        f"Fallback local do bloco {block_name} produziu JSON inválido: {details}"
+                    ) from exc
+
+            for key, value in partial_json.items():
+                if key != "document_type" and key in allowed_properties:
+                    consolidated_json[key] = value
+
+        validator_final = local_resolver_mod.load_validator(
+            schema, shared_schemas_dir, shared_schemas_dir
+        )
+        final_errors = sorted(
+            validator_final.iter_errors(consolidated_json), key=lambda error: list(error.path)
+        )
+        if final_errors:
+            details = []
+            for error in final_errors:
+                path = " -> ".join(str(part) for part in error.absolute_path) or "(root)"
+                details.append(f"[{path}] {error.message}")
+            raise ValueError(
+                "JSON consolidado de decisão falhou na validação do schema completo:\n"
+                + "\n".join(details)
+            )
+
+        if failed_blocks:
+            logger.warning(
+                "Extração de decisão concluída com fallback local nos blocos: %s",
+                ", ".join(failed_blocks),
+            )
+        else:
+            logger.info("Extração por blocos de decisão concluída e validada.")
+        return consolidated_json
+
+    @staticmethod
+    def _build_partial_schema(schema: Dict[str, Any], fields: List[str]) -> Dict[str, Any]:
+        partial_schema: Dict[str, Any] = {
+            "type": "object",
+            "required": [field for field in schema.get("required", []) if field in fields],
+            "properties": {
+                field: copy.deepcopy(schema["properties"][field])
+                for field in fields
+                if field in schema.get("properties", {})
+            },
+            "unevaluatedProperties": False,
+        }
+        if "$defs" in schema:
+            partial_schema["$defs"] = copy.deepcopy(schema["$defs"])
+        return partial_schema
+
+    def _validate_anchor_markers(self, payload: Any, markdown: str) -> str:
+        known_markers = self._known_markers(markdown)
+        for anchor in self._iter_anchors(payload):
+            marker = anchor.get("page_marker")
+            if not isinstance(marker, str) or not marker.strip() or marker.strip() in {"[]", "[ ]"}:
+                return f"page_marker inválido: {marker!r}"
+            if marker.strip() not in known_markers:
+                return f"page_marker sem evidência no documento: {marker!r}"
+        return ""
+
+    def _known_markers(self, markdown: str) -> set[str]:
+        markers: set[str] = set()
+        for pattern in (self._LOCATOR_RE, self._PRIMARY_PAGE_RE, self._LEGACY_PAGE_RE, self._FOLHA_RE):
+            for match in pattern.finditer(markdown or ""):
+                literal = match.group(0).strip()
+                markers.add(literal)
+                if pattern is self._LOCATOR_RE:
+                    page_match = self._LOCATOR_PAGE_RE.search(literal)
+                    if page_match:
+                        markers.add(page_match.group(1).strip())
+                else:
+                    number_match = self._NUMBERED_PAGE_RE.search(literal)
+                    if number_match:
+                        markers.add(number_match.group(1))
+        return markers
+
+    @staticmethod
+    def _iter_anchors(node: Any):
+        if isinstance(node, dict):
+            if {"kind", "page_marker", "quote"}.issubset(node):
+                yield node
+            for value in node.values():
+                yield from DecisaoBlockStrategy._iter_anchors(value)
+        elif isinstance(node, list):
+            for item in node:
+                yield from DecisaoBlockStrategy._iter_anchors(item)
+
+    def _deterministic_fallback(self, block_name: str, markdown: str) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"document_type": "decisao_processo"}
+        if block_name == "IDENTIFICACAO":
+            result.update(self._fallback_identification(markdown))
+        elif block_name in {"RELATORIO", "FUNDAMENTACAO"}:
+            field = block_name.lower()
+            result[field] = self._collect_explicit_section(markdown, block_name)
+        elif block_name == "CONCLUSAO":
+            items = self._collect_explicit_section(markdown, "CONCLUSAO")
+            if not items:
+                items = self._collect_matching_lines(markdown, self._OUTCOME_RE, max_items=20)
+            result["dispositivo"] = items
+            outcome = self._fallback_outcome(items)
+            if outcome:
+                result["outcome"] = outcome
+        elif block_name == "CUMPRIMENTO":
+            result["determinacoes"] = self._collect_matching_lines(
+                markdown, self._ORDER_RE, max_items=20
+            )
+        return result
+
+    def _fallback_identification(self, markdown: str) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+        process_match = self._PROCESS_RE.search(markdown or "")
+        if process_match:
+            anchor = self._anchor_for_match(markdown, process_match)
+            if anchor:
+                result["process_number"] = {
+                    "value": process_match.group(0),
+                    "anchors": [anchor],
+                }
+
+        type_match = self._TYPE_RE.search(markdown or "")
+        if type_match:
+            raw_type = type_match.group(0)
+            normalized = raw_type.casefold()
+            if "senten" in normalized:
+                value = "sentenca"
+            elif "despacho" in normalized:
+                value = "despacho"
+            else:
+                value = "decisao"
+            anchor = self._anchor_for_match(markdown, type_match)
+            if anchor:
+                result["decision_type"] = {
+                    "value": value,
+                    "value_raw": raw_type,
+                    "anchors": [anchor],
+                }
+
+        date_match = self._DATE_RE.search(markdown or "")
+        if date_match:
+            anchor = self._anchor_for_match(markdown, date_match)
+            if anchor:
+                result["decision_date"] = {
+                    "value": f"{date_match.group(3)}-{date_match.group(2)}-{date_match.group(1)}",
+                    "anchors": [anchor],
+                }
+
+        decisor_match = self._DECISOR_RE.search(markdown or "")
+        if decisor_match:
+            name = decisor_match.group(1).strip()
+            anchor = self._anchor_for_match(markdown, decisor_match, quote=name)
+            if name and anchor:
+                result["decisor"] = {"name": name, "anchors": [anchor]}
+        return result
+
+    def _collect_explicit_section(
+        self, markdown: str, block_name: str, max_items: int = 30
+    ) -> List[Dict[str, Any]]:
+        heading = self._SECTION_HEADINGS[block_name].search(markdown or "")
+        if heading is None:
+            return []
+        end = len(markdown)
+        for other in self._SECTION_HEADINGS.values():
+            candidate = other.search(markdown, heading.end())
+            if candidate and candidate.start() < end:
+                end = candidate.start()
+        return self._literal_lines(markdown, heading.end(), end, max_items)
+
+    def _collect_matching_lines(
+        self, markdown: str, pattern: "re.Pattern", max_items: int
+    ) -> List[Dict[str, Any]]:
+        items: List[Dict[str, Any]] = []
+        offset = 0
+        for line in (markdown or "").splitlines(keepends=True):
+            stripped = line.strip()
+            if stripped and pattern.search(stripped):
+                match = re.search(re.escape(stripped), markdown[offset:], re.MULTILINE)
+                absolute_start = offset + (match.start() if match else 0)
+                anchor = self._anchor_for_position(markdown, absolute_start, stripped)
+                if anchor:
+                    items.append({"text": stripped[:6000], "anchors": [anchor]})
+                    if len(items) >= max_items:
+                        break
+            offset += len(line)
+        return items
+
+    def _literal_lines(
+        self, markdown: str, start: int, end: int, max_items: int
+    ) -> List[Dict[str, Any]]:
+        items: List[Dict[str, Any]] = []
+        offset = start
+        for line in markdown[start:end].splitlines(keepends=True):
+            stripped = line.strip()
+            if stripped and not self._is_marker(stripped) and not stripped.startswith("#"):
+                anchor = self._anchor_for_position(markdown, offset, stripped)
+                if anchor:
+                    items.append({"text": stripped[:6000], "anchors": [anchor]})
+                    if len(items) >= max_items:
+                        break
+            offset += len(line)
+        return items
+
+    def _anchor_for_match(
+        self, markdown: str, match: "re.Match", quote: Optional[str] = None
+    ) -> Optional[Dict[str, str]]:
+        return self._anchor_for_position(markdown, match.start(), quote or match.group(0))
+
+    def _anchor_for_position(
+        self, markdown: str, position: int, quote: str
+    ) -> Optional[Dict[str, str]]:
+        marker = self._last_marker_before(markdown, position)
+        if marker is None or not quote.strip():
+            return None
+        kind = "folha" if self._FOLHA_RE.fullmatch(marker) else "pagina"
+        return {"kind": kind, "page_marker": marker, "quote": quote.strip()[:1200]}
+
+    def _last_marker_before(self, markdown: str, position: int) -> Optional[str]:
+        last: Optional[tuple[int, str]] = None
+        prefix = (markdown or "")[:position]
+        for pattern in (self._LOCATOR_RE, self._PRIMARY_PAGE_RE, self._LEGACY_PAGE_RE, self._FOLHA_RE):
+            for match in pattern.finditer(prefix):
+                if last is None or match.start() > last[0]:
+                    last = (match.start(), match.group(0).strip())
+        return last[1] if last else None
+
+    def _is_marker(self, text: str) -> bool:
+        return any(
+            pattern.fullmatch(text)
+            for pattern in (self._LOCATOR_RE, self._PRIMARY_PAGE_RE, self._LEGACY_PAGE_RE)
+        )
+
+    @staticmethod
+    def _fallback_outcome(items: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        mapping = (
+            (re.compile(r'\bINDEFIRO\b', re.IGNORECASE), "indeferiu"),
+            (re.compile(r'\bDEFIRO\b', re.IGNORECASE), "deferiu"),
+            (re.compile(r'\bJULGO\s+IMPROCEDENTE\b', re.IGNORECASE), "improcedente"),
+            (re.compile(r'\bJULGO\s+PROCEDENTE\b', re.IGNORECASE), "procedente"),
+            (re.compile(r'\bEXTINGO\b', re.IGNORECASE), "extinguiu"),
+            (re.compile(r'\bHOMOLOGO\b', re.IGNORECASE), "homologou"),
+        )
+        for item in items:
+            for pattern, value in mapping:
+                match = pattern.search(item["text"])
+                if match:
+                    return {
+                        "value": value,
+                        "value_raw": match.group(0),
+                        "anchors": copy.deepcopy(item["anchors"]),
+                    }
+        return None
+
+
 BLOCK_STRATEGIES = {
     "extr-peticao-processo": PeticaoBlockStrategy,
     "extr-contestacao-processo": ContestacaoBlockStrategy,
+    "extr-decisao-processo": DecisaoBlockStrategy,
 }
 
 
