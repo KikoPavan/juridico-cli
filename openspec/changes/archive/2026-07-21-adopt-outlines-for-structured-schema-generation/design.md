@@ -43,6 +43,28 @@ A skill may use Outlines only when its output is schema-bound.
 
 The canonical schema remains the source of truth.
 
+## Integration placement decision
+
+If operational integration is authorized after the deferred validation gate, the
+Outlines adapter belongs in `packages/shared-llm/`, behind the existing shared LLM
+interface. It must not be embedded in a specific skill script because structured
+generation is a reusable LLM capability and skill-specific extraction strategies
+must remain unchanged.
+
+This decision does not authorize implementation or add Outlines as a project
+dependency. Until the deferral in `deferred.md` is lifted, the validated prototype
+remains isolated from production code.
+
+Any future skill that opts into the shared adapter must still be dispatched by
+`platform/skill-runtime/skill_dispatcher.py`, registered in
+`platform/skill-runtime/skill_registry.yaml`, and use an LLM profile from
+`platform/skill-runtime/llm_registry.yaml`. The adapter is not a dispatcher,
+registry, validator, or parallel runtime.
+
+Generation constraints are auxiliary. Every produced value must still be checked
+by the existing validator against the canonical schema; no canonical schema is
+owned, copied, or redefined by the adapter.
+
 ## Version control
 
 The version and operational status of Outlines must be registered in:

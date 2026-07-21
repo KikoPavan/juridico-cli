@@ -21,14 +21,14 @@
 
 ## 4. Runtime integration
 
-- [ ] Decide whether Outlines integration belongs in `packages/` or inside a specific skill script
-- [ ] Ensure no parallel skill runtime is created
-- [ ] Ensure skill execution still passes through `platform/skill-runtime/`
+- [x] Decide whether Outlines integration belongs in `packages/` or inside a specific skill script
+- [x] Ensure no parallel skill runtime is created
+- [x] Ensure skill execution still passes through `platform/skill-runtime/`
 
 ## 5. Acceptance criteria
 
-- [ ] Outlines is documented in the version matrix
-- [ ] Outlines is documented architecturally as structured-generation support
-- [ ] No code is changed before validation
-- [ ] No runtime replacement is introduced
-- [ ] Schemas remain the canonical contracts
+- [x] Outlines is documented in the version matrix
+- [x] Outlines is documented architecturally as structured-generation support
+- [x] No code is changed before validation
+- [x] No runtime replacement is introduced
+- [x] Schemas remain the canonical contracts
