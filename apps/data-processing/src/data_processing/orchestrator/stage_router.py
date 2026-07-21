@@ -582,6 +582,9 @@ def _index_judicial_locators(text: str) -> list[dict]:
             "segment_end": (
                 matches[index + 1].start() if index + 1 < len(matches) else len(text)
             ),
+            "segment": text[match.end():(
+                matches[index + 1].start() if index + 1 < len(matches) else len(text)
+            )],
         })
     return result
 
@@ -1065,6 +1068,43 @@ def _compact_piece_bounds(piece: dict) -> tuple[int | None, int | None]:
         return None, None
 
 
+def _is_document_type_separator(piece: dict) -> bool:
+    raw_type = piece.get("document_type", "")
+    if "separador" in raw_type.lower():
+        return True
+    for anchor in piece.get("anchors") or []:
+        if anchor.get("kind") == "event_separator":
+            return True
+    return False
+
+
+def _is_separator_absorbable(left: dict, right: dict) -> bool:
+    left_is_sep = _is_document_type_separator(left)
+    right_is_sep = _is_document_type_separator(right)
+    if left_is_sep == right_is_sep:
+        return False
+    sep_piece = left if left_is_sep else right
+    real_piece = right if left_is_sep else left
+    sep_identity = _piece_identity(sep_piece)
+    real_identity = _piece_identity(real_piece)
+    if sep_identity.get("event") is None or real_identity.get("event") is None:
+        return False
+    if str(sep_identity["event"]) != str(real_identity["event"]):
+        return False
+    left_pn = re.sub(r"/[A-Z]{2}$", "", str(sep_identity.get("process_number", "")), flags=re.IGNORECASE)
+    right_pn = re.sub(r"/[A-Z]{2}$", "", str(real_identity.get("process_number", "")), flags=re.IGNORECASE)
+    if left_pn != right_pn:
+        return False
+    normalized_real = _normalize_document_type(real_piece.get("document_type", ""))
+    if normalized_real == "nao_classificado":
+        return False
+    sep_code = sep_identity.get("document_code")
+    real_code = real_identity.get("document_code")
+    if sep_code is not None and real_code is not None and str(sep_code) != str(real_code):
+        return False
+    return True
+
+
 def _compatible_partial_identity(left: dict, right: dict) -> bool:
     left_identity = _piece_identity(left)
     right_identity = _piece_identity(right)
@@ -1087,7 +1127,9 @@ def _compatible_partial_identity(left: dict, right: dict) -> bool:
         and str(left_identity[field]) == str(right_identity[field])
         for field in ("event", "document_code")
     )
-    return same_type or same_strong_identity
+    if same_type or same_strong_identity:
+        return True
+    return _is_separator_absorbable(left, right)
 
 
 def _partial_descriptor(piece: dict, *, window: dict, local_index: int, source_file: str) -> dict:
@@ -1206,21 +1248,6 @@ def _fill_uncovered_pages(merged: list[dict], locators: list[dict], total_pages:
 
     for pages in groups:
         gap_locators = [locator for locator in locators if locator["physical_page"] in pages]
-        next_piece = next(
-            (piece for piece in merged if piece["pages_start"] == pages[-1] + 1), None
-        )
-        separator_events = {
-            locator["attrs"].get("event")
-            for locator in gap_locators
-            if locator["attrs"].get("kind") == "event_separator"
-        }
-        if (
-            next_piece is not None
-            and len(separator_events) == 1
-            and str(_piece_identity(next_piece).get("event")) == str(next(iter(separator_events)))
-        ):
-            next_piece["pages_start"] = pages[0]
-            continue
         if len(gap_locators) != len(pages):
             raise ValueError(f"Lacuna sem páginas reais verificáveis: {pages!r}")
         merged.append({
@@ -1237,6 +1264,290 @@ def _fill_uncovered_pages(merged: list[dict], locators: list[dict], total_pages:
             ],
         })
     return sorted(merged, key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+
+
+def _normalized_process_number(value) -> str | None:
+    if value is None or not str(value).strip():
+        return None
+    return re.sub(r"/[A-Z]{2}$", "", str(value).strip(), flags=re.IGNORECASE)
+
+
+def _locator_is_structural_event_separator(locator: dict) -> bool:
+    if locator.get("attrs", {}).get("kind") == "event_separator":
+        return True
+    segment = locator.get("segment", "")
+    return bool(re.search(
+        r"(?im)^#*\s*P[ÁA]GINA\s+DE\s+SEPARA(?:Ç|C)[ÃA]O\s*$",
+        segment,
+    ))
+
+
+def _is_specific_document_piece(piece: dict) -> bool:
+    document_type = str(piece.get("document_type", "")).strip().lower()
+    return (
+        document_type not in {"", "nao_classificado", "não classificado"}
+        and "separador" not in document_type
+        and _is_trusted_document_code(_piece_identity(piece).get("document_code"))
+    )
+
+
+def _canonicalize_structural_event_separators(
+    pieces: list[dict], locators: list[dict] | None,
+) -> list[dict]:
+    """Absorve separadores pela evidência original, não pelo rótulo retornado pelo LLM."""
+    if not locators or not pieces:
+        return pieces
+    result = sorted(pieces, key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+    separator_locators = [item for item in locators if _locator_is_structural_event_separator(item)]
+    groups: list[list[dict]] = []
+    for locator in separator_locators:
+        if (
+            not groups
+            or locator["physical_page"] != groups[-1][-1]["physical_page"] + 1
+        ):
+            groups.append([locator])
+        else:
+            groups[-1].append(locator)
+
+    locator_by_page = {item["physical_page"]: item for item in locators}
+    for group in groups:
+        start = group[0]["physical_page"]
+        end = group[-1]["physical_page"]
+        separator_processes = {
+            _normalized_process_number(item.get("attrs", {}).get("process_number"))
+            for item in group
+        }
+        separator_events = {item.get("attrs", {}).get("event") for item in group}
+        if None in separator_processes or None in separator_events:
+            continue
+        if len(separator_processes) != 1 or len(separator_events) != 1:
+            continue
+
+        next_locator = locator_by_page.get(end + 1)
+        if next_locator is None:
+            continue
+        next_attrs = next_locator.get("attrs", {})
+        document_code = next_attrs.get("document_code")
+        if not _is_trusted_document_code(document_code):
+            continue
+        process_number = next(iter(separator_processes))
+        event = next(iter(separator_events))
+        if _normalized_process_number(next_attrs.get("process_number")) != process_number:
+            continue
+        if str(next_attrs.get("event")) != str(event):
+            continue
+        separator_codes = {
+            item.get("attrs", {}).get("document_code")
+            for item in group
+            if _is_trusted_document_code(item.get("attrs", {}).get("document_code"))
+        }
+        if separator_codes and separator_codes != {document_code}:
+            continue
+
+        candidates = [
+            piece for piece in result
+            if piece["pages_start"] <= end + 1 <= piece["pages_end"]
+            and _is_specific_document_piece(piece)
+            and _normalized_process_number(_piece_identity(piece).get("process_number"))
+            == process_number
+            and str(_piece_identity(piece).get("event")) == str(event)
+            and str(_piece_identity(piece).get("document_code")) == str(document_code)
+        ]
+        if len(candidates) != 1:
+            continue
+        target = candidates[0]
+        if target["pages_start"] not in (start, end + 1):
+            continue
+
+        owners = [
+            piece for piece in result
+            if piece is not target
+            and piece["pages_start"] <= end
+            and piece["pages_end"] >= start
+        ]
+        if any(
+            owner["pages_start"] < start or owner["pages_end"] > end
+            for owner in owners
+        ):
+            continue
+        result = [piece for piece in result if piece not in owners]
+        target["pages_start"] = start
+        target["anchors"] = [
+            anchor for anchor in (target.get("anchors") or [])
+            if not (start <= int(anchor.get("page") or 0) <= end)
+        ]
+        target["anchors"] = _merge_partial_anchors(target, {
+            "anchors": [{
+                "label": "event_separator",
+                "page": item["physical_page"],
+            } for item in group],
+        })
+        result.sort(key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+    return result
+
+
+def _canonicalize_specific_document_boundaries(
+    pieces: list[dict], locators: list[dict] | None,
+) -> list[dict]:
+    """Alinha limites e tipo de documentos fortes aos grupos contíguos da origem."""
+    if not locators or not pieces:
+        return pieces
+    physical_pages = {item.get("physical_page") for item in locators}
+    if physical_pages != set(range(1, max(physical_pages) + 1)):
+        return pieces
+    groups: list[list[dict]] = []
+    for locator in locators:
+        attrs = locator.get("attrs", {})
+        identity = (
+            _normalized_process_number(attrs.get("process_number")),
+            attrs.get("event"),
+            attrs.get("document_code") if _is_trusted_document_code(
+                attrs.get("document_code")
+            ) else None,
+        )
+        if identity[0] is None or identity[1] is None or identity[2] is None:
+            continue
+        if (
+            not groups
+            or locator["physical_page"] != groups[-1][-1]["physical_page"] + 1
+            or identity != groups[-1][0]["_canonical_identity"]
+        ):
+            item = dict(locator)
+            item["_canonical_identity"] = identity
+            groups.append([item])
+        else:
+            groups[-1].append(locator)
+
+    result = sorted(pieces, key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+    for group in groups:
+        process_number, event, document_code = group[0]["_canonical_identity"]
+        candidates = [
+            piece for piece in result
+            if _normalized_process_number(_piece_identity(piece).get("process_number"))
+            == process_number
+            and str(_piece_identity(piece).get("event")) == str(event)
+            and str(_piece_identity(piece).get("document_code")) == str(document_code)
+            and _is_specific_document_piece(piece)
+        ]
+        if not candidates:
+            continue
+        start = group[0]["physical_page"]
+        end = group[-1]["physical_page"]
+        previous_locator = next(
+            (item for item in locators if item["physical_page"] == start - 1), None
+        )
+        if previous_locator and _locator_is_structural_event_separator(previous_locator):
+            previous_attrs = previous_locator.get("attrs", {})
+            previous_code = previous_attrs.get("document_code")
+            if (
+                _normalized_process_number(previous_attrs.get("process_number"))
+                == process_number
+                and str(previous_attrs.get("event")) == str(event)
+                and (
+                    not _is_trusted_document_code(previous_code)
+                    or str(previous_code) == str(document_code)
+                )
+            ):
+                start -= 1
+        candidates = [
+            piece for piece in candidates
+            if piece["pages_start"] <= end and piece["pages_end"] >= start
+        ]
+        if not candidates:
+            continue
+        candidates.sort(key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+        target = candidates[0]
+        for fragment in candidates[1:]:
+            target["anchors"] = _merge_partial_anchors(target, fragment)
+            result.remove(fragment)
+        unclassified_fragments = [
+            piece for piece in result
+            if piece is not target
+            and _normalize_document_type(piece.get("document_type", ""))
+            == "nao_classificado"
+            and start <= piece["pages_start"]
+            and piece["pages_end"] <= end
+        ]
+        for fragment in unclassified_fragments:
+            result.remove(fragment)
+        target["pages_start"] = start
+        target["pages_end"] = end
+        segment = "".join(item.get("segment", "") for item in group)
+        inferred_type = _infer_single_piece_type(segment, "", document_code)
+        if inferred_type != "nao_classificado":
+            target["document_type"] = inferred_type
+
+    result.sort(key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+    if any(
+        right["pages_start"] <= left["pages_end"]
+        for left, right in zip(result, result[1:])
+    ):
+        return pieces
+    return result
+
+
+def _should_coalesce(left: dict, right: dict, locators: list[dict] | None = None) -> bool:
+    if left["pages_end"] + 1 != right["pages_start"]:
+        return False
+    left_id = _piece_identity(left)
+    right_id = _piece_identity(right)
+    nao_class = _normalize_document_type(right.get("document_type", "")) == "nao_classificado"
+    if nao_class and left_id.get("event") is not None and left_id.get("document_code") is not None:
+        if locators is not None:
+            for page in range(right["pages_start"], right["pages_end"] + 1):
+                gap_loc = next((l for l in locators if l["physical_page"] == page), None)
+                if gap_loc is None:
+                    return False
+                gap_event = gap_loc.get("attrs", {}).get("event")
+                gap_code = gap_loc.get("attrs", {}).get("document_code")
+                gap_process = gap_loc.get("attrs", {}).get("process_number")
+                if gap_event is not None and str(gap_event) != str(left_id["event"]):
+                    return False
+                if gap_code is not None and str(gap_code) != str(left_id["document_code"]):
+                    return False
+                if gap_process is None or str(gap_process) != str(left_id["process_number"]):
+                    return False
+            return True
+        return False
+    same_strong = all(
+        left_id.get(f) is not None
+        and right_id.get(f) is not None
+        and str(left_id[f]) == str(right_id[f])
+        for f in ("process_number", "event", "document_code")
+    )
+    if same_strong:
+        return True
+    same_type = _normalize_document_type(
+        left.get("document_type", "")
+    ) == _normalize_document_type(right.get("document_type", ""))
+    same_ec = all(
+        left_id.get(f) is not None
+        and right_id.get(f) is not None
+        and str(left_id[f]) == str(right_id[f])
+        for f in ("event", "document_code")
+    )
+    if same_type and same_ec:
+        return True
+    return False
+
+
+def _coalesce_contiguous_fragments(
+    merged: list[dict], locators: list[dict] | None = None
+) -> list[dict]:
+    if len(merged) < 2:
+        return merged
+    result = [merged[0]]
+    for piece in merged[1:]:
+        previous = result[-1]
+        if _should_coalesce(previous, piece, locators):
+            previous["pages_end"] = max(previous["pages_end"], piece["pages_end"])
+            previous["anchors"] = _merge_partial_anchors(previous, piece)
+            piece_type_norm = _normalize_document_type(piece.get("document_type", ""))
+            if piece_type_norm != "nao_classificado":
+                previous["document_code"] = piece.get("document_code", previous.get("document_code"))
+        else:
+            result.append(piece)
+    return result
 
 
 def _merge_partial_pieces(
@@ -1279,6 +1590,9 @@ def _merge_partial_pieces(
             piece_context = piece.get("_partial_context") or {}
             if previous_context and piece_context:
                 previous_context.update(piece_context)
+            if _is_document_type_separator(previous) and not _is_document_type_separator(piece):
+                previous["document_type"] = piece["document_type"]
+                previous["document_code"] = piece.get("document_code", previous.get("document_code"))
             continue
         if overlaps:
             previous_context = previous.get("_partial_context") or {}
@@ -1297,6 +1611,9 @@ def _merge_partial_pieces(
 
     if locators is not None:
         merged = _fill_uncovered_pages(merged, locators, total_pages)
+        merged = _canonicalize_structural_event_separators(merged, locators)
+        merged = _canonicalize_specific_document_boundaries(merged, locators)
+    merged = _coalesce_contiguous_fragments(merged, locators)
     for index, piece in enumerate(merged):
         piece.pop("_partial_context", None)
         piece["piece_id"] = f"peca_{index + 1:03d}"
@@ -1546,6 +1863,19 @@ def _segment_one_markdown(
                 "Segmentação sem evidência determinística suficiente; needs_review"
             ) from exc
 
+    locator_index = _index_judicial_locators(body)
+    if all(
+        piece.get("pages_start") is not None and piece.get("pages_end") is not None
+        for piece in envelope["pecas"]
+    ):
+        envelope["pecas"] = _canonicalize_structural_event_separators(
+            envelope["pecas"], locator_index
+        )
+        envelope["pecas"] = _canonicalize_specific_document_boundaries(
+            envelope["pecas"], locator_index
+        )
+    for index, piece in enumerate(envelope["pecas"]):
+        piece["piece_id"] = f"peca_{index + 1:03d}"
     _validate_compact_segmentation(envelope)
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_json_atomic(output_dir / "envelope_segmentacao_debug.json", envelope)
@@ -1572,7 +1902,6 @@ def _segment_one_markdown(
     metadata["document_code"] = document_code
 
     compact_pieces = envelope["pecas"]
-    locator_index = _index_judicial_locators(body)
     pecas = [
         _materialize_piece(
             piece, body, index,
