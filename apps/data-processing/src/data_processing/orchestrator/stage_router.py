@@ -13,6 +13,10 @@ console = Console()
 
 CollectorName = Literal["cad_obr", "proc"]
 
+_SEGMENTADOR_LONG_INPUT_CHARS = 40_000
+_SEGMENTADOR_WINDOW_PAGES = 12
+_SEGMENTADOR_WINDOW_OVERLAP_PAGES = 1
+
 
 def _convert_via_skill(pdf_path: Path, out_md: Path) -> None:
     import subprocess
@@ -895,13 +899,30 @@ def _is_compact_segmentation(value) -> bool:
     )
 
 
+def _validate_compact_segmentation(value: dict) -> None:
+    import jsonschema
+
+    errors = sorted(
+        jsonschema.Draft7Validator(_SEGMENTATION_DECISION_SCHEMA).iter_errors(value),
+        key=lambda error: list(error.path),
+    )
+    if errors or not _is_compact_segmentation(value):
+        details = "; ".join(
+            f"{'.'.join(map(str, error.path)) or '<root>'}: {error.message}"
+            for error in errors[:5]
+        ) or "estrutura compacta incompatível"
+        raise ValueError(f"Decisão compacta inválida: {details}")
+
+
 def _infer_single_piece_type(text: str, source_file: str, document_code: str | None) -> str:
     evidence = " ".join((document_code or "", source_file, text[:1000])).lower()
     hints = {
         "peticao_inicial": ("inic1", "petição inicial", "peticao inicial"),
         "contestacao": ("contes", "contestação", "contestacao"),
-        "sentenca": ("sentença", "sentenca"),
-        "decisao_interlocutoria": ("decisão interlocutória", "decisao interlocutoria"),
+        "sentenca": ("sentença", "sentenca", "sent1"),
+        "decisao_interlocutoria": (
+            "decisão interlocutória", "decisao interlocutoria", "despadec", "decis1",
+        ),
         "procuracao": ("procuraç", "procurac"),
     }
     for document_type, tokens in hints.items():
@@ -938,6 +959,350 @@ def _single_piece_fallback(body: str, source_file: str) -> dict | None:
             ],
         }],
     }
+
+
+def _multipiece_fallback(body: str, source_file: str) -> dict | None:
+    """Segmenta grupos judiciais contíguos somente quando todos são classificáveis."""
+    locators = _index_judicial_locators(body)
+    groups = _contiguous_locator_groups(locators)
+    substantial = [
+        [item for item in group if item["attrs"].get("kind") != "event_separator"]
+        for group in groups
+    ]
+    substantial = [group for group in substantial if group]
+    if len(substantial) < 2:
+        return None
+
+    pieces = []
+    for index, group in enumerate(substantial):
+        attrs = group[0]["attrs"]
+        segment = body[group[0]["start"]:group[-1]["segment_end"]].strip()
+        document_type = _infer_single_piece_type(
+            segment, source_file, attrs.get("document_code")
+        )
+        if document_type == "nao_classificado":
+            return None
+        pages = [item["physical_page"] for item in group]
+        pieces.append({
+            "piece_id": f"peca_{index + 1:03d}",
+            "document_type": document_type,
+            "document_type_confidence": "high",
+            "pages_start": min(pages),
+            "pages_end": max(pages),
+            "title": attrs.get("document_code") or document_type,
+            "text_excerpt": segment[:500],
+            "relevancia_estimada": 0.5,
+            "process_number": attrs.get("process_number"),
+            "event": attrs.get("event"),
+            "document_code": attrs.get("document_code"),
+            "anchors": [{
+                "label": item["attrs"].get("document_code") or document_type,
+                "page": item["physical_page"],
+            } for item in group],
+        })
+    return {"metadata": {}, "pecas": pieces}
+
+
+def _segmentador_preflight(body: str) -> dict:
+    locators = _index_judicial_locators(body)
+    page_count = max((item["physical_page"] for item in locators), default=0)
+    high_risk = len(body) > _SEGMENTADOR_LONG_INPUT_CHARS or page_count > (
+        _SEGMENTADOR_WINDOW_PAGES * 2
+    )
+    return {
+        "characters": len(body),
+        "pages": page_count,
+        "locator_count": len(locators),
+        "high_risk": high_risk,
+        "partition": "page_windows" if high_risk else "single_call",
+    }
+
+
+def _build_segmentation_windows(body: str) -> list[dict]:
+    locators = _index_judicial_locators(body)
+    if not locators:
+        return []
+    total_pages = max(item["physical_page"] for item in locators)
+    windows = []
+    start_page = 1
+    window_id = 1
+    while start_page <= total_pages:
+        end_page = min(total_pages, start_page + _SEGMENTADOR_WINDOW_PAGES - 1)
+        selected = [
+            item for item in locators
+            if start_page <= item["physical_page"] <= end_page
+        ]
+        if not selected:
+            return []
+        windows.append({
+            "window_id": window_id,
+            "pages_start": start_page,
+            "pages_end": end_page,
+            "text": body[selected[0]["start"]:selected[-1]["segment_end"]].strip(),
+            "locators": selected,
+        })
+        if end_page == total_pages:
+            break
+        start_page = end_page - _SEGMENTADOR_WINDOW_OVERLAP_PAGES + 1
+        window_id += 1
+    return windows
+
+
+def _compact_piece_bounds(piece: dict) -> tuple[int | None, int | None]:
+    anchors = piece.get("anchors") or []
+    anchor_pages = [item.get("page") for item in anchors if item.get("page") is not None]
+    start = _first_non_null(
+        piece.get("pages_start"), piece.get("page_number_start"),
+        min(anchor_pages) if anchor_pages else None,
+    )
+    end = _first_non_null(
+        piece.get("pages_end"), piece.get("page_number_end"),
+        max(anchor_pages) if anchor_pages else None,
+    )
+    try:
+        return int(start), int(end)
+    except (TypeError, ValueError):
+        return None, None
+
+
+def _compatible_partial_identity(left: dict, right: dict) -> bool:
+    left_identity = _piece_identity(left)
+    right_identity = _piece_identity(right)
+    for field in ("process_number", "event", "document_code"):
+        left_value = left_identity.get(field)
+        right_value = right_identity.get(field)
+        if left_value is None or right_value is None:
+            continue
+        if field == "process_number":
+            left_value = re.sub(r"/[A-Z]{2}$", "", str(left_value), flags=re.IGNORECASE)
+            right_value = re.sub(r"/[A-Z]{2}$", "", str(right_value), flags=re.IGNORECASE)
+        if str(left_value) != str(right_value):
+            return False
+    same_type = _normalize_document_type(
+        left.get("document_type", "")
+    ) == _normalize_document_type(right.get("document_type", ""))
+    same_strong_identity = all(
+        left_identity.get(field) is not None
+        and right_identity.get(field) is not None
+        and str(left_identity[field]) == str(right_identity[field])
+        for field in ("event", "document_code")
+    )
+    return same_type or same_strong_identity
+
+
+def _partial_descriptor(piece: dict, *, window: dict, local_index: int, source_file: str) -> dict:
+    """Anexa identidade interna; ``piece_id`` do modelo é local à janela."""
+    item = dict(piece)
+    start, end = _compact_piece_bounds(item)
+    if (
+        start is None
+        or end is None
+        or start < window["pages_start"]
+        or end > window["pages_end"]
+    ):
+        identity = _piece_identity(item)
+        strong_fields = [
+            field for field in ("event", "document_code") if identity.get(field) is not None
+        ]
+        matching_locators = [
+            locator for locator in window.get("locators", [])
+            if (
+                comparable_fields := [
+                    field for field in strong_fields
+                    if locator["attrs"].get(field) is not None
+                ]
+            )
+            and all(
+                str(locator["attrs"][field]) == str(identity[field])
+                for field in comparable_fields
+            )
+        ]
+        if not matching_locators:
+            raise ValueError(
+                "Limites locais da janela sem locator suficiente para tradução: "
+                f"window={window['window_id']}, local_piece={local_index}, "
+                f"pages={start!r}-{end!r}, identity={identity!r}"
+            )
+        item["pages_start"] = min(
+            locator["physical_page"] for locator in matching_locators
+        )
+        item["pages_end"] = max(
+            locator["physical_page"] for locator in matching_locators
+        )
+    item["_partial_context"] = {
+        "source_file": source_file,
+        "window_index": int(window["window_id"]),
+        "local_piece_index": local_index,
+        "window_pages_start": int(window["pages_start"]),
+        "window_pages_end": int(window["pages_end"]),
+    }
+    return item
+
+
+def _is_controlled_window_overlap(left: dict, right: dict) -> bool:
+    left_context = left.get("_partial_context")
+    right_context = right.get("_partial_context")
+    # Mantém compatibilidade para chamadas unitárias da operação interna. No fluxo
+    # particionado, a evidência de janela é obrigatória e verificada abaixo.
+    if left_context is None and right_context is None:
+        return True
+    if not left_context or not right_context:
+        return False
+    if left_context["source_file"] != right_context["source_file"]:
+        return False
+    if right_context["window_index"] != left_context["window_index"] + 1:
+        return False
+    overlap_start = max(
+        left_context["window_pages_start"], right_context["window_pages_start"]
+    )
+    overlap_end = min(
+        left_context["window_pages_end"], right_context["window_pages_end"]
+    )
+    if overlap_start > overlap_end:
+        return False
+    return (
+        left["pages_start"] <= overlap_end
+        and right["pages_start"] <= overlap_end
+        and left["pages_end"] >= overlap_start
+        and right["pages_end"] >= overlap_start
+    )
+
+
+def _merge_partial_anchors(left: dict, right: dict) -> list[dict]:
+    anchors = {}
+    for anchor in (left.get("anchors") or []) + (right.get("anchors") or []):
+        key = (
+            anchor.get("label"), anchor.get("page"), anchor.get("process_number"),
+            anchor.get("event"), anchor.get("document_code"),
+        )
+        anchors[key] = anchor
+    return sorted(anchors.values(), key=lambda anchor: (anchor.get("page") or 0, str(anchor)))
+
+
+def _fill_uncovered_pages(merged: list[dict], locators: list[dict], total_pages: int) -> list[dict]:
+    covered = {
+        page
+        for piece in merged
+        for page in range(piece["pages_start"], piece["pages_end"] + 1)
+    }
+    missing = [page for page in range(1, total_pages + 1) if page not in covered]
+    locator_by_page = {locator["physical_page"]: locator for locator in locators}
+    groups = []
+    for page in missing:
+        is_separator = locator_by_page.get(page, {}).get("attrs", {}).get(
+            "kind"
+        ) == "event_separator"
+        previous_is_separator = bool(groups) and locator_by_page.get(
+            groups[-1][-1], {}
+        ).get("attrs", {}).get("kind") == "event_separator"
+        if (
+            not groups
+            or page != groups[-1][-1] + 1
+            or is_separator != previous_is_separator
+        ):
+            groups.append([page])
+        else:
+            groups[-1].append(page)
+
+    for pages in groups:
+        gap_locators = [locator for locator in locators if locator["physical_page"] in pages]
+        next_piece = next(
+            (piece for piece in merged if piece["pages_start"] == pages[-1] + 1), None
+        )
+        separator_events = {
+            locator["attrs"].get("event")
+            for locator in gap_locators
+            if locator["attrs"].get("kind") == "event_separator"
+        }
+        if (
+            next_piece is not None
+            and len(separator_events) == 1
+            and str(_piece_identity(next_piece).get("event")) == str(next(iter(separator_events)))
+        ):
+            next_piece["pages_start"] = pages[0]
+            continue
+        if len(gap_locators) != len(pages):
+            raise ValueError(f"Lacuna sem páginas reais verificáveis: {pages!r}")
+        merged.append({
+            "document_type": "nao_classificado",
+            "document_type_confidence": "low",
+            "pages_start": pages[0],
+            "pages_end": pages[-1],
+            "title": "Páginas sem classificação determinística",
+            "text_excerpt": "Páginas reais preservadas para revisão curatorial.",
+            "relevancia_estimada": 0.5,
+            "anchors": [
+                {"label": "judicial_locator", "page": locator["physical_page"]}
+                for locator in gap_locators
+            ],
+        })
+    return sorted(merged, key=lambda piece: (piece["pages_start"], piece["pages_end"]))
+
+
+def _merge_partial_pieces(
+    partials: list[dict], total_pages: int, *, locators: list[dict] | None = None
+) -> dict:
+    normalized = []
+    for piece in partials:
+        _validate_compact_segmentation({"pecas": [piece]})
+        start, end = _compact_piece_bounds(piece)
+        if start is None or end is None or start < 1 or start > end or end > total_pages:
+            raise ValueError(
+                f"Limites parciais inválidos: piece_id={piece.get('piece_id')!r}, "
+                f"pages_start={start!r}, pages_end={end!r}, total_pages={total_pages}"
+            )
+        item = dict(piece)
+        item["pages_start"], item["pages_end"] = start, end
+        normalized.append(item)
+    normalized.sort(key=lambda item: (
+        item["pages_start"], item["pages_end"],
+        (item.get("_partial_context") or {}).get("window_index", 0),
+        (item.get("_partial_context") or {}).get("local_piece_index", 0),
+    ))
+
+    merged = []
+    for piece in normalized:
+        if not merged:
+            merged.append(piece)
+            continue
+        previous = merged[-1]
+        overlaps = piece["pages_start"] <= previous["pages_end"]
+        if (
+            overlaps
+            and _is_controlled_window_overlap(previous, piece)
+            and _compatible_partial_identity(previous, piece)
+        ):
+            previous["pages_end"] = max(previous["pages_end"], piece["pages_end"])
+            previous["pages_start"] = min(previous["pages_start"], piece["pages_start"])
+            previous["anchors"] = _merge_partial_anchors(previous, piece)
+            previous_context = previous.get("_partial_context") or {}
+            piece_context = piece.get("_partial_context") or {}
+            if previous_context and piece_context:
+                previous_context.update(piece_context)
+            continue
+        if overlaps:
+            previous_context = previous.get("_partial_context") or {}
+            piece_context = piece.get("_partial_context") or {}
+            raise ValueError(
+                "Descritores distintos possuem sobreposição indevida: "
+                f"local_ids={previous.get('piece_id')!r}/{piece.get('piece_id')!r}, "
+                f"intervalos={previous['pages_start']}-{previous['pages_end']}/"
+                f"{piece['pages_start']}-{piece['pages_end']}, "
+                f"janelas={previous_context.get('window_index')!r}/"
+                f"{piece_context.get('window_index')!r}, "
+                f"tipos={previous.get('document_type')!r}/{piece.get('document_type')!r}, "
+                f"identidades={_piece_identity(previous)!r}/{_piece_identity(piece)!r}"
+            )
+        merged.append(piece)
+
+    if locators is not None:
+        merged = _fill_uncovered_pages(merged, locators, total_pages)
+    for index, piece in enumerate(merged):
+        piece.pop("_partial_context", None)
+        piece["piece_id"] = f"peca_{index + 1:03d}"
+    result = {"metadata": {}, "pecas": merged}
+    _validate_compact_segmentation(result)
+    return result
 
 
 def _first_non_null(*values):
@@ -1049,60 +1414,57 @@ def _write_json_atomic(path: Path, value: dict) -> None:
     temporary_path.replace(path)
 
 
-def run_segmentador_stage(
-    input_md_path: Path,
-    output_path: Path,
-    *,
-    llm_client=None,
+def _segmentador_diagnostic(
+    output_dir: Path, source_file: str, attempt: str, strategy: str, error: Exception
 ) -> Path:
-    """
-    Etapa segmentador-juridico da nova esteira.
+    from datetime import datetime, timezone
 
-    Entrada: arquivos .md limpos (pós-clean)
-    Saída:   envelope_segmentacao.json em output_path
+    timestamp = datetime.now(timezone.utc)
+    safe_source = re.sub(r"[^A-Za-z0-9_.-]+", "_", Path(source_file).stem)
+    path = output_dir / (
+        f"segmentador-juridico__{safe_source}__{attempt}__"
+        f"{timestamp.strftime('%Y%m%dT%H%M%S%fZ')}.error.json"
+    )
+    _write_json_atomic(path, {
+        "stage": "segmentador-juridico",
+        "source_file": source_file,
+        "attempt": attempt,
+        "strategy": strategy,
+        "timestamp": timestamp.isoformat(),
+        "error_type": type(error).__name__,
+        "error": str(error),
+    })
+    return path
 
-    Usa o SkillDispatcher canônico + LLMClient real para segmentar
-    documentos jurídicos em peças lógicas classificadas.
-    """
-    import json
+
+def _call_segmentador_client(client, messages: list[dict], schema: dict, context: dict):
+    import inspect
+
+    signature = inspect.signature(client.generate_structured)
+    accepts_kwargs = any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
+    if accepts_kwargs or "debug_context" in signature.parameters:
+        return client.generate_structured(
+            messages, schema=schema, debug_context=context
+        )
+    return client.generate_structured(messages, schema=schema)
+
+
+def _segment_one_markdown(
+    md_file: Path,
+    output_dir: Path,
+    *,
+    client,
+    system_prompt: str,
+    decision_schema: dict,
+    output_schema: dict,
+) -> Path:
     import hashlib
-    import sys
+    import jsonschema
 
-    # Dynamic load do dispatcher canônico
-    dispatcher_file = Path("platform/skill-runtime/skill_dispatcher.py")
-    if not dispatcher_file.exists():
-        raise FileNotFoundError(f"SkillDispatcher não encontrado: {dispatcher_file}")
-
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("skill_dispatcher", dispatcher_file)
-    dispatcher_mod = importlib.util.module_from_spec(spec)
-    sys.modules["skill_dispatcher"] = dispatcher_mod
-    spec.loader.exec_module(dispatcher_mod)
-
-    dispatcher = dispatcher_mod.SkillDispatcher(platform_path="platform")
-
-    # Carregar LLMClient real
-    shared_llm_file = Path("packages/shared-llm/client.py")
-    if not shared_llm_file.exists():
-        raise FileNotFoundError(f"shared-llm/client.py não encontrado: {shared_llm_file}")
-
-    spec2 = importlib.util.spec_from_file_location("shared_llm_client", shared_llm_file)
-    shared_llm_mod = importlib.util.module_from_spec(spec2)
-    shared_llm_mod  # reference to avoid unused import warning
-    spec2.loader.exec_module(shared_llm_mod)
-
-    # Coletar .md limpos do staging
-    md_files = list(input_md_path.glob("*.md"))
-    if not md_files:
-        raise FileNotFoundError(f"Nenhum .md limpo encontrado em {input_md_path}")
-
-    # Processar cada arquivo .md limpo
-    # Para simplificar esta fase, processamos o primeiro .md encontrado
-    # (suporte a múltiplos arquivos será adicionado em fase posterior)
-    md_file = md_files[0]
     raw_text = md_file.read_text(encoding="utf-8")
-
-    # Parse frontmatter se existir (para metadados de proveniência)
     frontmatter = {}
     body = raw_text
     if raw_text.startswith("---"):
@@ -1112,75 +1474,83 @@ def run_segmentador_stage(
             frontmatter = _yaml.safe_load(parts[1]) or {}
             body = parts[2].strip()
 
-    # Computar hash SHA-256 do arquivo de origem
-    source_sha256 = hashlib.sha256(md_file.read_bytes()).hexdigest()
     source_file = md_file.name
     source_path = str(md_file.resolve())
-
-    # Inferir process_group_id do frontmatter ou do nome do arquivo
+    source_sha256 = hashlib.sha256(md_file.read_bytes()).hexdigest()
     process_group_id = frontmatter.get("process_group_id", md_file.stem)
+    preflight = _segmentador_preflight(body)
+    console.print(
+        f"  [cyan]Segmentando[/cyan] {source_file} → "
+        f"pages={preflight['pages']} chars={preflight['characters']} "
+        f"strategy={preflight['partition']}"
+    )
 
-    console.print(f"  [cyan]Segmentando[/cyan] {md_file.name} → segmentador-juridico")
-
-    # Despatch via canônico
-    dispatch_result = dispatcher.dispatch("segmentador-juridico")
-    system_prompt = dispatch_result["system_prompt"]
-    skill_config = dispatch_result["skill_config"]
-    schema_ref = skill_config.get("schema_ref")
-
-    if not schema_ref or not Path(schema_ref).exists():
-        raise FileNotFoundError(f"Schema do segmentador não encontrado: {schema_ref}")
-
-    with open(schema_ref, "r", encoding="utf-8") as sf:
-        output_schema = json.load(sf)
-
-    # O contrato do LLM contém apenas decisões compactas. O schema final é
-    # aplicado somente depois que Python materializa texto e proveniência.
-    decision_schema = _flatten_nullable_types(_SEGMENTATION_DECISION_SCHEMA)
-
-    # Invocar LLM — com estratégia de resiliência
-    client = llm_client or shared_llm_mod.LLMClientFactory.create_client()
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": body},
-    ]
-
-    console.print("  [dim]Aguardando resposta do LLM (segmentação pode demorar)...[/dim]")
-
-    # Uma resposta incompatível (inclusive fallback genérico de extração do
-    # provider) nunca é promovida a Envelope de Processo.
     try:
-        envelope = client.generate_structured(messages, schema=decision_schema)
-        if not _is_compact_segmentation(envelope):
-            raise ValueError("Resposta incompatível com a segmentação compacta")
-    except ValueError as exc:
-        console.print(
-            f"  [yellow]Segmentação estruturada falhou: {exc}[/yellow]\n"
-            "  [yellow]Tentando fallback determinístico de peça única...[/yellow]"
+        if preflight["high_risk"]:
+            windows = _build_segmentation_windows(body)
+            if len(windows) < 2:
+                raise ValueError(
+                    "Documento de alto risco sem marcadores suficientes para janelas seguras"
+                )
+            partials = []
+            for window in windows:
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": window["text"]},
+                ]
+                partial = _call_segmentador_client(client, messages, decision_schema, {
+                    "stage": "segmentador-juridico",
+                    "source_file": source_file,
+                    "attempt": f"window-{window['window_id']}",
+                    "strategy": "page_windows",
+                })
+                _validate_compact_segmentation(partial)
+                partials.extend(
+                    _partial_descriptor(
+                        piece,
+                        window=window,
+                        local_index=local_index,
+                        source_file=source_file,
+                    )
+                    for local_index, piece in enumerate(partial["pecas"])
+                )
+                console.print(
+                    f"  [dim]{source_file}: janela {window['window_id']} "
+                    f"páginas {window['pages_start']}-{window['pages_end']}, "
+                    f"peças parciais={len(partial['pecas'])}[/dim]"
+                )
+            envelope = _merge_partial_pieces(
+                partials,
+                preflight["pages"],
+                locators=_index_judicial_locators(body),
+            )
+        else:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": body},
+            ]
+            envelope = _call_segmentador_client(client, messages, decision_schema, {
+                "stage": "segmentador-juridico",
+                "source_file": source_file,
+                "attempt": "single-call",
+                "strategy": "single_call",
+            })
+            _validate_compact_segmentation(envelope)
+    except Exception as exc:
+        console.print(f"  [yellow]{source_file}: chamada falhou: {exc}[/yellow]")
+        envelope = _single_piece_fallback(body, source_file) or _multipiece_fallback(
+            body, source_file
         )
-        envelope = _single_piece_fallback(body, source_file)
         if envelope is None:
             raise ValueError(
-                "Resposta do LLM incompatível e documento sem grupo judicial único"
+                "Segmentação sem evidência determinística suficiente; needs_review"
             ) from exc
 
-    # Persistir a decisão compacta antes de qualquer enriquecimento ou recorte.
-    # Este artefato é diagnóstico e deliberadamente não usa o schema final.
-    output_path.mkdir(parents=True, exist_ok=True)
-    debug_envelope_file = output_path / "envelope_segmentacao_debug.json"
-    _write_json_atomic(debug_envelope_file, envelope)
+    _validate_compact_segmentation(envelope)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_json_atomic(output_dir / "envelope_segmentacao_debug.json", envelope)
 
-    # =========================================================================
-    # Enriquecimento obrigatório de proveniência (correção de handoff)
-    # =========================================================================
-    # O LLM pode omitir campos de proveniência como source_file, source_path,
-    # source_sha256, process_group_id, origin_piece_index. Estes campos são
-    # obrigatórios para o yaml-normalizador-juridico. Enriquecemos aqui com
-    # dados canônicos do arquivo .md de origem.
-    # =========================================================================
-    if "metadata" not in envelope:
-        envelope["metadata"] = {}
-    metadata = envelope["metadata"]
+    metadata = envelope.setdefault("metadata", {})
     source_locators = _extract_judicial_locators(body)
     source_locator_attrs = (source_locators or [("", {})])[0][1]
     process_number = _first_non_null(
@@ -1205,51 +1575,46 @@ def run_segmentador_stage(
     locator_index = _index_judicial_locators(body)
     pecas = [
         _materialize_piece(
-            piece,
-            body,
-            idx,
-            next_piece=(compact_pieces[idx + 1] if idx + 1 < len(compact_pieces) else None),
+            piece, body, index,
+            next_piece=(compact_pieces[index + 1] if index + 1 < len(compact_pieces) else None),
             all_pieces=compact_pieces,
             locators=locator_index,
         )
-        for idx, piece in enumerate(compact_pieces)
+        for index, piece in enumerate(compact_pieces)
     ]
     envelope["pecas"] = pecas
-    for idx, peca in enumerate(pecas):
+    for index, piece in enumerate(pecas):
         _enrich_peca_with_provenance(
-            peca=peca,
+            peca=piece,
             source_file=source_file,
             source_path=source_path,
             source_sha256=source_sha256,
             process_group_id=process_group_id,
-            index=idx,
+            index=index,
             envelope_metadata=metadata,
             source_text=body,
         )
 
-    # Atualizar metadata com valores canônicos calculados localmente.
     from datetime import datetime, timezone
 
     locator_pages = _page_bounds(source_locators)
     metadata["processo_id"] = str(_first_non_null(
         metadata.get("processo_id"), process_number, process_group_id,
     ))
-    metadata["total_pecas"] = len(pecas)
-    metadata["gerado_por"] = "segmentador-juridico"
-    metadata["timestamp"] = datetime.now(timezone.utc).isoformat()
-    metadata["source_file"] = source_file
+    metadata.update({
+        "total_pecas": len(pecas),
+        "gerado_por": "segmentador-juridico",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "source_file": source_file,
+        "schema_version": "1.1.0",
+    })
     total_page_candidates = [
-        frontmatter.get("total_pages"),
-        len(locator_index) or None,
-        locator_pages[1],
+        frontmatter.get("total_pages"), len(locator_index) or None, locator_pages[1],
         max((piece.get("pages_end") or 1 for piece in pecas), default=1),
     ]
     metadata["total_pages"] = max(
         int(value) for value in total_page_candidates if value is not None
     )
-    metadata["schema_version"] = "1.1.0"
-
-    import jsonschema
 
     validation_errors = sorted(
         jsonschema.Draft7Validator(output_schema).iter_errors(envelope),
@@ -1261,15 +1626,100 @@ def run_segmentador_stage(
             for error in validation_errors[:5]
         )
         raise ValueError(f"Envelope do segmentador inválido: {details}")
-
-    # Persistir envelope
-    envelope_file = output_path / "envelope_segmentacao.json"
+    envelope_file = output_dir / "envelope_segmentacao.json"
     _write_json_atomic(envelope_file, envelope)
-
-    total_pecas = len(envelope.get("pecas", []))
-    console.print(f"  [green]Segmentação concluída[/green] {envelope_file} ({total_pecas} peças)")
-
+    console.print(
+        f"  [green]Segmentação concluída[/green] {source_file} "
+        f"({len(pecas)} peças)"
+    )
     return envelope_file
+
+
+def run_segmentador_stage(
+    input_md_path: Path,
+    output_path: Path,
+    *,
+    llm_client=None,
+) -> Path:
+    """Segmenta todos os Markdown elegíveis, isolando resultados por origem."""
+    import importlib.util
+    import json
+    import sys
+
+    dispatcher_file = Path("platform/skill-runtime/skill_dispatcher.py")
+    if not dispatcher_file.exists():
+        raise FileNotFoundError(f"SkillDispatcher não encontrado: {dispatcher_file}")
+    spec = importlib.util.spec_from_file_location("skill_dispatcher", dispatcher_file)
+    dispatcher_mod = importlib.util.module_from_spec(spec)
+    sys.modules["skill_dispatcher"] = dispatcher_mod
+    spec.loader.exec_module(dispatcher_mod)
+    dispatch_result = dispatcher_mod.SkillDispatcher(platform_path="platform").dispatch(
+        "segmentador-juridico"
+    )
+
+    schema_ref = dispatch_result["skill_config"].get("schema_ref")
+    if not schema_ref or not Path(schema_ref).exists():
+        raise FileNotFoundError(f"Schema do segmentador não encontrado: {schema_ref}")
+    with open(schema_ref, "r", encoding="utf-8") as schema_file:
+        output_schema = json.load(schema_file)
+
+    shared_llm_file = Path("packages/shared-llm/client.py")
+    spec2 = importlib.util.spec_from_file_location("shared_llm_client", shared_llm_file)
+    shared_llm_mod = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(shared_llm_mod)
+    client = llm_client or shared_llm_mod.LLMClientFactory.create_client()
+    md_files = sorted(input_md_path.glob("*.md"), key=lambda path: path.name.casefold())
+    if not md_files:
+        raise FileNotFoundError(f"Nenhum .md limpo encontrado em {input_md_path}")
+
+    output_path.mkdir(parents=True, exist_ok=True)
+    batch_results = []
+    for md_file in md_files:
+        per_file_dir = output_path if len(md_files) == 1 else output_path / re.sub(
+            r"[^A-Za-z0-9_.-]+", "_", md_file.stem
+        )
+        try:
+            envelope_path = _segment_one_markdown(
+                md_file,
+                per_file_dir,
+                client=client,
+                system_prompt=dispatch_result["system_prompt"],
+                decision_schema=_flatten_nullable_types(_SEGMENTATION_DECISION_SCHEMA),
+                output_schema=output_schema,
+            )
+            batch_results.append({
+                "source_file": md_file.name,
+                "status": "success",
+                "envelope_path": str(envelope_path.resolve()),
+                "diagnostic_path": None,
+                "error": None,
+            })
+        except Exception as exc:
+            per_file_dir.mkdir(parents=True, exist_ok=True)
+            diagnostic = _segmentador_diagnostic(
+                per_file_dir, md_file.name, "final", "segmentador_specific", exc
+            )
+            console.print(f"  [red]NEEDS REVIEW[/red] {md_file.name}: {exc}")
+            batch_results.append({
+                "source_file": md_file.name,
+                "status": "needs_review",
+                "envelope_path": None,
+                "diagnostic_path": str(diagnostic.resolve()),
+                "error": str(exc),
+            })
+
+    successes = [item for item in batch_results if item["status"] == "success"]
+    if len(md_files) == 1 and len(successes) == 1:
+        return Path(successes[0]["envelope_path"])
+    manifest = output_path / "segmentacao_lote.json"
+    _write_json_atomic(manifest, {
+        "stage": "segmentador-juridico",
+        "total_files": len(md_files),
+        "success_count": len(successes),
+        "needs_review_count": len(batch_results) - len(successes),
+        "results": batch_results,
+    })
+    return manifest
 
 
 def run_curador_stage(envelope_path: Path, output_path: Path, modo: str = "padrao") -> Path:
@@ -1486,15 +1936,31 @@ def run_nova_esteira_juridica_stage(
 
         # 1. Segmentador
         console.rule("[magenta]Etapa: segmentador-juridico[/magenta]")
-        envelope_seg_path = run_segmentador_stage(input_md_path, tmp)
+        segmentador_result = run_segmentador_stage(input_md_path, tmp)
+        if segmentador_result.name == "segmentacao_lote.json":
+            import json
 
-        # 2. Curador
-        console.rule("[magenta]Etapa: curador-relevancia[/magenta]")
-        envelope_cur_path = run_curador_stage(envelope_seg_path, tmp, modo=modo_curadoria)
+            manifest = json.loads(segmentador_result.read_text(encoding="utf-8"))
+            envelope_paths = [
+                Path(item["envelope_path"])
+                for item in manifest["results"]
+                if item["status"] == "success"
+            ]
+        else:
+            envelope_paths = [segmentador_result]
 
-        # 3. Normalizador → staging
-        console.rule("[magenta]Etapa: yaml-normalizador-juridico[/magenta]")
-        gerados = run_normalizador_stage(envelope_cur_path, staging_path)
+        gerados = 0
+        for index, envelope_seg_path in enumerate(envelope_paths, start=1):
+            artifact_dir = tmp / f"handoff_{index:03d}"
+            # 2. Curador
+            console.rule("[magenta]Etapa: curador-relevancia[/magenta]")
+            envelope_cur_path = run_curador_stage(
+                envelope_seg_path, artifact_dir, modo=modo_curadoria
+            )
+
+            # 3. Normalizador → staging
+            console.rule("[magenta]Etapa: yaml-normalizador-juridico[/magenta]")
+            gerados += run_normalizador_stage(envelope_cur_path, staging_path)
 
     console.rule("[bold green]Nova Esteira Jurídica concluída[/bold green]")
     return gerados

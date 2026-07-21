@@ -304,14 +304,15 @@ def test_materialization_failure_keeps_debug_and_reports_evidence(tmp_path):
     decision["pecas"][0].update({"pages_start": 1, "pages_end": 15})
     decision["pecas"][1].update({"page_number_start": 1, "page_number_end": 15})
 
-    with pytest.raises(ValueError) as exc_info:
-        run_segmentador_stage(
-            input_dir,
-            output_dir,
-            llm_client=_CompactSegmentationClient(decision),
-        )
-
-    message = str(exc_info.value)
+    manifest_path = run_segmentador_stage(
+        input_dir,
+        output_dir,
+        llm_client=_CompactSegmentationClient(decision),
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest_path.name == "segmentacao_lote.json"
+    assert manifest["results"][0]["status"] == "needs_review"
+    message = manifest["results"][0]["error"]
     assert "piece_id='peca_003'" in message
     assert "document_type='nao_classificado'" in message
     assert "pages_start=None" in message

@@ -151,6 +151,7 @@ class GeminiLLMClient(LLMClient):
         import os
         import copy
         import json
+        import re
         from pathlib import Path
 
         # 1. Definir base_dir
@@ -160,9 +161,20 @@ class GeminiLLMClient(LLMClient):
         normalized_schema = self._normalize_schema(schema)
 
         # 3. Salvar o schema efetivamente enviado em debug
+        debug_context = kwargs.get("debug_context") or {}
+        debug_parts = [
+            debug_context.get("stage"), debug_context.get("source_file"),
+            debug_context.get("attempt"), debug_context.get("strategy"),
+        ]
+        debug_slug = "__".join(
+            re.sub(r"[^A-Za-z0-9_.-]+", "_", str(part))
+            for part in debug_parts if part
+        )
         debug_dir = os.path.join(base_dir, "var", "artifacts", "gemini-debug")
+        if debug_slug:
+            debug_dir = os.path.join(debug_dir, debug_slug)
         os.makedirs(debug_dir, exist_ok=True)
-        debug_file_path = os.path.join(debug_dir, "peticao_processo.response_schema.sanitized.json")
+        debug_file_path = os.path.join(debug_dir, "response_schema.sanitized.json")
         try:
             with open(debug_file_path, "w", encoding="utf-8") as f:
                 json.dump(normalized_schema, f, indent=2, ensure_ascii=False)
@@ -302,10 +314,24 @@ class GeminiLLMClient(LLMClient):
             # Persiste a mensagem completa do erro em disco (o logger.warning acima
             # nem sempre é capturado em arquivo), para permitir diagnóstico posterior
             # da causa exata do erro 400/INVALID_ARGUMENT do Gemini.
-            structured_call_error_path = os.path.join(debug_dir, "structured_call_error.txt")
+            from datetime import datetime, timezone
+
+            error_timestamp = datetime.now(timezone.utc)
+            structured_call_error_path = os.path.join(
+                debug_dir,
+                f"structured_call_error__{error_timestamp.strftime('%Y%m%dT%H%M%S%fZ')}.json",
+            )
             try:
                 with open(structured_call_error_path, "w", encoding="utf-8") as f_err:
-                    f_err.write(f"{type(e).__name__}: {str(e)}")
+                    json.dump({
+                        "stage": debug_context.get("stage"),
+                        "source_file": debug_context.get("source_file"),
+                        "attempt": debug_context.get("attempt"),
+                        "strategy": debug_context.get("strategy"),
+                        "timestamp": error_timestamp.isoformat(),
+                        "error_type": type(e).__name__,
+                        "error": str(e),
+                    }, f_err, ensure_ascii=False, indent=2)
             except Exception as file_err:
                 logger.warning(f"Falha ao salvar erro da chamada estruturada em {structured_call_error_path}: {file_err}")
 
